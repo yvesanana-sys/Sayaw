@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 
+import 'package:clock/clock.dart';
 import 'package:just_audio/just_audio.dart' as ja;
 import 'package:media_kit/media_kit.dart' as mk;
 
@@ -33,7 +34,7 @@ class PlayableMedia {
 
   bool get isExpiringSoon =>
       expiresAt != null &&
-      expiresAt!.difference(DateTime.now()) < const Duration(seconds: 60);
+      expiresAt!.difference(clock.now()) < const Duration(seconds: 60);
 }
 
 class DrmConfig {

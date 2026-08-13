@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:clock/clock.dart';
+
 import 'fade_curves.dart';
 
 /// One independently-animatable gain stage.
@@ -51,11 +53,11 @@ class GainStage {
 
     final done = Completer<void>();
     _rampDone = done;
-    final started = DateTime.now();
+    final started = clock.now();
     final totalMs = duration.inMilliseconds;
 
     _ramp = Timer.periodic(tick, (timer) {
-      final elapsed = DateTime.now().difference(started).inMilliseconds;
+      final elapsed = clock.now().difference(started).inMilliseconds;
       final t = (elapsed / totalMs).clamp(0.0, 1.0);
 
       // Shape the *interpolation*, not the absolute level, so a ramp from

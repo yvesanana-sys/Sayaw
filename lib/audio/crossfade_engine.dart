@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:clock/clock.dart';
+
 import 'announcement_engine.dart';
 import 'deck.dart';
 import 'fade_curves.dart';
@@ -311,7 +313,7 @@ class CrossfadeEngine {
   Future<void> _runCrossfade(TransitionSpec spec) async {
     await _standby.play();
 
-    _fadeStartedAt = DateTime.now();
+    _fadeStartedAt = clock.now();
     _fadeDuration = spec.crossfade;
     _currentSpec = spec;
     _setPhase(EnginePhase.crossfading);
@@ -326,7 +328,7 @@ class CrossfadeEngine {
 
     _activeFade = 0.0;
     _standbyFade = 0.0;
-    _fadeStartedAt = DateTime.now();
+    _fadeStartedAt = clock.now();
     _fadeDuration = spec.crossfade;
     _currentSpec = spec;
     _setPhase(EnginePhase.crossfading);
@@ -341,7 +343,7 @@ class CrossfadeEngine {
   }
 
   Future<void> _fadeActiveToSilence(Duration duration, FadeCurve curve) async {
-    _fadeStartedAt = DateTime.now();
+    _fadeStartedAt = clock.now();
     _fadeDuration = duration;
     _currentSpec = TransitionSpec(crossfade: duration, fadeOutCurve: curve);
     _setPhase(EnginePhase.fadingOut);
@@ -356,7 +358,7 @@ class CrossfadeEngine {
     final started = _fadeStartedAt;
     if (started == null || _fadeDuration <= Duration.zero) return;
 
-    final elapsed = DateTime.now().difference(started).inMilliseconds;
+    final elapsed = clock.now().difference(started).inMilliseconds;
     final t = (elapsed / _fadeDuration.inMilliseconds).clamp(0.0, 1.0);
 
     if (_phase == EnginePhase.fadingOut) {
@@ -388,8 +390,8 @@ class CrossfadeEngine {
   Future<void> _awaitFadeComplete() async {
     final total = _fadeDuration.inMilliseconds;
     if (total <= 0) return;
-    final deadline = DateTime.now().add(_fadeDuration + tick);
-    while (DateTime.now().isBefore(deadline) && _fadeStartedAt != null) {
+    final deadline = clock.now().add(_fadeDuration + tick);
+    while (clock.now().isBefore(deadline) && _fadeStartedAt != null) {
       await Future<void>.delayed(tick);
     }
   }

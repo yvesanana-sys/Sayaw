@@ -51,6 +51,7 @@ dependencies:
   crypto: ^3.0.7
   connectivity_plus: ^7.3.1
   wakelock_plus: ^1.7.0
+  clock: ^1.1.2
 
 dev_dependencies:
   flutter_test:
