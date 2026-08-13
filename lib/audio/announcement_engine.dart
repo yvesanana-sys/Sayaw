@@ -59,18 +59,26 @@ class AnnouncementEngine {
     required String cacheDirectory,
     required this.settings,
     AnnouncementCacheStore? store,
+    ClipFactory? clipFactory,
   })  : _deck = voiceDeck,
-        _cacheDir = cacheDirectory,
-        _store = store ?? InMemoryAnnouncementCache();
-
-  static const _desktopTts = MethodChannel('sayaw/tts');
+        _store = store ?? InMemoryAnnouncementCache() {
+    _clips = clipFactory ??
+        PlatformClipFactory(
+          deck: voiceDeck,
+          cacheDirectory: cacheDirectory,
+          settings: settings,
+        );
+  }
 
   final Deck _deck;
-  final String _cacheDir;
   final AnnouncementCacheStore _store;
   final TtsVoiceSettings settings;
 
-  final FlutterTts _tts = FlutterTts();
+  /// Everything outside this class: the filesystem, the platform TTS engine,
+  /// and reading a rendered file's duration back. Swapped in tests for a
+  /// factory that returns clips of known length without touching any of them.
+  late final ClipFactory _clips;
+
   final Map<String, Future<AnnouncementClip?>> _inFlight = {};
 
   // -------------------------------------------------------------------------
@@ -88,15 +96,7 @@ class AnnouncementEngine {
     return null;
   }
 
-  String _hashFor(String text) {
-    final key = jsonEncode({
-      'text': text,
-      'voice': settings.voiceId,
-      'rate': settings.rate,
-      'pitch': settings.pitch,
-    });
-    return sha1.convert(utf8.encode(key)).toString();
-  }
+  String _hashFor(String text) => announcementHash(text, settings);
 
   // -------------------------------------------------------------------------
   // Rendering
@@ -110,8 +110,8 @@ class AnnouncementEngine {
   Future<AnnouncementClip?> clipFor(QueueEntry entry) {
     // A hand-recorded clip bypasses TTS entirely.
     final custom = entry.announcementClipPath;
-    if (custom != null && custom.isNotEmpty && File(custom).existsSync()) {
-      return _probe(custom, text: entry.danceTypeName ?? '');
+    if (custom != null && custom.isNotEmpty && _clips.exists(custom)) {
+      return _clips.probe(custom, text: entry.danceTypeName ?? '');
     }
 
     final text = _textFor(entry);
@@ -123,9 +123,9 @@ class AnnouncementEngine {
     return _inFlight.putIfAbsent(hash, () async {
       try {
         final cached = await _store.get(hash);
-        if (cached != null && File(cached.filePath).existsSync()) return cached;
+        if (cached != null && _clips.exists(cached.filePath)) return cached;
 
-        final clip = await _render(text, hash);
+        final clip = await _clips.render(text, hash);
         if (clip != null) await _store.put(clip);
         return clip;
       } finally {
@@ -133,59 +133,6 @@ class AnnouncementEngine {
         scheduleMicrotask(() => _inFlight.remove(hash));
       }
     });
-  }
-
-  Future<AnnouncementClip?> _render(String text, String hash) async {
-    final outPath = p.join(_cacheDir, '$hash.wav');
-    await Directory(_cacheDir).create(recursive: true);
-
-    if (Platform.isAndroid || Platform.isIOS) {
-      await _configureTts();
-      // flutter_tts writes to the app's TTS output directory on Android and to
-      // a path on iOS; both accept a bare filename plus this flag.
-      await _tts.setSharedInstance(true);
-      final ok = await _tts.synthesizeToFile(text, '$hash.wav');
-      if (ok != 1) return null;
-    } else {
-      // Windows: SpeechSynthesizer.SynthesizeTextToStreamAsync
-      // macOS:   AVSpeechSynthesizer.write(_:toBufferCallback:)
-      // Both are ~40 lines of platform code behind this channel; flutter_tts's
-      // desktop synthesizeToFile coverage is not dependable enough to rely on.
-      final result = await _desktopTts.invokeMethod<String>('synthesizeToFile', {
-        'text': text,
-        'path': outPath,
-        'voiceId': settings.voiceId,
-        'rate': settings.rate,
-        'pitch': settings.pitch,
-      });
-      if (result == null) return null;
-    }
-
-    if (!File(outPath).existsSync()) return null;
-    return _probe(outPath, text: text, hash: hash);
-  }
-
-  /// Loads the file on the voice deck purely to read its duration back.
-  Future<AnnouncementClip?> _probe(String path,
-      {required String text, String? hash}) async {
-    await _deck.load(PlayableMedia(uri: Uri.file(path)));
-    final d = _deck.duration;
-    if (d == null) return null;
-    return AnnouncementClip(
-      hash: hash ?? _hashFor(text),
-      filePath: path,
-      duration: d,
-      text: text,
-    );
-  }
-
-  Future<void> _configureTts() async {
-    await _tts.setSpeechRate(settings.rate);
-    await _tts.setPitch(settings.pitch);
-    await _tts.setVolume(settings.volume);
-    if (settings.voiceId != null) {
-      await _tts.setVoice({'name': settings.voiceId!, 'locale': ''});
-    }
   }
 
   // -------------------------------------------------------------------------
@@ -251,7 +198,7 @@ class AnnouncementEngine {
     double duckLevel = 0.2,
   }) async {
     final hash = _hashFor(text);
-    final clip = await _store.get(hash) ?? await _render(text, hash);
+    final clip = await _store.get(hash) ?? await _clips.render(text, hash);
     if (clip == null) return;
     await announceWithDuck(
       clip,
@@ -261,6 +208,120 @@ class AnnouncementEngine {
   }
 
   Future<void> dispose() => _deck.dispose();
+}
+
+// ---------------------------------------------------------------------------
+
+/// The cache key for a piece of speech: the text plus every voice setting that
+/// would change how it sounds. Changing the rate re-renders; replaying the same
+/// dance name forty times in an event does not.
+String announcementHash(String text, TtsVoiceSettings settings) {
+  final key = jsonEncode({
+    'text': text,
+    'voice': settings.voiceId,
+    'rate': settings.rate,
+    'pitch': settings.pitch,
+  });
+  return sha1.convert(utf8.encode(key)).toString();
+}
+
+/// Everything [AnnouncementEngine] needs from outside itself: the filesystem,
+/// the platform speech synthesiser, and reading a rendered file's duration.
+///
+/// This is the seam that makes announcement sequencing testable. The engine's
+/// interesting behaviour is *when* it ducks and for how long, which is derived
+/// entirely from `clip.duration`. Injecting a factory that returns a known
+/// duration lets every announcement envelope be asserted without a TTS engine,
+/// an audio backend, or a single byte of disk.
+abstract class ClipFactory {
+  /// Whether a previously rendered file is still present.
+  bool exists(String path);
+
+  /// Synthesises [text] to an audio file, or null if synthesis failed.
+  Future<AnnouncementClip?> render(String text, String hash);
+
+  /// Reads an existing file's duration back.
+  Future<AnnouncementClip?> probe(String path,
+      {required String text, String? hash});
+}
+
+/// The production [ClipFactory]: native TTS to a file, duration read back off
+/// the voice deck.
+class PlatformClipFactory implements ClipFactory {
+  PlatformClipFactory({
+    required Deck deck,
+    required String cacheDirectory,
+    required this.settings,
+  })  // A named parameter cannot be private, so `this._deck` is unavailable.
+      // ignore: prefer_initializing_formals
+      : _deck = deck,
+        _cacheDir = cacheDirectory;
+
+  static const _desktopTts = MethodChannel('sayaw/tts');
+
+  final Deck _deck;
+  final String _cacheDir;
+  final TtsVoiceSettings settings;
+
+  final FlutterTts _tts = FlutterTts();
+
+  @override
+  bool exists(String path) => File(path).existsSync();
+
+  @override
+  Future<AnnouncementClip?> render(String text, String hash) async {
+    final outPath = p.join(_cacheDir, '$hash.wav');
+    await Directory(_cacheDir).create(recursive: true);
+
+    if (Platform.isAndroid || Platform.isIOS) {
+      await _configureTts();
+      // flutter_tts writes to the app's TTS output directory on Android and to
+      // a path on iOS; both accept a bare filename plus this flag.
+      await _tts.setSharedInstance(true);
+      final ok = await _tts.synthesizeToFile(text, '$hash.wav');
+      if (ok != 1) return null;
+    } else {
+      // Windows: SpeechSynthesizer.SynthesizeTextToStreamAsync
+      // macOS:   AVSpeechSynthesizer.write(_:toBufferCallback:)
+      // Both are ~40 lines of platform code behind this channel; flutter_tts's
+      // desktop synthesizeToFile coverage is not dependable enough to rely on.
+      final result = await _desktopTts.invokeMethod<String>('synthesizeToFile', {
+        'text': text,
+        'path': outPath,
+        'voiceId': settings.voiceId,
+        'rate': settings.rate,
+        'pitch': settings.pitch,
+      });
+      if (result == null) return null;
+    }
+
+    if (!exists(outPath)) return null;
+    return probe(outPath, text: text, hash: hash);
+  }
+
+  /// Loads the file on the voice deck purely to read its duration back.
+  @override
+  Future<AnnouncementClip?> probe(String path,
+      {required String text, String? hash}) async {
+    await _deck.load(PlayableMedia(uri: Uri.file(path)));
+    final d = _deck.duration;
+    if (d == null) return null;
+    return AnnouncementClip(
+      hash: hash ?? announcementHash(text, settings),
+      filePath: path,
+      duration: d,
+      text: text,
+    );
+  }
+
+  Future<void> _configureTts() async {
+    await _tts.setSpeechRate(settings.rate);
+    await _tts.setPitch(settings.pitch);
+    await _tts.setVolume(settings.volume);
+    if (settings.voiceId != null) {
+      await _tts.setVoice({'name': settings.voiceId!, 'locale': ''});
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------

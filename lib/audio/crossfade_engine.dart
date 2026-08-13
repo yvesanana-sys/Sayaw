@@ -139,6 +139,10 @@ class CrossfadeEngine {
   QueueEntry? _activeEntry;
   QueueEntry? _standbyEntry;
 
+  /// Queue index of [_standbyEntry], which is not always `_index + 1` because
+  /// unplayable entries are skipped during preload.
+  int _standbyIndex = -1;
+
   EnginePhase _phase = EnginePhase.idle;
   EnginePhase get phase => _phase;
 
@@ -176,6 +180,9 @@ class CrossfadeEngine {
     await _active.pause();
     await _standby.pause();
     _setPhase(EnginePhase.paused);
+    // Release the latch: any in-flight transition sees the phase change and
+    // abandons itself, so the next play() is free to retrigger it.
+    _transitionInFlight = false;
   }
 
   Future<void> stop() async {
@@ -262,11 +269,11 @@ class CrossfadeEngine {
 
     if (incoming == null) {
       // End of queue: fade out and stop rather than cutting to silence.
-      await _fadeActiveToSilence(
+      final faded = await _fadeActiveToSilence(
         outgoing?.spec.crossfade ?? const Duration(seconds: 2),
         outgoing?.spec.fadeOutCurve ?? FadeCurve.equalPower,
       );
-      await stop();
+      if (faded) await stop();
       _transitionInFlight = false;
       return;
     }
@@ -290,7 +297,10 @@ class CrossfadeEngine {
       case AnnounceMode.beforeMusic:
         // Sequential: silence, then voice, then music.
         _setPhase(EnginePhase.fadingOut);
-        await _fadeActiveToSilence(spec.crossfade, spec.fadeOutCurve);
+        if (!await _fadeActiveToSilence(spec.crossfade, spec.fadeOutCurve)) {
+          _transitionInFlight = false;
+          return;
+        }
         await _active.stop();
 
         final clip = await announcements.clipFor(incoming);
@@ -318,8 +328,7 @@ class CrossfadeEngine {
     _currentSpec = spec;
     _setPhase(EnginePhase.crossfading);
 
-    await _awaitFadeComplete();
-    await _completeSwap();
+    if (await _awaitFadeComplete()) await _completeSwap();
   }
 
   Future<void> _startIncoming(TransitionSpec spec) async {
@@ -334,7 +343,7 @@ class CrossfadeEngine {
     _setPhase(EnginePhase.crossfading);
     _applyGains();
 
-    await _awaitFadeComplete();
+    if (!await _awaitFadeComplete()) return;
     _activeFade = 1.0;
     _applyGains();
     _setPhase(EnginePhase.playing);
@@ -342,14 +351,15 @@ class CrossfadeEngine {
     await _preloadNext();
   }
 
-  Future<void> _fadeActiveToSilence(Duration duration, FadeCurve curve) async {
+  Future<bool> _fadeActiveToSilence(Duration duration, FadeCurve curve) async {
     _fadeStartedAt = clock.now();
     _fadeDuration = duration;
     _currentSpec = TransitionSpec(crossfade: duration, fadeOutCurve: curve);
     _setPhase(EnginePhase.fadingOut);
-    await _awaitFadeComplete();
+    if (!await _awaitFadeComplete()) return false;
     _activeFade = 0.0;
     _applyGains();
+    return true;
   }
 
   TransitionSpec _currentSpec = const TransitionSpec();
@@ -387,14 +397,29 @@ class CrossfadeEngine {
     if (t >= 1.0) _fadeStartedAt = null;
   }
 
-  Future<void> _awaitFadeComplete() async {
-    final total = _fadeDuration.inMilliseconds;
-    if (total <= 0) return;
+  /// Waits for the in-flight fade to reach its end.
+  ///
+  /// Returns false if the fade was *abandoned* rather than finished — the
+  /// engine was paused or stopped part-way through. The deadline alone is not
+  /// enough to decide this: pausing cancels the ticker, so `_advanceFade` stops
+  /// running and the fade never progresses, but wall time keeps passing. A
+  /// caller that treated the deadline as success would retire the outgoing
+  /// deck and advance the queue while the operator had the set paused.
+  Future<bool> _awaitFadeComplete() async {
+    if (_fadeDuration <= Duration.zero) return true;
     final deadline = clock.now().add(_fadeDuration + tick);
-    while (clock.now().isBefore(deadline) && _fadeStartedAt != null) {
+    while (clock.now().isBefore(deadline)) {
+      if (!_isFading) break;             // abandoned part-way
+      if (_fadeStartedAt == null) break; // reached the end
       await Future<void>.delayed(tick);
     }
+    return _isFading;
   }
+
+  /// Whether a fade is still the engine's current business. Pausing or stopping
+  /// clears this, and every exit from [_awaitFadeComplete] is gated on it.
+  bool get _isFading =>
+      _phase == EnginePhase.crossfading || _phase == EnginePhase.fadingOut;
 
   /// Applies the composed gain to both decks.
   ///
@@ -429,7 +454,10 @@ class CrossfadeEngine {
     _activeIsA = !_activeIsA;
     _activeEntry = _standbyEntry;
     _standbyEntry = null;
-    _index++;
+    // Not `_index++`: the standby is not always the very next row, because
+    // _preloadNext skips entries that fail to load.
+    _index = _standbyIndex >= 0 ? _standbyIndex : _index + 1;
+    _standbyIndex = -1;
     _emit();
   }
 
@@ -456,28 +484,30 @@ class CrossfadeEngine {
   /// announcement engine to render its clip now — so the transition costs
   /// nothing but a gain ramp when it arrives.
   Future<void> _preloadNext() async {
-    final nextIndex = _index + 1;
-    if (nextIndex >= _queue.length) {
-      _standbyEntry = null;
-      return;
+    for (var i = _index + 1; i < _queue.length; i++) {
+      final next = _queue[i];
+      try {
+        await _standby.load(next.media);
+        await _standby.preroll();
+        await _standby.setVolume(0);
+        _standbyEntry = next;
+        _standbyIndex = i;
+        // Pre-render the TTS now rather than at the transition. This is the
+        // payoff for caching announcements as files instead of speaking live.
+        unawaited(announcements.warm(next));
+        return;
+      } catch (e) {
+        // A dead URL or missing file must not stall the set: keep walking the
+        // queue until something loads. The UI surfaces the skip separately.
+        _standbyEntry = null;
+        _standbyIndex = -1;
+        _events.add(EngineEvent(_phase, currentIndex: _index, entry: next));
+      }
     }
 
-    final next = _queue[nextIndex];
-    _standbyEntry = next;
-
-    try {
-      await _standby.load(next.media);
-      await _standby.preroll();
-      await _standby.setVolume(0);
-      // Pre-render the TTS now rather than at the transition. This is the
-      // payoff for caching announcements as files instead of speaking live.
-      unawaited(announcements.warm(next));
-    } catch (e) {
-      // A dead URL or missing file must not stall the set. Drop this entry and
-      // try the one after it; the UI surfaces it separately.
-      _standbyEntry = null;
-      _events.add(EngineEvent(_phase, currentIndex: _index, entry: next));
-    }
+    // Nothing further in the queue is playable.
+    _standbyEntry = null;
+    _standbyIndex = -1;
   }
 
   void _setPhase(EnginePhase p) {

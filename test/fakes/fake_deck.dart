@@ -19,6 +19,15 @@ class VolumeEvent {
   String toString() => '${at.inMilliseconds}ms -> ${volume.toStringAsFixed(4)}';
 }
 
+/// One lifecycle call, stamped with the virtual time it happened at.
+class CallEvent {
+  const CallEvent(this.at, this.name);
+  final Duration at;
+  final String name;
+  @override
+  String toString() => '${at.inMilliseconds}ms:$name';
+}
+
 /// A [Deck] with no audio stack behind it.
 ///
 /// Position advances purely as a function of virtual time, so a 4-minute track
@@ -42,11 +51,28 @@ class FakeDeck implements Deck {
   /// the real decks' job — so this is the raw gain envelope.
   final List<VolumeEvent> volumeEvents = [];
 
-  /// Call log, for asserting on lifecycle rather than gain.
-  final List<String> calls = [];
+  /// Lifecycle call log, stamped with virtual time.
+  ///
+  /// Timestamps matter: `loadQueue` stops both decks before it starts, so a
+  /// bare `calls.contains('stop')` would be satisfied by initialisation and
+  /// would not notice a retired deck being left running.
+  final List<CallEvent> callEvents = [];
 
-  /// Set to make [load] throw, exercising the failed-preload path.
+  /// Call names in order, without timestamps.
+  List<String> get calls => [for (final c in callEvents) c.name];
+
+  /// Whether [name] was called at or after [since].
+  bool calledSince(String name, Duration since) =>
+      callEvents.any((c) => c.name == name && c.at >= since);
+
+  void _record(String name) => callEvents.add(CallEvent(_now, name));
+
+  /// Set to make every [load] throw, exercising the failed-preload path.
   Object? loadError;
+
+  /// URIs whose [load] should throw, leaving other media loadable. Decks
+  /// alternate roles, so failing a *track* needs this rather than [loadError].
+  final Set<String> failUris = {};
 
   PlayableMedia? _media;
   double _volume = 1.0;
@@ -70,11 +96,14 @@ class FakeDeck implements Deck {
 
   @override
   Future<void> load(PlayableMedia media) async {
-    calls.add('load');
-    if (loadError != null) {
-      final e = loadError!;
-      _status.add(DeckStatus(DeckPlaybackState.error, error: e));
-      throw e;
+    _record('load');
+    final failure = loadError ??
+        (failUris.contains(media.uri.toString())
+            ? StateError('cannot load ${media.uri}')
+            : null);
+    if (failure != null) {
+      _status.add(DeckStatus(DeckPlaybackState.error, error: failure));
+      throw failure;
     }
     _media = media;
     _base = media.cueIn;
@@ -84,11 +113,11 @@ class FakeDeck implements Deck {
   }
 
   @override
-  Future<void> preroll() async => calls.add('preroll');
+  Future<void> preroll() async => _record('preroll');
 
   @override
   Future<void> play() async {
-    calls.add('play');
+    _record('play');
     if (_playing) return;
     _playing = true;
     _startedAt = clock.now();
@@ -101,7 +130,7 @@ class FakeDeck implements Deck {
 
   @override
   Future<void> pause() async {
-    calls.add('pause');
+    _record('pause');
     _foldElapsed();
     _playing = false;
     _positionTicker?.cancel();
@@ -111,7 +140,7 @@ class FakeDeck implements Deck {
 
   @override
   Future<void> stop() async {
-    calls.add('stop');
+    _record('stop');
     _foldElapsed();
     _playing = false;
     _base = Duration.zero;
@@ -123,7 +152,7 @@ class FakeDeck implements Deck {
 
   @override
   Future<void> seek(Duration position) async {
-    calls.add('seek');
+    _record('seek');
     _base = position;
     _startedAt = _playing ? clock.now() : null;
   }

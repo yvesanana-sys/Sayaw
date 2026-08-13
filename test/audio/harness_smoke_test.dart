@@ -6,6 +6,7 @@ import 'package:sayaw/audio/crossfade_engine.dart';
 import 'package:sayaw/audio/deck.dart';
 import 'package:sayaw/audio/gain_bus.dart';
 
+import '../fakes/fake_clip_factory.dart';
 import '../fakes/fake_deck.dart';
 
 /// A 6-second track with a 4-second crossfade: the transition begins at 2s and
@@ -47,6 +48,7 @@ _Outcome _crossfadeOnce() {
         voiceDeck: FakeDeck('voice'),
         cacheDirectory: '/nonexistent',
         settings: const TtsVoiceSettings(),
+        clipFactory: FakeClipFactory(),
       ),
     );
 
@@ -67,11 +69,6 @@ _Outcome _crossfadeOnce() {
 }
 
 void main() {
-  // AnnouncementEngine builds a FlutterTts in a field initializer, which
-  // registers a MethodChannel handler and so needs a binding. Nothing in these
-  // tests ever speaks — Prompt 1b replaces this with a proper seam.
-  TestWidgetsFlutterBinding.ensureInitialized();
-
   test('a 4-second crossfade runs to completion in virtual time', () {
     final r = _crossfadeOnce();
 
