@@ -298,7 +298,7 @@ Code lives in `lib/`:
 | `lib/audio/gain_bus.dart` | Composable gain stages and the duck controller |
 | `lib/audio/crossfade_engine.dart` | The dual-deck scheduler — the core of the app |
 | `lib/audio/announcement_engine.dart` | TTS render-to-cache and announcement sequencing |
-| `lib/audio/dance_audio_handler.dart` | `audio_service` wiring for background + lock screen |
+| `lib/audio/sayaw_audio_handler.dart` | `audio_service` wiring for background + lock screen |
 | `lib/data/media_resolver.dart` | Source-polymorphic resolution and DRM policy |
 
 ## 3.1 Gain composition

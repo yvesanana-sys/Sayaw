@@ -58,9 +58,14 @@ class SayawAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
       config: const AudioServiceConfig(
         androidNotificationChannelId: 'com.example.sayaw.audio',
         androidNotificationChannelName: 'Playback',
-        androidNotificationOngoing: true,
         // Keep the service alive between tracks — a set has gaps, and letting
         // Android reclaim the service mid-event is fatal.
+        //
+        // `androidNotificationOngoing: true` cannot be combined with this:
+        // audio_service asserts against the pair, because an ongoing (undismissable)
+        // notification has no effect once the service stays in the foreground
+        // through a pause. Setting it here was a compile-time error, and it was
+        // the redundant half of the pair — this line is the one that matters.
         androidStopForegroundOnPause: false,
       ),
     );
@@ -156,7 +161,9 @@ class SayawAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
   @override
   Future<void> skipToNext() => engine.skipNext();
 
-  @override
+  /// Not an `AudioHandler` member — that interface has no volume command, since
+  /// system volume is the OS's business. This is Sayaw's own master fader,
+  /// driven from the UI and from `customAction`.
   Future<void> setVolume(double volume) async =>
       bus.master.setImmediate(volume);
 
