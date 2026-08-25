@@ -30,6 +30,11 @@ final announcementCacheProvider = Provider<String>(
   (ref) => throw UnimplementedError('overridden in main()'),
 );
 
+/// Where downloaded media is written.
+final mediaCacheProvider = Provider<String>(
+  (ref) => throw UnimplementedError('overridden in main()'),
+);
+
 /// How this install identifies itself to plex.tv.
 final plexIdentityProvider = Provider<PlexIdentity>(
   (ref) => throw UnimplementedError('overridden in main()'),
@@ -73,6 +78,7 @@ Future<void> main() async {
 
   final support = await getApplicationSupportDirectory();
   final announcementCache = p.join(support.path, 'announcements');
+  final mediaCache = p.join(support.path, 'media');
 
   // Only desktop has a window to size, position or strip the title bar from.
   // On mobile the no-op backend keeps the same call sites valid rather than
@@ -91,6 +97,7 @@ Future<void> main() async {
         windowControllerProvider.overrideWithValue(windows),
         databaseProvider.overrideWithValue(db),
         announcementCacheProvider.overrideWithValue(announcementCache),
+        mediaCacheProvider.overrideWithValue(mediaCache),
         plexIdentityProvider.overrideWithValue(plexIdentity),
       ],
       child: SayawApp(windows: windows),
@@ -147,6 +154,7 @@ class _BootstrapState extends ConsumerState<_Bootstrap> {
         db: ref.read(databaseProvider),
         controller: ref.read(playbackProvider.notifier),
         announcementCacheDirectory: ref.read(announcementCacheProvider),
+        mediaCacheDirectory: ref.read(mediaCacheProvider),
         plexIdentity: ref.read(plexIdentityProvider),
       );
       _runtime = runtime;

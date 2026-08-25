@@ -254,11 +254,14 @@ abstract class TidalClient {
   bool hasOfflineEntitlement(String accountId);
 }
 
+/// The read side of the on-disk cache.
+///
+/// Deliberately read-only: the resolver's job is to find something playable,
+/// and giving it the ability to write media bytes would put a second code path
+/// next to [MediaResolver.policyFor]. Downloading lives in `MediaDownloader`,
+/// which asks `policyFor` first and is the only thing that can write.
 abstract class MediaCache {
   Future<String?> completeFileFor(TrackSource source);
-
-  /// Throws unless [MediaResolver.policyFor] returned [CachePolicy.allow].
-  Future<void> download(TrackSource source, {required CachePolicy policy});
 }
 
 abstract class SecurityScopedBookmarks {

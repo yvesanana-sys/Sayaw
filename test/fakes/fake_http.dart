@@ -20,22 +20,39 @@ class RecordedRequest {
 
 /// How the fake server answers one route.
 class FakeResponse {
-  FakeResponse(this.body, {this.status = 200, this.delay = Duration.zero});
+  FakeResponse(this.body, {this.status = 200, this.delay = Duration.zero})
+      : bytes = null,
+        headers = const {};
+
+  /// A body of raw bytes, for downloads. [headers] carries `content-length`
+  /// and, when answering a range request, `content-range`.
+  FakeResponse.bytes(
+    this.bytes, {
+    this.status = 200,
+    this.headers = const {},
+  })  : body = null,
+        delay = Duration.zero;
 
   /// Never answers. For a connection that hangs rather than refusing, which is
   /// the failure the connection race exists to survive.
   FakeResponse.hangs()
       : body = null,
+        bytes = null,
+        headers = const {},
         status = 200,
         delay = const Duration(days: 1);
 
   /// Refuses at the socket level.
   FakeResponse.refused()
       : body = _refused,
+        bytes = null,
+        headers = const {},
         status = 0,
         delay = Duration.zero;
 
   final Object? body;
+  final List<int>? bytes;
+  final Map<String, String> headers;
   final int status;
   final Duration delay;
 
@@ -101,6 +118,17 @@ class FakeHttpAdapter implements HttpClientAdapter {
       throw DioException.connectionError(
         requestOptions: options,
         reason: 'Connection refused',
+      );
+    }
+
+    if (response.bytes case final bytes?) {
+      return ResponseBody.fromBytes(
+        bytes,
+        response.status,
+        headers: {
+          for (final entry in response.headers.entries)
+            entry.key: [entry.value],
+        },
       );
     }
 

@@ -2,8 +2,12 @@ import '../../audio/announcement_engine.dart';
 import '../../audio/crossfade_engine.dart';
 import '../../audio/deck.dart';
 import '../../audio/gain_bus.dart';
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 
+import '../../data/cache/file_media_cache.dart';
+import '../../data/cache/media_downloader.dart';
 import '../../data/db/announcement_dao.dart';
 import '../../data/db/database.dart';
 import '../../data/media_resolver.dart';
@@ -32,6 +36,7 @@ class PlaybackRuntime {
     required this.session,
     required this.plex,
     required this.sources,
+    required this.downloader,
     required this.decks,
     required this.bus,
   });
@@ -47,6 +52,9 @@ class PlaybackRuntime {
   /// Connecting and disconnecting services, for the sources screen.
   final SourcesAccess sources;
 
+  /// The only thing that writes media bytes to disk.
+  final MediaDownloader downloader;
+
   /// Held only so they can be disposed: everything that reads them goes
   /// through the engine.
   final List<Deck> decks;
@@ -57,6 +65,7 @@ class PlaybackRuntime {
     required SayawDatabase db,
     required PlaybackController controller,
     required String announcementCacheDirectory,
+    required String mediaCacheDirectory,
     required PlexIdentity plexIdentity,
     TtsVoiceSettings voice = const TtsVoiceSettings(),
     SecretStore secrets = const SecureSecretStore(),
@@ -68,11 +77,25 @@ class PlaybackRuntime {
     final bus = MusicGainBus();
 
     final dio = http ?? Dio();
+
+    // One client, not one per user of it: it remembers which of a server's
+    // addresses answered, and a second copy would race them all again.
     final plex = PlexApiClient(
       dio: dio,
       identity: plexIdentity,
       secrets: secrets,
       accounts: db.sourceAccountDao,
+    );
+
+    final resolver = MediaResolver(
+      plex: plex,
+      tidal: const UnconfiguredTidalClient(),
+      cache: FileMediaCache(db),
+      // Connectivity is not watched yet, so this always claims a connection.
+      // The cost of being wrong is bounded: the connection race gives every
+      // address a few hundred milliseconds and then reports the server as
+      // unreachable in words.
+      networkMode: () => NetworkMode.online,
     );
 
     final engine = CrossfadeEngine(
@@ -91,6 +114,12 @@ class PlaybackRuntime {
       db: db,
       engine: engine,
       plex: plex,
+      downloader: MediaDownloader(
+        db: db,
+        resolver: resolver,
+        dio: dio,
+        directory: Directory(mediaCacheDirectory),
+      ),
       sources: SourcesService(
         db: db,
         plex: plex,
@@ -101,19 +130,7 @@ class PlaybackRuntime {
       session: PlaybackSession(
         engine: engine,
         controller: controller,
-        repository: PlaylistRepository(
-          db: db,
-          resolver: MediaResolver(
-            plex: plex,
-            tidal: const UnconfiguredTidalClient(),
-            cache: const NoMediaCache(),
-            // Connectivity is not watched yet, so this always claims a
-            // connection. The cost of being wrong is bounded: the connection
-            // race gives every address a few hundred milliseconds and then
-            // reports the server as unreachable in words.
-            networkMode: () => NetworkMode.online,
-          ),
-        ),
+        repository: PlaylistRepository(db: db, resolver: resolver),
       ),
     );
   }

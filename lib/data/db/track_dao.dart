@@ -21,6 +21,32 @@ class TrackDao extends DatabaseAccessor<SayawDatabase> with _$TrackDaoMixin {
   Future<List<Track>> byIds(Iterable<String> ids) =>
       (select(tracks)..where((t) => t.id.isIn(ids))).get();
 
+  /// The track behind a source triple `(source_type, account_id, source_id)`.
+  ///
+  /// The inverse of the mapper in `PlaylistRepository.sourceFor`: the cache is
+  /// handed a source and has to find the row it belongs to, because
+  /// `cache_entries` is keyed by track.
+  Future<Track?> bySource({
+    required SourceType sourceType,
+    String? accountId,
+    String? sourceId,
+    String? localPath,
+  }) {
+    final query = select(tracks)
+      ..where((t) => t.sourceType.equalsValue(sourceType))
+      ..limit(1);
+
+    if (sourceType == SourceType.local) {
+      query.where((t) => t.localPath.equals(localPath ?? ''));
+    } else {
+      query.where((t) =>
+          t.accountId.equals(accountId ?? '') &
+          t.sourceId.equals(sourceId ?? ''));
+    }
+
+    return query.getSingleOrNull();
+  }
+
   /// Insert, or update the row that already carries this id.
   Future<void> upsert(TracksCompanion track) =>
       into(tracks).insertOnConflictUpdate(track);

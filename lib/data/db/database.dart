@@ -4,6 +4,7 @@ import '../../audio/crossfade_engine.dart' show AnnounceMode;
 import '../../audio/fade_curves.dart' show FadeCurve;
 import '../media_resolver.dart' show CachePolicy;
 import 'announcement_dao.dart';
+import 'cache_dao.dart';
 import 'converters.dart';
 import 'enums.dart';
 import 'playlist_dao.dart';
@@ -36,7 +37,13 @@ part 'database.g.dart';
     AnnouncementCache,
     PlayHistory,
   ],
-  daos: [TrackDao, PlaylistDao, AnnouncementDao, SourceAccountDao],
+  daos: [
+    TrackDao,
+    PlaylistDao,
+    AnnouncementDao,
+    SourceAccountDao,
+    CacheDao,
+  ],
 )
 class SayawDatabase extends _$SayawDatabase {
   SayawDatabase(super.e);

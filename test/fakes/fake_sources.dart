@@ -49,13 +49,9 @@ class FakeMediaCache implements MediaCache {
   Future<String?> completeFileFor(TrackSource source) async =>
       files[_key(source)];
 
-  @override
-  Future<void> download(TrackSource source, {required CachePolicy policy}) async {
-    if (policy != CachePolicy.allow) {
-      throw StateError('policy $policy does not permit writing to disk');
-    }
-    files[_key(source)] = '/cache/${_key(source)}';
-  }
+  /// Pretends a download happened. The real one is `MediaDownloader`; this is
+  /// only here so a test can say "this track is already cached".
+  void hold(TrackSource source) => files[_key(source)] = '/cache/${_key(source)}';
 
   static String _key(TrackSource source) => switch (source) {
         LocalSource s => s.path ?? s.contentUri ?? '',

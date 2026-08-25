@@ -40,15 +40,10 @@ class UnconfiguredTidalClient implements TidalClient {
   bool hasOfflineEntitlement(String accountId) => false;
 }
 
-/// Nothing is downloaded yet, so nothing is cached.
+/// A cache with nothing in it, for a build with no cache directory to hand.
 class NoMediaCache implements MediaCache {
   const NoMediaCache();
 
   @override
   Future<String?> completeFileFor(TrackSource source) async => null;
-
-  @override
-  Future<void> download(TrackSource source, {required CachePolicy policy}) async {
-    throw UnsupportedError('Downloading is not implemented yet');
-  }
 }
