@@ -38,6 +38,7 @@ dependencies:
   drift: ^2.34.3
   drift_flutter: ^0.3.1
   sqlite3_flutter_libs: ^0.6.0+eol
+  sqlite3: ^3.5.1
   just_audio: ^0.10.6
   audio_service: ^0.18.19
   audio_session: ^0.2.4

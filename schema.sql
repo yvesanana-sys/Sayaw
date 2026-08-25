@@ -1,6 +1,9 @@
 -- ============================================================================
 -- Dance Media Player — SQLite schema (Drift-compatible)
 -- Times are INTEGER epoch milliseconds (UTC). Durations are milliseconds.
+-- Primary keys spell out NOT NULL: outside of INTEGER PRIMARY KEY, SQLite
+-- still lets a NULL into a primary key column, and a playlist row with no id
+-- is not something to discover mid-set.
 -- ============================================================================
 
 PRAGMA foreign_keys = ON;
@@ -11,7 +14,7 @@ PRAGMA journal_mode = WAL;
 -- remote track must carry the account it came from.
 -- ---------------------------------------------------------------------------
 CREATE TABLE source_accounts (
-  id                  TEXT PRIMARY KEY,
+  id                  TEXT NOT NULL PRIMARY KEY,
   provider            TEXT NOT NULL CHECK (provider IN ('plex','tidal')),
   display_name        TEXT NOT NULL,
   machine_identifier  TEXT,          -- Plex: server uuid
@@ -28,7 +31,7 @@ CREATE TABLE source_accounts (
 -- Dance types. One row per Waltz / Cha-Cha / Bachata / ...
 -- ---------------------------------------------------------------------------
 CREATE TABLE dance_types (
-  id                  TEXT PRIMARY KEY,
+  id                  TEXT NOT NULL PRIMARY KEY,
   name                TEXT NOT NULL UNIQUE,        -- 'Viennese Waltz'
   slug                TEXT NOT NULL UNIQUE,        -- 'viennese-waltz'
   -- '{name}' and '{next}' are substituted at render time.
@@ -45,7 +48,7 @@ CREATE TABLE dance_types (
 -- Tracks. Source-polymorphic: exactly one of the source blocks is populated.
 -- ---------------------------------------------------------------------------
 CREATE TABLE tracks (
-  id                  TEXT PRIMARY KEY,            -- app-generated uuid
+  id                  TEXT NOT NULL PRIMARY KEY,            -- app-generated uuid
   source_type         TEXT NOT NULL CHECK (source_type IN ('local','plex','tidal')),
   account_id          TEXT REFERENCES source_accounts(id) ON DELETE SET NULL,
 
@@ -117,7 +120,7 @@ CREATE VIRTUAL TABLE tracks_fts USING fts5(
 -- Playlists (an event, a set, a practice list).
 -- ---------------------------------------------------------------------------
 CREATE TABLE playlists (
-  id                     TEXT PRIMARY KEY,
+  id                     TEXT NOT NULL PRIMARY KEY,
   name                   TEXT NOT NULL,
   description            TEXT,
   event_kind             TEXT,                     -- 'social','competition','showcase','practice'
@@ -148,7 +151,7 @@ CREATE TABLE playlists (
 -- single-row UPDATE instead of a full renumber.
 -- ---------------------------------------------------------------------------
 CREATE TABLE playlist_items (
-  id                     TEXT PRIMARY KEY,
+  id                     TEXT NOT NULL PRIMARY KEY,
   playlist_id            TEXT NOT NULL REFERENCES playlists(id) ON DELETE CASCADE,
   position               REAL NOT NULL,
 
@@ -192,7 +195,7 @@ CREATE INDEX idx_items_track ON playlist_items (track_id);
 -- the DRM matrix and is the single gate on ever writing bytes to disk.
 -- ---------------------------------------------------------------------------
 CREATE TABLE cache_entries (
-  track_id               TEXT PRIMARY KEY REFERENCES tracks(id) ON DELETE CASCADE,
+  track_id               TEXT NOT NULL PRIMARY KEY REFERENCES tracks(id) ON DELETE CASCADE,
   state                  TEXT NOT NULL DEFAULT 'none'
                            CHECK (state IN ('none','pending','partial','complete','expired','failed')),
   cache_path             TEXT,
@@ -216,7 +219,7 @@ CREATE INDEX idx_cache_lru ON cache_entries (pinned, last_accessed_at)
 -- Lets Event Mode pre-render everything before doors open.
 -- ---------------------------------------------------------------------------
 CREATE TABLE announcement_cache (
-  hash                   TEXT PRIMARY KEY,
+  hash                   TEXT NOT NULL PRIMARY KEY,
   text                   TEXT NOT NULL,
   voice_id               TEXT,
   rate                   REAL NOT NULL,
@@ -231,7 +234,7 @@ CREATE TABLE announcement_cache (
 -- Play history — powers "don't repeat within N hours" across a long night.
 -- ---------------------------------------------------------------------------
 CREATE TABLE play_history (
-  id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+  id                     INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   track_id               TEXT REFERENCES tracks(id) ON DELETE CASCADE,
   playlist_id            TEXT REFERENCES playlists(id) ON DELETE SET NULL,
   dance_type_id          TEXT REFERENCES dance_types(id) ON DELETE SET NULL,
