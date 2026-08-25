@@ -98,10 +98,16 @@ class PlaybackRuntime {
       networkMode: () => NetworkMode.online,
     );
 
+    final repository = PlaylistRepository(db: db, resolver: resolver);
+
     final engine = CrossfadeEngine(
       deckA: deckA,
       deckB: deckB,
       bus: bus,
+      // Signed Plex and TIDAL URLs expire. This is what stops one dying
+      // between the moment the set was built and the moment the track is
+      // due, which on a four-hour night is most of them.
+      refresh: repository.refreshEntry,
       announcements: AnnouncementEngine(
         voiceDeck: voiceDeck,
         cacheDirectory: announcementCacheDirectory,
@@ -133,7 +139,7 @@ class PlaybackRuntime {
         engine: engine,
         controller: controller,
         downloader: downloader,
-        repository: PlaylistRepository(db: db, resolver: resolver),
+        repository: repository,
       ),
     );
   }

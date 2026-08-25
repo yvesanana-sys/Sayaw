@@ -25,17 +25,30 @@ class FakeTidalClient implements TidalClient {
 
   bool offlineEntitled;
 
+  /// Appended to the URL, so a test can tell one signing apart from the next.
+  /// Empty by default, which keeps a single resolve looking exactly like the
+  /// real thing.
+  String signature = '';
+
+  DateTime? expiresAt = DateTime.utc(2026, 8, 25, 23);
+
+  int playbackInfoCalls = 0;
+
   @override
   Future<String> accessToken(String accountId) async => 'tidal-token';
 
   @override
-  Future<TidalPlaybackInfo> playbackInfo(String accountId, String trackId) async =>
-      TidalPlaybackInfo(
-        manifestType: TidalManifestType.bts,
-        directUrls: [Uri.parse('https://audio.tidal.com/$trackId.flac')],
-        expiresAt: DateTime.utc(2026, 8, 25, 23),
-        replayGainDb: -1.5,
-      );
+  Future<TidalPlaybackInfo> playbackInfo(String accountId, String trackId) async {
+    playbackInfoCalls++;
+    return TidalPlaybackInfo(
+      manifestType: TidalManifestType.bts,
+      directUrls: [
+        Uri.parse('https://audio.tidal.com/$trackId.flac$signature'),
+      ],
+      expiresAt: expiresAt,
+      replayGainDb: -1.5,
+    );
+  }
 
   @override
   bool hasOfflineEntitlement(String accountId) => offlineEntitled;

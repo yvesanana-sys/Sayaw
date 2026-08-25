@@ -79,13 +79,29 @@ class PlaylistDao extends DatabaseAccessor<SayawDatabase> with _$PlaylistDaoMixi
   Future<List<PlaylistRow>> itemsOf(String playlistId) =>
       _joinedItems(playlistId).get();
 
-  Selectable<PlaylistRow> _joinedItems(String playlistId) {
+  /// One row on its own, for re-resolving a single entry mid-set without
+  /// reading the whole playlist back.
+  ///
+  /// Null once the row has been deleted, which is what happens when someone
+  /// edits the set while it is playing.
+  Future<PlaylistRow?> rowById(String itemId) =>
+      _joinedRows(playlistItems.id.equals(itemId)).getSingleOrNull();
+
+  Selectable<PlaylistRow> _joinedItems(String playlistId) => _joinedRows(
+        playlistItems.playlistId.equals(playlistId),
+        ordered: true,
+      );
+
+  Selectable<PlaylistRow> _joinedRows(
+    Expression<bool> where, {
+    bool ordered = false,
+  }) {
     final q = select(playlistItems).join([
       leftOuterJoin(tracks, tracks.id.equalsExp(playlistItems.trackId)),
       leftOuterJoin(danceTypes, danceTypes.id.equalsExp(playlistItems.danceTypeId)),
-    ])
-      ..where(playlistItems.playlistId.equals(playlistId))
-      ..orderBy([OrderingTerm.asc(playlistItems.position)]);
+    ])..where(where);
+
+    if (ordered) q.orderBy([OrderingTerm.asc(playlistItems.position)]);
 
     return q.map((row) => PlaylistRow(
           item: row.readTable(playlistItems),

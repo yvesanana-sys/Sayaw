@@ -83,7 +83,30 @@ class QueueEntry {
 
   /// Static per-track trim from ReplayGain plus any manual offset.
   double get trimGain => dbToAmplitude(media.gainDb).clamp(0.0, 1.0);
+
+  /// The same row with freshly resolved media, for a signed URL replaced
+  /// before it expired. Nothing else about the row changes: the spec, the
+  /// announcement and the titles were merged when the set was built and do
+  /// not go stale just because a URL did.
+  QueueEntry withMedia(PlayableMedia media) => QueueEntry(
+        itemId: itemId,
+        media: media,
+        spec: spec,
+        danceTypeName: danceTypeName,
+        announcementText: announcementText,
+        announcementClipPath: announcementClipPath,
+        targetDuration: targetDuration,
+        title: title,
+        artist: artist,
+      );
 }
+
+/// Re-resolves an entry whose signed URL is close to expiry, returning one
+/// with fresh media.
+///
+/// Supplied from above, because resolving a row means knowing about playlists
+/// and source accounts and the engine deliberately knows about neither.
+typedef EntryRefresher = Future<QueueEntry> Function(QueueEntry entry);
 
 enum EnginePhase { idle, playing, fadingOut, announcing, crossfading, paused }
 
@@ -111,6 +134,7 @@ class CrossfadeEngine {
     required Deck deckB,
     required this.bus,
     required this.announcements,
+    this.refresh,
     this.tick = const Duration(milliseconds: 20),
   })  : _a = deckA,
         _b = deckB {
@@ -121,6 +145,12 @@ class CrossfadeEngine {
   final Deck _b;
   final MusicGainBus bus;
   final AnnouncementEngine announcements;
+
+  /// How to re-resolve an entry whose URL is about to expire. Null leaves the
+  /// engine playing exactly what it was handed, which is what a set of local
+  /// files wants.
+  final EntryRefresher? refresh;
+
   final Duration tick;
 
   StreamSubscription<double>? _busSub;
@@ -504,8 +534,7 @@ class CrossfadeEngine {
     _index++;
     if (_index >= _queue.length) return;
 
-    _activeEntry = _queue[_index];
-    await _active.load(_activeEntry!.media);
+    _activeEntry = await _loadOnto(_active, _queue[_index]);
     await _active.preroll();
     _activeFade = 1.0;
     _standbyFade = 0.0;
@@ -522,14 +551,14 @@ class CrossfadeEngine {
     for (var i = _index + 1; i < _queue.length; i++) {
       final next = _queue[i];
       try {
-        await _standby.load(next.media);
+        final loaded = await _loadOnto(_standby, next);
         await _standby.preroll();
         await _standby.setVolume(0);
-        _standbyEntry = next;
+        _standbyEntry = loaded;
         _standbyIndex = i;
         // Pre-render the TTS now rather than at the transition. This is the
         // payoff for caching announcements as files instead of speaking live.
-        unawaited(announcements.warm(next));
+        unawaited(announcements.warm(loaded));
         return;
       } catch (e) {
         // A dead URL or missing file must not stall the set: keep walking the
@@ -543,6 +572,30 @@ class CrossfadeEngine {
     // Nothing further in the queue is playable.
     _standbyEntry = null;
     _standbyIndex = -1;
+  }
+
+  /// Loads [entry] onto [deck], re-resolving it first when its URL is close
+  /// enough to expiry to die mid-transition. Returns what was actually
+  /// loaded, so the caller records the fresh entry rather than the stale one.
+  Future<QueueEntry> _loadOnto(Deck deck, QueueEntry entry) async {
+    final loaded = await _refreshed(entry);
+    await deck.load(loaded.media);
+    return loaded;
+  }
+
+  Future<QueueEntry> _refreshed(QueueEntry entry) async {
+    final refresh = this.refresh;
+    if (refresh == null || !entry.media.isExpiringSoon) return entry;
+
+    try {
+      return await refresh(entry);
+    } catch (_) {
+      // A refresh that fails is not a reason to drop the track. The URL in
+      // hand has not expired yet — it is merely about to — and playing it is
+      // better than a hole in the set. If it really is dead, the load fails
+      // and the caller's existing skip handling takes over.
+      return entry;
+    }
   }
 
   void _setPhase(EnginePhase p) {

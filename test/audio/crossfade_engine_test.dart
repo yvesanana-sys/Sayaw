@@ -20,6 +20,7 @@ QueueEntry _entry(
   Duration? cueOut,
   Duration? targetDuration,
   String? danceTypeName,
+  DateTime? expiresAt,
   double duckLevel = 0.2,
   Duration duckFade = const Duration(milliseconds: 600),
   Duration duckHold = const Duration(milliseconds: 250),
@@ -31,6 +32,7 @@ QueueEntry _entry(
       uri: Uri.parse('fake://$id'),
       cueIn: cueIn,
       cueOut: cueOut,
+      expiresAt: expiresAt,
     ),
     spec: TransitionSpec(
       crossfade: crossfade,
@@ -70,6 +72,7 @@ class _Rig {
   _Rig({
     Duration track = const Duration(seconds: 10),
     Duration clip = const Duration(seconds: 2),
+    EntryRefresher? refresh,
   }) {
     epoch = clock.now();
     a = FakeDeck('A', trackDuration: track);
@@ -88,6 +91,7 @@ class _Rig {
       deckB: b,
       bus: bus,
       announcements: announcements,
+      refresh: refresh,
     );
     engine.events.listen((e) {
       phases.add(_PhaseAt(now, e.phase));
@@ -602,6 +606,135 @@ void main() {
         async.elapse(const Duration(milliseconds: 100));
 
         expect(rig.a.lastVolume, closeTo(0.5, 0.01));
+      });
+    });
+  });
+
+  group('expiring URLs', () {
+    /// Records what it was asked to refresh and hands back a fresh URL.
+    ({List<String> asked, EntryRefresher refresh}) recorder() {
+      final asked = <String>[];
+      return (
+        asked: asked,
+        refresh: (entry) async {
+          asked.add(entry.itemId);
+          return entry.withMedia(PlayableMedia(
+            uri: Uri.parse('fresh://${entry.itemId}'),
+            cueIn: entry.media.cueIn,
+            cueOut: entry.media.cueOut,
+          ));
+        },
+      );
+    }
+
+    test('a URL nowhere near expiry is played untouched', () {
+      fakeAsync((async) {
+        final r = recorder();
+        final rig = _Rig(refresh: r.refresh);
+        rig.start([
+          _entry('one', expiresAt: clock.now().add(const Duration(hours: 3))),
+        ], async);
+
+        expect(r.asked, isEmpty);
+        expect(rig.a.media!.uri.toString(), 'fake://one');
+      });
+    });
+
+    test('a URL with no expiry at all is played untouched', () {
+      // Local files and finished downloads. Nothing to refresh, and asking
+      // would put a database read in front of every load.
+      fakeAsync((async) {
+        final r = recorder();
+        final rig = _Rig(refresh: r.refresh);
+        rig.start([_entry('one')], async);
+
+        expect(r.asked, isEmpty);
+        expect(rig.a.media!.uri.toString(), 'fake://one');
+      });
+    });
+
+    test('a URL about to expire is re-resolved before it reaches a deck', () {
+      fakeAsync((async) {
+        final r = recorder();
+        final rig = _Rig(refresh: r.refresh);
+        rig.start([
+          _entry('one', expiresAt: clock.now().add(const Duration(seconds: 30))),
+        ], async);
+
+        expect(r.asked, ['one']);
+        expect(rig.a.media!.uri.toString(), 'fresh://one');
+      });
+    });
+
+    test('the standby deck is refreshed too, not just the audible one', () {
+      // The standby entry is the one most likely to go stale: it was resolved
+      // when the set was built and does not play for another four minutes.
+      fakeAsync((async) {
+        final r = recorder();
+        final rig = _Rig(refresh: r.refresh);
+        rig.start([
+          _entry('one'),
+          _entry('two', expiresAt: clock.now().add(const Duration(seconds: 10))),
+        ], async);
+
+        expect(r.asked, ['two']);
+        expect(rig.b.media!.uri.toString(), 'fresh://two');
+      });
+    });
+
+    test('the refreshed entry is what the engine reports playing', () {
+      fakeAsync((async) {
+        final r = recorder();
+        final rig = _Rig(refresh: r.refresh);
+        rig.start([
+          _entry('one', expiresAt: clock.now().add(const Duration(seconds: 5))),
+        ], async);
+
+        expect(rig.engine.currentEntry!.media.uri.toString(), 'fresh://one');
+        expect(rig.engine.currentEntry!.itemId, 'one');
+      });
+    });
+
+    test('a refresh that fails leaves the set playing what it had', () {
+      // The URL in hand is about to expire, not expired. Playing it beats a
+      // hole in the set, and it may well outlast the track.
+      fakeAsync((async) {
+        final rig = _Rig(
+          refresh: (entry) async => throw StateError('server unreachable'),
+        );
+        rig.start([
+          _entry('one', expiresAt: clock.now().add(const Duration(seconds: 5))),
+        ], async);
+
+        expect(rig.a.media!.uri.toString(), 'fake://one');
+        expect(rig.engine.phase, EnginePhase.playing);
+      });
+    });
+
+    test('with no refresher the engine plays exactly what it was handed', () {
+      fakeAsync((async) {
+        final rig = _Rig();
+        rig.start([
+          _entry('one', expiresAt: clock.now().add(const Duration(seconds: 5))),
+        ], async);
+
+        expect(rig.a.media!.uri.toString(), 'fake://one');
+        expect(rig.engine.phase, EnginePhase.playing);
+      });
+    });
+
+    test('a refresh happens once per load, not once per tick', () {
+      fakeAsync((async) {
+        final r = recorder();
+        final rig = _Rig(refresh: r.refresh);
+        rig.start([
+          _entry('one', expiresAt: clock.now().add(const Duration(seconds: 30))),
+        ], async);
+
+        async.elapse(const Duration(seconds: 5));
+        async.flushMicrotasks();
+
+        expect(r.asked, ['one']);
       });
     });
   });

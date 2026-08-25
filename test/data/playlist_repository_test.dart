@@ -319,6 +319,93 @@ void main() {
       expect(() => repo.buildQueue('no-such-set'), throwsArgumentError);
     });
   });
+
+  group('refreshing a row whose URL is about to expire', () {
+    setUp(() async {
+      await _addTidalAccount(db);
+      await _appendTidal(db, set, 't');
+    });
+
+    test('the media comes back freshly signed', () async {
+      final entry = (await repo.buildQueue(set)).entries.single;
+      tidal.signature = '?sig=second';
+
+      final fresh = await repo.refreshEntry(entry);
+
+      expect(fresh.media.uri.toString(), endsWith('?sig=second'));
+      expect(entry.media.uri.toString(), isNot(contains('sig')),
+          reason: 'the original entry should not be mutated');
+    });
+
+    test('the new expiry comes with it', () async {
+      final entry = (await repo.buildQueue(set)).entries.single;
+      tidal.expiresAt = DateTime.utc(2026, 8, 26, 3);
+
+      final fresh = await repo.refreshEntry(entry);
+
+      expect(fresh.media.expiresAt, DateTime.utc(2026, 8, 26, 3));
+    });
+
+    test('everything the set decided about the row survives', () async {
+      // A URL dying at the ninety-minute mark says nothing about the
+      // crossfade or the announcement the operator chose for that row.
+      await _override(
+        db,
+        'item-t',
+        const PlaylistItemsCompanion(
+          crossfadeMs: Value(Duration(seconds: 9)),
+          announcementText: Value('Next up, a Tango'),
+        ),
+      );
+
+      final entry = (await repo.buildQueue(set)).entries.single;
+      final fresh = await repo.refreshEntry(entry);
+
+      expect(fresh.itemId, entry.itemId);
+      expect(fresh.spec.crossfade, const Duration(seconds: 9));
+      expect(fresh.announcementText, 'Next up, a Tango');
+      expect(fresh.title, entry.title);
+      expect(fresh.targetDuration, entry.targetDuration);
+    });
+
+    test('the trims and cue points resolve on the original terms', () async {
+      // The refresh must not quietly drop the row's offsets: a track that
+      // came back playing from 0:00 instead of 0:12 would be audible.
+      await (db.update(db.tracks)..where((t) => t.id.equals('t'))).write(
+        const TracksCompanion(
+          gainDb: Value(-4.0),
+          cueInMs: Value(Duration(milliseconds: 500)),
+        ),
+      );
+      await _override(
+        db,
+        'item-t',
+        const PlaylistItemsCompanion(
+          gainOffsetDb: Value(1.5),
+          startOffsetMs: Value(Duration(milliseconds: 250)),
+          endOffsetMs: Value(Duration(seconds: 90)),
+        ),
+      );
+
+      final entry = (await repo.buildQueue(set)).entries.single;
+      final fresh = await repo.refreshEntry(entry);
+
+      expect(fresh.media.gainDb, entry.media.gainDb);
+      expect(fresh.media.cueIn, const Duration(milliseconds: 750));
+      expect(fresh.media.cueOut, const Duration(seconds: 90));
+    });
+
+    test('a row deleted mid-set is an error, not a silently empty entry',
+        () async {
+      // Someone editing the set while it plays. The engine catches this and
+      // keeps the URL it already has rather than stopping the music.
+      final entry = (await repo.buildQueue(set)).entries.single;
+      await (db.delete(db.playlistItems)..where((i) => i.id.equals('item-t')))
+          .go();
+
+      expect(() => repo.refreshEntry(entry), throwsStateError);
+    });
+  });
 }
 
 // ---------------------------------------------------------------------------

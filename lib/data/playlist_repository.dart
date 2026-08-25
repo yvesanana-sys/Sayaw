@@ -1,4 +1,5 @@
 import '../audio/crossfade_engine.dart';
+import '../audio/deck.dart' show PlayableMedia;
 import 'db/database.dart';
 import 'media_resolver.dart';
 
@@ -119,14 +120,7 @@ class PlaylistRepository {
     }
     final item = row.item;
 
-    final media = await resolver.resolve(
-      sourceFor(track, account: account),
-      // Two independent trims: the track's own ReplayGain or manual level, and
-      // a nudge for this one appearance of it in this one set.
-      gainDb: track.gainDb + item.gainOffsetDb,
-      cueIn: track.cueInMs + item.startOffsetMs,
-      cueOut: item.endOffsetMs ?? track.cueOutMs,
-    );
+    final media = await _resolveMedia(row, account: account);
 
     return QueueEntry(
       itemId: item.id,
@@ -139,6 +133,47 @@ class PlaylistRepository {
       targetDuration: item.targetDurationMs,
       title: track.title,
       artist: track.artist ?? '',
+    );
+  }
+
+  /// Re-resolves one entry's media, for a signed URL that is about to expire.
+  ///
+  /// Only the media is replaced. A TIDAL URL dying at the ninety-minute mark
+  /// says nothing about the crossfade the operator set for that row, so
+  /// rebuilding the whole entry would be work with a chance of changing
+  /// something under a set that is already running.
+  ///
+  /// Throws when the row has been deleted out from under the queue; the engine
+  /// treats that as a reason to keep the URL it has rather than to stop.
+  Future<QueueEntry> refreshEntry(QueueEntry entry) async {
+    final row = await db.playlistDao.rowById(entry.itemId);
+    if (row == null || row.track == null) {
+      throw StateError('item ${entry.itemId} is no longer in the set');
+    }
+
+    final accounts = await _accountsById();
+    return entry.withMedia(await _resolveMedia(
+      row,
+      account: accounts[row.track!.accountId],
+    ));
+  }
+
+  /// The one place a row's trims and cue points turn into playable media, so
+  /// a refresh mid-set resolves on exactly the terms the set was built on.
+  Future<PlayableMedia> _resolveMedia(
+    PlaylistRow row, {
+    SourceAccount? account,
+  }) {
+    final track = row.track!;
+    final item = row.item;
+
+    return resolver.resolve(
+      sourceFor(track, account: account),
+      // Two independent trims: the track's own ReplayGain or manual level, and
+      // a nudge for this one appearance of it in this one set.
+      gainDb: track.gainDb + item.gainOffsetDb,
+      cueIn: track.cueInMs + item.startOffsetMs,
+      cueOut: item.endOffsetMs ?? track.cueOutMs,
     );
   }
 

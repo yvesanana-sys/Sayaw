@@ -67,6 +67,38 @@ void main() {
     });
   });
 
+  group('one row on its own', () {
+    test('it comes back with its track and dance type joined', () async {
+      await db.into(db.danceTypes).insert(DanceTypesCompanion.insert(
+            id: 'tango',
+            name: 'Tango',
+            slug: 'tango',
+          ));
+      await _appendTracks(db, set, ['a'], danceTypeId: 'tango');
+      final id = (await db.playlistDao.itemsOf(set)).single.item.id;
+
+      final row = await db.playlistDao.rowById(id);
+
+      expect(row!.track!.title, 'Track a');
+      expect(row.danceType!.name, 'Tango');
+    });
+
+    test('it picks out the right row from a set of them', () async {
+      await _appendTracks(db, set, ['a', 'b', 'c']);
+      final rows = await db.playlistDao.itemsOf(set);
+
+      final row = await db.playlistDao.rowById(rows[1].item.id);
+
+      expect(row!.track!.title, 'Track b');
+    });
+
+    test('a row that has been deleted is null, not a throw', () async {
+      // The set can be edited while it is playing, so this is a state the
+      // engine's refresh has to survive rather than a programming error.
+      expect(await db.playlistDao.rowById('no-such-item'), isNull);
+    });
+  });
+
   group('reordering', () {
     setUp(() => _appendTracks(db, set, ['a', 'b', 'c', 'd']));
 
