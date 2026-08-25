@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:io';
 
 import '../../audio/crossfade_engine.dart';
+import '../../data/cache/media_downloader.dart';
 import '../../data/db/database.dart';
+import '../../data/event_mode.dart';
 import '../../data/library/library_scanner.dart';
 import '../../data/media_resolver.dart' show UnavailableOffline;
 import '../../data/playlist_repository.dart';
@@ -19,11 +21,12 @@ import 'playback_ui_state.dart';
 /// It lives in `ui/state` rather than `audio/` on purpose — the audio layer
 /// stays free of any dependency on the UI, which is what keeps its whole test
 /// suite runnable without a widget tree.
-class PlaybackSession implements LibraryAccess {
+class PlaybackSession implements LibraryAccess, EventModeAccess {
   PlaybackSession({
     required this.engine,
     required this.repository,
     required this.controller,
+    this.downloader,
     this.uiTick = const Duration(milliseconds: 100),
   }) {
     _events = engine.events.listen(_onEngineEvent);
@@ -34,6 +37,10 @@ class PlaybackSession implements LibraryAccess {
   final PlaylistRepository repository;
   final PlaybackController controller;
 
+  /// Absent in a build with nowhere to write to, which makes preparing for
+  /// offline unavailable rather than silently doing nothing.
+  final MediaDownloader? downloader;
+
   /// The engine writes gains at 50 Hz. A progress arc does not need that, and
   /// on a tablet running a four-hour event the difference is battery.
   final Duration uiTick;
@@ -43,6 +50,9 @@ class PlaybackSession implements LibraryAccess {
 
   String? _playlistId;
   String? get playlistId => _playlistId;
+
+  @override
+  String? get openPlaylistId => _playlistId;
 
   /// Which rows the engine actually accepted, in engine order. The queue the
   /// operator sees can contain rows the engine skipped, so the two index
@@ -204,6 +214,34 @@ class PlaybackSession implements LibraryAccess {
   /// Only meaningful where `dart:io` paths are: on Android a folder picker
   /// hands back a SAF tree URI rather than a path, which is a different import
   /// route and is not built yet.
+  @override
+  /// Walks the open set, downloads what policy permits, pre-renders every
+  /// announcement and reports what will and will not play without a
+  /// connection.
+  @override
+  Future<PreflightReport> prepareForOffline({
+    void Function(PreflightProgress)? onProgress,
+  }) async {
+    final playlistId = _playlistId;
+    final downloader = this.downloader;
+    if (playlistId == null || downloader == null) {
+      throw StateError('No set is open to prepare');
+    }
+
+    final report = await EventPreflight(
+      db: repository.db,
+      repository: repository,
+      downloader: downloader,
+      announcements: engine.announcements,
+    ).prepare(playlistId, onProgress: onProgress);
+
+    // The set on screen was resolved before any of this ran, so a row that has
+    // just been downloaded is still drawn as unplayable until it is reloaded.
+    await openPlaylist(playlistId);
+
+    return report;
+  }
+
   @override
   Future<ScanReport> scanFolders(
     Iterable<Directory> folders, {

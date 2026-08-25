@@ -405,6 +405,11 @@ final libraryAccessProvider = Provider<LibraryAccess?>(
   (ref) => ref.watch(playbackSessionProvider),
 );
 
+/// Preparing the open set to run without a connection.
+final eventModeProvider = Provider<EventModeAccess?>(
+  (ref) => ref.watch(playbackSessionProvider),
+);
+
 /// Narrow selector so the wakelock listener does not rebuild on every position
 /// tick — the engine updates position at 50 Hz.
 final anyDeckPlayingProvider = Provider<bool>(

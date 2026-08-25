@@ -110,16 +110,18 @@ class PlaybackRuntime {
       ),
     );
 
+    final downloader = MediaDownloader(
+      db: db,
+      resolver: resolver,
+      dio: dio,
+      directory: Directory(mediaCacheDirectory),
+    );
+
     return PlaybackRuntime._(
       db: db,
       engine: engine,
       plex: plex,
-      downloader: MediaDownloader(
-        db: db,
-        resolver: resolver,
-        dio: dio,
-        directory: Directory(mediaCacheDirectory),
-      ),
+      downloader: downloader,
       sources: SourcesService(
         db: db,
         plex: plex,
@@ -130,6 +132,7 @@ class PlaybackRuntime {
       session: PlaybackSession(
         engine: engine,
         controller: controller,
+        downloader: downloader,
         repository: PlaylistRepository(db: db, resolver: resolver),
       ),
     );

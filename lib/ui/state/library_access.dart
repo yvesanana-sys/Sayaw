@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import '../../data/db/database.dart';
+import '../../data/event_mode.dart';
 import '../../data/library/library_scanner.dart';
 
 /// What the library pane needs, and nothing else.
@@ -22,5 +23,19 @@ abstract class LibraryAccess {
   Future<ScanReport> scanFolders(
     Iterable<Directory> folders, {
     void Function(int filesSeen, String path)? onProgress,
+  });
+}
+
+/// Preparing the open set to run without a connection.
+///
+/// Its own interface rather than a method on the session for the same reason
+/// the library is: the screen that shows the report has no business reaching
+/// for the transport.
+abstract class EventModeAccess {
+  /// Null when no set is open.
+  String? get openPlaylistId;
+
+  Future<PreflightReport> prepareForOffline({
+    void Function(PreflightProgress)? onProgress,
   });
 }

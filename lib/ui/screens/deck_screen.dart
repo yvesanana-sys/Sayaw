@@ -10,6 +10,7 @@ import '../widgets/deck_panel.dart';
 import '../widgets/library_pane.dart';
 import '../widgets/queue_list.dart';
 import '../widgets/transport_bar.dart';
+import 'event_mode_dialog.dart';
 import 'sources_screen.dart';
 import '../window/window_controller.dart';
 
@@ -68,7 +69,11 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
               : AppBar(
                   backgroundColor: SayawColors.surfaceContainer,
                   title: Text(breakpoint.isCompact ? 'Sayaw' : 'Sayaw — Set'),
-                  actions: const [_SourcesButton(), _PerformanceModeButton()],
+                  actions: const [
+                    EventModeButton(),
+                    _SourcesButton(),
+                    _PerformanceModeButton(),
+                  ],
                 ),
           body: SafeArea(
             child: switch (breakpoint) {
