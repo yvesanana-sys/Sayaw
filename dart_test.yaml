@@ -1,0 +1,7 @@
+# Goldens pin layout, not glyphs, but they are still the slowest and most
+# environment-sensitive tests here. Declaring the tag lets CI run
+# `flutter test -x golden` on machines where a rendering difference would be
+# noise rather than a regression.
+tags:
+  golden:
+    description: Layout goldens for the deck screen breakpoints.

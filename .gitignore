@@ -63,3 +63,6 @@ macos/.symlinks/
 .env
 .env.*
 !.env.example
+
+# Golden diff output, written on failure. Look at it, never commit it.
+test/**/failures/
