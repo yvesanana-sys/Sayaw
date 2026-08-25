@@ -1,19 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'data/dance_type_seed.dart';
+import 'data/db/connection.dart';
+import 'data/db/database.dart';
 import 'ui/screens/deck_screen.dart';
+import 'ui/state/playback_runtime.dart';
 import 'ui/state/playback_ui_state.dart';
-import 'ui/state/sample_queue.dart';
 import 'ui/theme/sayaw_theme.dart';
 import 'ui/wakelock/playback_wakelock.dart';
 import 'ui/window/window_controller.dart';
 
+/// The database, opened once in [main] and handed to the widget tree.
+final databaseProvider = Provider<SayawDatabase>(
+  (ref) => throw UnimplementedError('overridden in main()'),
+);
+
+/// Where rendered announcement audio is written.
+final announcementCacheProvider = Provider<String>(
+  (ref) => throw UnimplementedError('overridden in main()'),
+);
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // libmpv, behind the desktop decks. Has to happen before any Player exists.
+  if (isDesktopWindowPlatform) MediaKit.ensureInitialized();
+
   final prefs = await SharedPreferences.getInstance();
+
+  final db = openSayawDatabase();
+  // Only fills in what is missing, so a renamed dance stays renamed.
+  await seedDanceTypes(db);
+
+  final support = await getApplicationSupportDirectory();
+  final announcementCache = p.join(support.path, 'announcements');
 
   // Only desktop has a window to size, position or strip the title bar from.
   // On mobile the no-op backend keeps the same call sites valid rather than
@@ -28,7 +54,11 @@ Future<void> main() async {
 
   runApp(
     ProviderScope(
-      overrides: [windowControllerProvider.overrideWithValue(windows)],
+      overrides: [
+        windowControllerProvider.overrideWithValue(windows),
+        databaseProvider.overrideWithValue(db),
+        announcementCacheProvider.overrideWithValue(announcementCache),
+      ],
       child: SayawApp(windows: windows),
     ),
   );
@@ -60,7 +90,11 @@ class SayawApp extends ConsumerWidget {
   }
 }
 
-/// Seeds the placeholder queue once. Replaced in Phase 4 by the real library.
+/// Builds the audio runtime and opens the set the app was last using.
+///
+/// Deliberately after the first frame: the deck screen draws its empty state
+/// immediately rather than waiting on libmpv, a database read and a resolve of
+/// every row in a four-hour set.
 class _Bootstrap extends ConsumerStatefulWidget {
   const _Bootstrap();
 
@@ -69,12 +103,26 @@ class _Bootstrap extends ConsumerStatefulWidget {
 }
 
 class _BootstrapState extends ConsumerState<_Bootstrap> {
+  PlaybackRuntime? _runtime;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(playbackProvider.notifier).setQueue(sampleQueue());
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final runtime = PlaybackRuntime.start(
+        db: ref.read(databaseProvider),
+        controller: ref.read(playbackProvider.notifier),
+        announcementCacheDirectory: ref.read(announcementCacheProvider),
+      );
+      _runtime = runtime;
+      await runtime.openMostRecentPlaylist();
     });
+  }
+
+  @override
+  void dispose() {
+    _runtime?.dispose();
+    super.dispose();
   }
 
   @override

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../audio/crossfade_engine.dart' show EnginePhase;
 import '../../data/fractional_order.dart';
+import 'playback_session.dart';
 
 /// Which of the two music decks.
 enum DeckSlot {
@@ -75,13 +76,19 @@ enum UnavailableReason {
   fileMissing,
 
   /// Streaming-only source with no connectivity.
-  offline;
+  offline,
+
+  /// A silence gap, a standalone announcement or a marker. The operator put it
+  /// in the set deliberately, so it is shown greyed rather than hidden.
+  unsupportedRowType;
 
   String get message => switch (this) {
         UnavailableReason.drmUnsupportedOnPlatform =>
           'Not playable on Windows — this track is DRM-protected.',
         UnavailableReason.fileMissing => 'File not found.',
         UnavailableReason.offline => 'Needs an internet connection.',
+        UnavailableReason.unsupportedRowType =>
+          'This kind of row cannot be played yet.',
       };
 }
 
@@ -172,20 +179,55 @@ class PlaybackUiState {
   }
 }
 
-/// UI-facing playback state.
+/// UI-facing playback state, and the one surface the widgets give commands to.
 ///
-/// Deliberately decoupled from [CrossfadeEngine]: the engine needs real decks,
-/// and real decks need libmpv or ExoPlayer. Keeping the view model separate is
-/// what lets every widget test in this phase run hermetically, and it is the
-/// same seam the engine's event stream will feed once the shell is wired to
-/// audio. Nothing here does audio work — it holds what the screen draws.
+/// Nothing here does audio work. With no [PlaybackSession] attached it simply
+/// moves its own state, which is what lets every widget test run without
+/// libmpv or ExoPlayer behind it. Attach a session and the same commands go to
+/// the engine instead, and the state comes back from the engine's events —
+/// authority moves, the call sites do not.
 class PlaybackController extends Notifier<PlaybackUiState> {
   @override
   PlaybackUiState build() => const PlaybackUiState();
 
+  PlaybackSession? _session;
+
+  /// Called by [PlaybackSession] as it is constructed.
+  void attach(PlaybackSession session) => _session = session;
+
+  void detach(PlaybackSession session) {
+    if (identical(_session, session)) _session = null;
+  }
+
+  /// The queue as last drawn. The session needs it to translate between the
+  /// engine's index space, which counts only playable rows, and the operator's,
+  /// which counts every row they put in the set.
+  List<QueueItemUi> get queueSnapshot => state.queue;
+
+  /// The engine's view of the world, pushed in after every event and on the UI
+  /// tick. One direction only: this never reads back what was last drawn.
+  void applyEngineState({
+    required DeckSlot activeSlot,
+    required EnginePhase phase,
+    required int currentIndex,
+    required DeckUiState active,
+    required DeckUiState standby,
+  }) {
+    state = state.copyWith(
+      deckA: activeSlot == DeckSlot.a ? active : standby,
+      deckB: activeSlot == DeckSlot.a ? standby : active,
+      phase: phase,
+      currentIndex: currentIndex,
+    );
+  }
+
   // -- transport -------------------------------------------------------------
 
   void togglePlay(DeckSlot slot) {
+    if (_session case final session?) {
+      session.togglePlay(slot);
+      return;
+    }
     final deck = state.deck(slot);
     if (!deck.isLoaded) return;
     _setDeck(slot, deck.copyWith(isPlaying: !deck.isPlaying));
@@ -193,6 +235,10 @@ class PlaybackController extends Notifier<PlaybackUiState> {
   }
 
   void pauseAll() {
+    if (_session case final session?) {
+      session.pause();
+      return;
+    }
     state = state.copyWith(
       deckA: state.deckA.copyWith(isPlaying: false),
       deckB: state.deckB.copyWith(isPlaying: false),
@@ -202,6 +248,11 @@ class PlaybackController extends Notifier<PlaybackUiState> {
 
   /// Return the deck to its cue point without changing what is loaded.
   void cue(DeckSlot slot) {
+    // No engine equivalent yet: the standby deck is already sitting at its cue
+    // point, and rewinding the audible one mid-dance is not something to do by
+    // accident. Left inert rather than given a plausible-looking wrong meaning.
+    if (_session != null) return;
+
     final deck = state.deck(slot);
     if (!deck.isLoaded) return;
     _setDeck(slot, deck.copyWith(position: Duration.zero, isPlaying: false));
@@ -224,6 +275,10 @@ class PlaybackController extends Notifier<PlaybackUiState> {
   /// Operator-triggered transition. Slams the crossfader to the standby deck
   /// and starts it; the engine owns the actual ramp, this is the intent.
   void crossfadeNow() {
+    if (_session case final session?) {
+      session.skipNext();
+      return;
+    }
     final toB = state.crossfader < 0.5;
     state = state.copyWith(
       crossfader: toB ? 1.0 : 0.0,
@@ -236,7 +291,12 @@ class PlaybackController extends Notifier<PlaybackUiState> {
 
   void setCrossfader(double value) {
     state = state.copyWith(crossfader: value.clamp(0.0, 1.0));
-    _applyCrossfaderGains();
+
+    // With a session attached the deck levels are the engine's, and the slider
+    // is the operator's stated intent rather than a live control — nothing
+    // downstream reads it yet. Overwriting the meters here would draw a
+    // position the decks are not at.
+    if (_session == null) _applyCrossfaderGains();
   }
 
   void setPerformanceMode(bool enabled) =>
@@ -258,6 +318,11 @@ class PlaybackController extends Notifier<PlaybackUiState> {
     final queue = state.queue;
     if (oldIndex < 0 || oldIndex >= queue.length) return;
     if (newIndex < 0 || newIndex >= queue.length) return;
+
+    if (_session case final session?) {
+      session.reorder(oldIndex, newIndex);
+      return;
+    }
 
     final positions = [for (final item in queue) item.position];
     var moved = reorderPosition(positions, oldIndex, newIndex);

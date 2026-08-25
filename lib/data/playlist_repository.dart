@@ -20,15 +20,21 @@ class UnavailableItem {
   const UnavailableItem({
     required this.itemId,
     required this.title,
+    required this.kind,
     required this.reason,
   });
 
   final String itemId;
   final String title;
+  final UnavailableKind kind;
 
   /// Phrased for the operator, not for a log file.
   final String reason;
 }
+
+/// Why a row will not play, in the terms the operator can act on: find the
+/// file, get the network back, or accept that the app cannot do this yet.
+enum UnavailableKind { fileMissing, unreachable, unsupportedRow }
 
 /// Turns stored rows into [QueueEntry]s.
 ///
@@ -69,6 +75,7 @@ class PlaylistRepository {
         unavailable.add(UnavailableItem(
           itemId: row.item.id,
           title: row.danceType?.name ?? row.item.itemType.name,
+          kind: UnavailableKind.unsupportedRow,
           reason: '${row.item.itemType.name} rows are not playable yet',
         ));
         continue;
@@ -85,6 +92,11 @@ class PlaylistRepository {
         unavailable.add(UnavailableItem(
           itemId: row.item.id,
           title: row.track!.title,
+          // A local track that will not resolve is a file the operator can go
+          // and find; a remote one is a server or a connection.
+          kind: row.track!.sourceType == SourceType.local
+              ? UnavailableKind.fileMissing
+              : UnavailableKind.unreachable,
           reason: e.reason,
         ));
       }

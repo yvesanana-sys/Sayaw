@@ -157,6 +157,26 @@ class CrossfadeEngine {
   QueueEntry? get currentEntry => _activeEntry;
   int get currentIndex => _index;
 
+  /// Which physical deck is audible. The two swap roles every transition, so
+  /// a UI drawing two decks cannot assume the set started on A and stayed
+  /// there.
+  bool get activeIsA => _activeIsA;
+
+  /// Where the audible deck has got to, for a progress readout. The engine
+  /// reads this every tick anyway; exposing it saves the UI from holding a
+  /// reference to the decks themselves.
+  Duration get activePosition => _active.position;
+  Duration? get activeDuration => _active.duration;
+
+  /// What is cued up behind the audible deck, already loaded and prerolled.
+  QueueEntry? get standbyEntry => _standbyEntry;
+
+  /// The two crossfade gains as of the last tick, before the duck bus and the
+  /// per-track trim are multiplied in. Meters drawn from these show what the
+  /// engine is actually doing rather than what the operator asked for.
+  double get activeFade => _activeFade;
+  double get standbyFade => _standbyFade;
+
   // -------------------------------------------------------------------------
   // Queue control
   // -------------------------------------------------------------------------

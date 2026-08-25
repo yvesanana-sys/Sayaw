@@ -31,20 +31,29 @@ a set that keeps running when the venue wifi dies.
 
 ## Status
 
-Early. Architecture and core audio engine are designed; see
-[`ARCHITECTURE.md`](ARCHITECTURE.md).
+Early, but it runs. The audio engine, the database, the deck screen and the
+wiring between them are in place, and a set of local files plays end to end
+with crossfades and announcements. Not yet written: Plex and TIDAL auth and
+their clients, the library scanner, downloading and caching, and Event Mode's
+pre-flight check. See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the design.
 
 ## Layout
 
 ```
-lib/audio/fade_curves.dart          curve math
-lib/audio/gain_bus.dart             composable multiplicative gain stages
-lib/audio/deck.dart                 Deck interface + just_audio / media_kit backends
-lib/audio/crossfade_engine.dart     the dual-deck scheduler
-lib/audio/announcement_engine.dart  TTS render-to-cache and duck envelopes
-lib/audio/sayaw_audio_handler.dart  background playback and lock-screen controls
-lib/data/media_resolver.dart        source-polymorphic resolution and cache policy
-schema.sql                          SQLite schema
+lib/audio/fade_curves.dart           curve math
+lib/audio/gain_bus.dart              composable multiplicative gain stages
+lib/audio/deck.dart                  Deck interface + just_audio / media_kit backends
+lib/audio/crossfade_engine.dart      the dual-deck scheduler
+lib/audio/announcement_engine.dart   TTS render-to-cache and duck envelopes
+lib/audio/sayaw_audio_handler.dart   background playback and lock-screen controls
+lib/data/media_resolver.dart         source-polymorphic resolution and cache policy
+lib/data/db/                         Drift tables and the playlist, track and
+                                     announcement accessors
+lib/data/playlist_repository.dart    stored rows -> engine-ready queue entries
+lib/ui/screens/deck_screen.dart      the operator's screen
+lib/ui/state/playback_session.dart   the seam between the engine and the screen
+schema.sql                           SQLite schema, and the source of truth the
+                                     Drift tables are tested against
 ```
 
 ## A note on TIDAL
