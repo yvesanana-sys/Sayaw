@@ -9,8 +9,11 @@ import '../../data/db/database.dart';
 import '../../data/media_resolver.dart';
 import '../../data/playlist_repository.dart';
 import '../../data/sources/plex/plex_api_client.dart';
+import '../../data/sources/sources_access.dart';
 import '../../data/sources/plex/plex_identity.dart';
+import '../../data/sources/plex/plex_auth.dart';
 import '../../data/sources/secret_store.dart';
+import '../../data/sources/sources_service.dart';
 import '../../data/sources/unconfigured_sources.dart';
 import 'playback_session.dart';
 import 'playback_ui_state.dart';
@@ -28,6 +31,7 @@ class PlaybackRuntime {
     required this.engine,
     required this.session,
     required this.plex,
+    required this.sources,
     required this.decks,
     required this.bus,
   });
@@ -39,6 +43,9 @@ class PlaybackRuntime {
   /// Held so the settings screen can run the sign-in flow against the same
   /// client the resolver plays through.
   final PlexApiClient plex;
+
+  /// Connecting and disconnecting services, for the sources screen.
+  final SourcesAccess sources;
 
   /// Held only so they can be disposed: everything that reads them goes
   /// through the engine.
@@ -60,8 +67,9 @@ class PlaybackRuntime {
     final voiceDeck = DeckFactory.create('voice');
     final bus = MusicGainBus();
 
+    final dio = http ?? Dio();
     final plex = PlexApiClient(
-      dio: http ?? Dio(),
+      dio: dio,
       identity: plexIdentity,
       secrets: secrets,
       accounts: db.sourceAccountDao,
@@ -83,6 +91,11 @@ class PlaybackRuntime {
       db: db,
       engine: engine,
       plex: plex,
+      sources: SourcesService(
+        db: db,
+        plex: plex,
+        plexAuth: PlexAuth(dio: dio, identity: plexIdentity),
+      ),
       decks: [deckA, deckB, voiceDeck],
       bus: bus,
       session: PlaybackSession(

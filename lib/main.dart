@@ -14,6 +14,7 @@ import 'data/db/database.dart';
 import 'data/sources/plex/plex_identity.dart';
 import 'ui/screens/deck_screen.dart';
 import 'ui/state/playback_runtime.dart';
+import 'ui/state/sources_provider.dart';
 import 'ui/state/playback_ui_state.dart';
 import 'ui/theme/sayaw_theme.dart';
 import 'ui/wakelock/playback_wakelock.dart';
@@ -149,6 +150,7 @@ class _BootstrapState extends ConsumerState<_Bootstrap> {
         plexIdentity: ref.read(plexIdentityProvider),
       );
       _runtime = runtime;
+      ref.read(sourcesHolderProvider.notifier).set(runtime.sources);
       await runtime.openMostRecentPlaylist();
     });
   }

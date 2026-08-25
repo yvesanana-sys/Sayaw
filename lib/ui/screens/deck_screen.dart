@@ -10,6 +10,7 @@ import '../widgets/deck_panel.dart';
 import '../widgets/library_pane.dart';
 import '../widgets/queue_list.dart';
 import '../widgets/transport_bar.dart';
+import 'sources_screen.dart';
 import '../window/window_controller.dart';
 
 /// Which pane a single-pane or two-pane layout is showing.
@@ -67,7 +68,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
               : AppBar(
                   backgroundColor: SayawColors.surfaceContainer,
                   title: Text(breakpoint.isCompact ? 'Sayaw' : 'Sayaw — Set'),
-                  actions: const [_PerformanceModeButton()],
+                  actions: const [_SourcesButton(), _PerformanceModeButton()],
                 ),
           body: SafeArea(
             child: switch (breakpoint) {
@@ -198,6 +199,34 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
         const Divider(height: 1),
         TransportBar(compact: compactTransport),
       ],
+    );
+  }
+}
+
+/// Opens the sources screen.
+///
+/// In the app bar rather than behind a settings menu: the moment an operator
+/// needs it is when a server has stopped answering an hour before doors, and
+/// that is not the moment to go looking.
+class _SourcesButton extends StatelessWidget {
+  const _SourcesButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Music sources',
+      excludeSemantics: true,
+      child: SizedBox(
+        width: kMinTouchTarget,
+        height: kMinTouchTarget,
+        child: IconButton(
+          icon: const Icon(Icons.dns_outlined),
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const SourcesScreen()),
+          ),
+        ),
+      ),
     );
   }
 }
