@@ -8,12 +8,14 @@ import 'converters.dart';
 import 'enums.dart';
 import 'playlist_dao.dart';
 import 'schema_extras.dart';
+import 'source_account_dao.dart';
 import 'tables.dart';
 import 'track_dao.dart';
 
 export 'enums.dart';
 export 'ids.dart' show newId;
 export 'playlist_dao.dart' show PlaylistRow;
+export 'source_account_dao.dart' show SourceAccountDao;
 
 part 'database.g.dart';
 
@@ -34,7 +36,7 @@ part 'database.g.dart';
     AnnouncementCache,
     PlayHistory,
   ],
-  daos: [TrackDao, PlaylistDao, AnnouncementDao],
+  daos: [TrackDao, PlaylistDao, AnnouncementDao, SourceAccountDao],
 )
 class SayawDatabase extends _$SayawDatabase {
   SayawDatabase(super.e);

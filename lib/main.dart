@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'data/dance_type_seed.dart';
 import 'data/db/connection.dart';
 import 'data/db/database.dart';
+import 'data/sources/plex/plex_identity.dart';
 import 'ui/screens/deck_screen.dart';
 import 'ui/state/playback_runtime.dart';
 import 'ui/state/playback_ui_state.dart';
@@ -26,6 +29,33 @@ final announcementCacheProvider = Provider<String>(
   (ref) => throw UnimplementedError('overridden in main()'),
 );
 
+/// How this install identifies itself to plex.tv.
+final plexIdentityProvider = Provider<PlexIdentity>(
+  (ref) => throw UnimplementedError('overridden in main()'),
+);
+
+/// Generated once and kept: plex.tv ties the approved PIN, and every token
+/// minted from it, to this identifier. Losing it means signing in again.
+const _plexClientIdKey = 'sayaw.plex.clientIdentifier';
+
+Future<PlexIdentity> _plexIdentity(SharedPreferences prefs) async {
+  var id = prefs.getString(_plexClientIdKey);
+  if (id == null) {
+    id = newId();
+    await prefs.setString(_plexClientIdKey, id);
+  }
+  return PlexIdentity(
+    clientIdentifier: id,
+    version: _appVersion,
+    // Shown in Authorized Devices on plex.tv, so it wants to read as the
+    // machine in the DJ booth rather than as a generic app name.
+    deviceName: Platform.localHostname,
+    platform: Platform.operatingSystem,
+  );
+}
+
+const _appVersion = '1.0.0';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -37,6 +67,8 @@ Future<void> main() async {
   final db = openSayawDatabase();
   // Only fills in what is missing, so a renamed dance stays renamed.
   await seedDanceTypes(db);
+
+  final plexIdentity = await _plexIdentity(prefs);
 
   final support = await getApplicationSupportDirectory();
   final announcementCache = p.join(support.path, 'announcements');
@@ -58,6 +90,7 @@ Future<void> main() async {
         windowControllerProvider.overrideWithValue(windows),
         databaseProvider.overrideWithValue(db),
         announcementCacheProvider.overrideWithValue(announcementCache),
+        plexIdentityProvider.overrideWithValue(plexIdentity),
       ],
       child: SayawApp(windows: windows),
     ),
@@ -113,6 +146,7 @@ class _BootstrapState extends ConsumerState<_Bootstrap> {
         db: ref.read(databaseProvider),
         controller: ref.read(playbackProvider.notifier),
         announcementCacheDirectory: ref.read(announcementCacheProvider),
+        plexIdentity: ref.read(plexIdentityProvider),
       );
       _runtime = runtime;
       await runtime.openMostRecentPlaylist();

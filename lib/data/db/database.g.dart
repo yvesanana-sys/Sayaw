@@ -7253,6 +7253,9 @@ abstract class _$SayawDatabase extends GeneratedDatabase {
   late final AnnouncementDao announcementDao = AnnouncementDao(
     this as SayawDatabase,
   );
+  late final SourceAccountDao sourceAccountDao = SourceAccountDao(
+    this as SayawDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();

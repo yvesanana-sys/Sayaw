@@ -2,10 +2,15 @@ import '../../audio/announcement_engine.dart';
 import '../../audio/crossfade_engine.dart';
 import '../../audio/deck.dart';
 import '../../audio/gain_bus.dart';
+import 'package:dio/dio.dart';
+
 import '../../data/db/announcement_dao.dart';
 import '../../data/db/database.dart';
 import '../../data/media_resolver.dart';
 import '../../data/playlist_repository.dart';
+import '../../data/sources/plex/plex_api_client.dart';
+import '../../data/sources/plex/plex_identity.dart';
+import '../../data/sources/secret_store.dart';
 import '../../data/sources/unconfigured_sources.dart';
 import 'playback_session.dart';
 import 'playback_ui_state.dart';
@@ -22,6 +27,7 @@ class PlaybackRuntime {
     required this.db,
     required this.engine,
     required this.session,
+    required this.plex,
     required this.decks,
     required this.bus,
   });
@@ -29,6 +35,10 @@ class PlaybackRuntime {
   final SayawDatabase db;
   final CrossfadeEngine engine;
   final PlaybackSession session;
+
+  /// Held so the settings screen can run the sign-in flow against the same
+  /// client the resolver plays through.
+  final PlexApiClient plex;
 
   /// Held only so they can be disposed: everything that reads them goes
   /// through the engine.
@@ -40,12 +50,22 @@ class PlaybackRuntime {
     required SayawDatabase db,
     required PlaybackController controller,
     required String announcementCacheDirectory,
+    required PlexIdentity plexIdentity,
     TtsVoiceSettings voice = const TtsVoiceSettings(),
+    SecretStore secrets = const SecureSecretStore(),
+    Dio? http,
   }) {
     final deckA = DeckFactory.create('A');
     final deckB = DeckFactory.create('B');
     final voiceDeck = DeckFactory.create('voice');
     final bus = MusicGainBus();
+
+    final plex = PlexApiClient(
+      dio: http ?? Dio(),
+      identity: plexIdentity,
+      secrets: secrets,
+      accounts: db.sourceAccountDao,
+    );
 
     final engine = CrossfadeEngine(
       deckA: deckA,
@@ -62,6 +82,7 @@ class PlaybackRuntime {
     return PlaybackRuntime._(
       db: db,
       engine: engine,
+      plex: plex,
       decks: [deckA, deckB, voiceDeck],
       bus: bus,
       session: PlaybackSession(
@@ -70,11 +91,13 @@ class PlaybackRuntime {
         repository: PlaylistRepository(
           db: db,
           resolver: MediaResolver(
-            plex: const UnconfiguredPlexClient(),
+            plex: plex,
             tidal: const UnconfiguredTidalClient(),
             cache: const NoMediaCache(),
-            // Nothing consults this until a Plex or TIDAL account exists to
-            // consult it about; connectivity detection arrives with them.
+            // Connectivity is not watched yet, so this always claims a
+            // connection. The cost of being wrong is bounded: the connection
+            // race gives every address a few hundred milliseconds and then
+            // reports the server as unreachable in words.
             networkMode: () => NetworkMode.online,
           ),
         ),
