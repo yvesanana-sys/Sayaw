@@ -6194,7 +6194,7 @@ class CacheEntriesCompanion extends UpdateCompanion<CacheEntry> {
 }
 
 class $AnnouncementCacheTable extends AnnouncementCache
-    with TableInfo<$AnnouncementCacheTable, AnnouncementClip> {
+    with TableInfo<$AnnouncementCacheTable, AnnouncementCacheRow> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
@@ -6303,7 +6303,7 @@ class $AnnouncementCacheTable extends AnnouncementCache
   static const String $name = 'announcement_cache';
   @override
   VerificationContext validateIntegrity(
-    Insertable<AnnouncementClip> instance, {
+    Insertable<AnnouncementCacheRow> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -6360,9 +6360,9 @@ class $AnnouncementCacheTable extends AnnouncementCache
   @override
   Set<GeneratedColumn> get $primaryKey => {hash};
   @override
-  AnnouncementClip map(Map<String, dynamic> data, {String? tablePrefix}) {
+  AnnouncementCacheRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return AnnouncementClip(
+    return AnnouncementCacheRow(
       hash: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}hash'],
@@ -6423,8 +6423,8 @@ class $AnnouncementCacheTable extends AnnouncementCache
       NullAwareTypeConverter.wrap($converterlastUsedAt);
 }
 
-class AnnouncementClip extends DataClass
-    implements Insertable<AnnouncementClip> {
+class AnnouncementCacheRow extends DataClass
+    implements Insertable<AnnouncementCacheRow> {
   final String hash;
   final String body;
   final String? voiceId;
@@ -6434,7 +6434,7 @@ class AnnouncementClip extends DataClass
   final Duration durationMs;
   final DateTime createdAt;
   final DateTime? lastUsedAt;
-  const AnnouncementClip({
+  const AnnouncementCacheRow({
     required this.hash,
     required this.body,
     this.voiceId,
@@ -6492,12 +6492,12 @@ class AnnouncementClip extends DataClass
     );
   }
 
-  factory AnnouncementClip.fromJson(
+  factory AnnouncementCacheRow.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return AnnouncementClip(
+    return AnnouncementCacheRow(
       hash: serializer.fromJson<String>(json['hash']),
       body: serializer.fromJson<String>(json['body']),
       voiceId: serializer.fromJson<String?>(json['voiceId']),
@@ -6525,7 +6525,7 @@ class AnnouncementClip extends DataClass
     };
   }
 
-  AnnouncementClip copyWith({
+  AnnouncementCacheRow copyWith({
     String? hash,
     String? body,
     Value<String?> voiceId = const Value.absent(),
@@ -6535,7 +6535,7 @@ class AnnouncementClip extends DataClass
     Duration? durationMs,
     DateTime? createdAt,
     Value<DateTime?> lastUsedAt = const Value.absent(),
-  }) => AnnouncementClip(
+  }) => AnnouncementCacheRow(
     hash: hash ?? this.hash,
     body: body ?? this.body,
     voiceId: voiceId.present ? voiceId.value : this.voiceId,
@@ -6546,8 +6546,8 @@ class AnnouncementClip extends DataClass
     createdAt: createdAt ?? this.createdAt,
     lastUsedAt: lastUsedAt.present ? lastUsedAt.value : this.lastUsedAt,
   );
-  AnnouncementClip copyWithCompanion(AnnouncementCacheCompanion data) {
-    return AnnouncementClip(
+  AnnouncementCacheRow copyWithCompanion(AnnouncementCacheCompanion data) {
+    return AnnouncementCacheRow(
       hash: data.hash.present ? data.hash.value : this.hash,
       body: data.body.present ? data.body.value : this.body,
       voiceId: data.voiceId.present ? data.voiceId.value : this.voiceId,
@@ -6566,7 +6566,7 @@ class AnnouncementClip extends DataClass
 
   @override
   String toString() {
-    return (StringBuffer('AnnouncementClip(')
+    return (StringBuffer('AnnouncementCacheRow(')
           ..write('hash: $hash, ')
           ..write('body: $body, ')
           ..write('voiceId: $voiceId, ')
@@ -6595,7 +6595,7 @@ class AnnouncementClip extends DataClass
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is AnnouncementClip &&
+      (other is AnnouncementCacheRow &&
           other.hash == this.hash &&
           other.body == this.body &&
           other.voiceId == this.voiceId &&
@@ -6607,7 +6607,7 @@ class AnnouncementClip extends DataClass
           other.lastUsedAt == this.lastUsedAt);
 }
 
-class AnnouncementCacheCompanion extends UpdateCompanion<AnnouncementClip> {
+class AnnouncementCacheCompanion extends UpdateCompanion<AnnouncementCacheRow> {
   final Value<String> hash;
   final Value<String> body;
   final Value<String?> voiceId;
@@ -6648,7 +6648,7 @@ class AnnouncementCacheCompanion extends UpdateCompanion<AnnouncementClip> {
        filePath = Value(filePath),
        durationMs = Value(durationMs),
        createdAt = Value(createdAt);
-  static Insertable<AnnouncementClip> custom({
+  static Insertable<AnnouncementCacheRow> custom({
     Expression<String>? hash,
     Expression<String>? body,
     Expression<String>? voiceId,
@@ -7250,6 +7250,9 @@ abstract class _$SayawDatabase extends GeneratedDatabase {
   late final $PlayHistoryTable playHistory = $PlayHistoryTable(this);
   late final TrackDao trackDao = TrackDao(this as SayawDatabase);
   late final PlaylistDao playlistDao = PlaylistDao(this as SayawDatabase);
+  late final AnnouncementDao announcementDao = AnnouncementDao(
+    this as SayawDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -11779,21 +11782,21 @@ class $$AnnouncementCacheTableTableManager
         RootTableManager<
           _$SayawDatabase,
           $AnnouncementCacheTable,
-          AnnouncementClip,
+          AnnouncementCacheRow,
           $$AnnouncementCacheTableFilterComposer,
           $$AnnouncementCacheTableOrderingComposer,
           $$AnnouncementCacheTableAnnotationComposer,
           $$AnnouncementCacheTableCreateCompanionBuilder,
           $$AnnouncementCacheTableUpdateCompanionBuilder,
           (
-            AnnouncementClip,
+            AnnouncementCacheRow,
             BaseReferences<
               _$SayawDatabase,
               $AnnouncementCacheTable,
-              AnnouncementClip
+              AnnouncementCacheRow
             >,
           ),
-          AnnouncementClip,
+          AnnouncementCacheRow,
           PrefetchHooks Function()
         > {
   $$AnnouncementCacheTableTableManager(
@@ -11872,21 +11875,21 @@ typedef $$AnnouncementCacheTableProcessedTableManager =
     ProcessedTableManager<
       _$SayawDatabase,
       $AnnouncementCacheTable,
-      AnnouncementClip,
+      AnnouncementCacheRow,
       $$AnnouncementCacheTableFilterComposer,
       $$AnnouncementCacheTableOrderingComposer,
       $$AnnouncementCacheTableAnnotationComposer,
       $$AnnouncementCacheTableCreateCompanionBuilder,
       $$AnnouncementCacheTableUpdateCompanionBuilder,
       (
-        AnnouncementClip,
+        AnnouncementCacheRow,
         BaseReferences<
           _$SayawDatabase,
           $AnnouncementCacheTable,
-          AnnouncementClip
+          AnnouncementCacheRow
         >,
       ),
-      AnnouncementClip,
+      AnnouncementCacheRow,
       PrefetchHooks Function()
     >;
 typedef $$PlayHistoryTableCreateCompanionBuilder =

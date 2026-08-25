@@ -343,10 +343,14 @@ class CacheEntries extends Table {
 
 /// Rendered announcement audio, keyed by a hash of (text, voice, rate, pitch).
 ///
+/// The row class is `AnnouncementCacheRow` rather than `AnnouncementClip`:
+/// the audio layer already owns that name for the thing it plays, and
+/// `DriftAnnouncementCache` maps between the two.
+///
 /// [durationMs] is the reason announcements are synthesised to a file rather
 /// than spoken directly: the duck envelope needs to know how long the voice
 /// will last before it starts.
-@DataClassName('AnnouncementClip')
+@DataClassName('AnnouncementCacheRow')
 class AnnouncementCache extends Table {
   TextColumn get hash => text()();
   TextColumn get body => text().named('text')();

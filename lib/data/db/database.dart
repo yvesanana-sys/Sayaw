@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 import '../../audio/crossfade_engine.dart' show AnnounceMode;
 import '../../audio/fade_curves.dart' show FadeCurve;
 import '../media_resolver.dart' show CachePolicy;
+import 'announcement_dao.dart';
 import 'converters.dart';
 import 'enums.dart';
 import 'playlist_dao.dart';
@@ -33,7 +34,7 @@ part 'database.g.dart';
     AnnouncementCache,
     PlayHistory,
   ],
-  daos: [TrackDao, PlaylistDao],
+  daos: [TrackDao, PlaylistDao, AnnouncementDao],
 )
 class SayawDatabase extends _$SayawDatabase {
   SayawDatabase(super.e);
