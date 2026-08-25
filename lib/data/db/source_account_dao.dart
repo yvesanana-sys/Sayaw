@@ -44,6 +44,7 @@ class SourceAccountDao extends DatabaseAccessor<SayawDatabase>
     String? baseUri,
     String? countryCode,
     bool offlineEntitled = false,
+    bool owned = false,
   }) async {
     final now = clock.now();
     await into(sourceAccounts).insertOnConflictUpdate(SourceAccountsCompanion(
@@ -55,6 +56,7 @@ class SourceAccountDao extends DatabaseAccessor<SayawDatabase>
       countryCode: Value(countryCode),
       keychainRef: Value(keychainRef),
       offlineEntitled: Value(offlineEntitled),
+      isOwned: Value(owned),
       lastVerifiedAt: Value(now),
       createdAt: Value(now),
     ));

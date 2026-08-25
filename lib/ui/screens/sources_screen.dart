@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/db/database.dart';
 import '../../data/sources/plex/plex_api_client.dart';
 import '../../data/sources/plex/plex_auth.dart';
+import '../../data/sources/plex/plex_library.dart';
 import '../../data/sources/sources_access.dart';
 import '../state/sources_provider.dart';
 import '../theme/sayaw_theme.dart';
@@ -77,15 +78,7 @@ class _Accounts extends StatelessWidget {
                 ),
               ),
             for (final account in accounts)
-              ListTile(
-                leading: const Icon(Icons.dns_outlined),
-                title: Text(account.displayName),
-                subtitle: Text(account.provider.name),
-                trailing: _DisconnectButton(
-                  label: 'Disconnect ${account.displayName}',
-                  onPressed: () => sources.disconnect(account.id),
-                ),
-              ),
+              _AccountRow(account: account, sources: sources),
             const Divider(height: 32),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -107,6 +100,198 @@ class _Accounts extends StatelessWidget {
         barrierDismissible: false,
         builder: (_) => PlexSignInDialog(sources: sources),
       );
+}
+
+/// One connected server, with what can be done to it.
+class _AccountRow extends StatelessWidget {
+  const _AccountRow({required this.account, required this.sources});
+
+  final SourceAccount account;
+  final SourcesAccess sources;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: const Icon(Icons.dns_outlined),
+      title: Text(account.displayName),
+      subtitle: Text(account.isOwned ? 'Your server' : 'Shared with you'),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _IconAction(
+            icon: Icons.library_add_outlined,
+            label: 'Import music from ${account.displayName}',
+            onPressed: () => _import(context),
+          ),
+          _IconAction(
+            icon: Icons.link_off,
+            label: 'Disconnect ${account.displayName}',
+            onPressed: () => sources.disconnect(account.id),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _import(BuildContext context) => showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => PlexImportDialog(sources: sources, account: account),
+      );
+}
+
+/// Picking a music library and copying it into the local mirror.
+///
+/// Modal and not dismissible while it runs: an import interrupted halfway
+/// leaves a library that is half there, and the operator has no way to tell
+/// which half.
+class PlexImportDialog extends StatefulWidget {
+  const PlexImportDialog({
+    super.key,
+    required this.sources,
+    required this.account,
+  });
+
+  final SourcesAccess sources;
+  final SourceAccount account;
+
+  @override
+  State<PlexImportDialog> createState() => _PlexImportDialogState();
+}
+
+class _PlexImportDialogState extends State<PlexImportDialog> {
+  List<PlexSection>? _sections;
+  String? _error;
+  String? _done;
+  int _imported = 0;
+  int _total = 0;
+  bool _running = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSections();
+  }
+
+  Future<void> _loadSections() async {
+    setState(() {
+      _error = null;
+      _sections = null;
+    });
+
+    try {
+      final sections = await widget.sources.musicSections(widget.account.id);
+      if (!mounted) return;
+
+      // One music library is the common case, and offering a list of one is a
+      // step for nothing.
+      if (sections.length == 1) {
+        await _import(sections.single);
+        return;
+      }
+      setState(() => _sections = sections);
+    } on Object catch (e) {
+      _fail(e);
+    }
+  }
+
+  Future<void> _import(PlexSection section) async {
+    setState(() {
+      _running = true;
+      _sections = null;
+      _imported = 0;
+      _total = 0;
+    });
+
+    try {
+      final report = await widget.sources.importSection(
+        widget.account.id,
+        section.key,
+        onProgress: (imported, total) {
+          if (!mounted) return;
+          setState(() {
+            _imported = imported;
+            _total = total;
+          });
+        },
+      );
+      if (!mounted) return;
+
+      setState(() {
+        _running = false;
+        _done = '${report.added} added, ${report.updated} updated, '
+            '${report.unchanged} already there.';
+      });
+    } on Object catch (e) {
+      _fail(e);
+    }
+  }
+
+  void _fail(Object error) {
+    if (!mounted) return;
+    setState(() {
+      _running = false;
+      _error = '$error';
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: SayawColors.surfaceContainer,
+      title: Text('Import from ${widget.account.displayName}'),
+      content: SizedBox(width: 360, child: _content()),
+      actions: [
+        TextButton(
+          onPressed: _running ? null : () => Navigator.of(context).pop(),
+          child: Text(_done == null ? 'Cancel' : 'Done'),
+        ),
+      ],
+    );
+  }
+
+  Widget _content() {
+    if (_error case final error?) {
+      return Text(error, style: const TextStyle(color: SayawColors.error));
+    }
+
+    if (_done case final done?) return Text(done);
+
+    if (_sections case final sections?) {
+      if (sections.isEmpty) {
+        return const Text('This server has no music libraries on it.');
+      }
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Which library?'),
+          const SizedBox(height: 8),
+          for (final section in sections)
+            ListTile(
+              leading: const Icon(Icons.library_music_outlined),
+              title: Text(section.title),
+              onTap: () => _import(section),
+            ),
+        ],
+      );
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        LinearProgressIndicator(
+          value: _total == 0 ? null : _imported / _total,
+        ),
+        const SizedBox(height: 12),
+        Text(
+          _total == 0 ? 'Reading the library…' : '$_imported of $_total',
+          style: const TextStyle(color: SayawColors.onSurfaceVariant),
+        ),
+      ],
+    );
+  }
 }
 
 /// The PIN flow, start to finish.
@@ -317,10 +502,19 @@ class _CopyCodeButton extends StatelessWidget {
   }
 }
 
-class _DisconnectButton extends StatelessWidget {
-  const _DisconnectButton({required this.label, required this.onPressed});
+class _IconAction extends StatelessWidget {
+  const _IconAction({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
 
+  final IconData icon;
+
+  /// Names the server as well as the action: a screen reader reads the whole
+  /// row as one node, and "Disconnect" alone is ambiguous in a list of them.
   final String label;
+
   final VoidCallback onPressed;
 
   @override
@@ -332,10 +526,7 @@ class _DisconnectButton extends StatelessWidget {
       child: SizedBox(
         width: kMinTouchTarget,
         height: kMinTouchTarget,
-        child: IconButton(
-          icon: const Icon(Icons.link_off),
-          onPressed: onPressed,
-        ),
+        child: IconButton(icon: Icon(icon), onPressed: onPressed),
       ),
     );
   }

@@ -1,6 +1,8 @@
 import '../db/database.dart';
 import 'plex/plex_api_client.dart';
 import 'plex/plex_auth.dart';
+import 'plex/plex_importer.dart';
+import 'plex/plex_library.dart';
 
 /// Connecting and disconnecting music services.
 ///
@@ -23,4 +25,14 @@ abstract class SourcesAccess {
   Future<void> connectPlexServer(PlexServer server);
 
   Future<void> disconnect(String accountId);
+
+  /// The music libraries on a connected server.
+  Future<List<PlexSection>> musicSections(String accountId);
+
+  /// Copies one into the local mirror, so it can be searched offline.
+  Future<ImportReport> importSection(
+    String accountId,
+    String sectionKey, {
+    void Function(int imported, int total)? onProgress,
+  });
 }

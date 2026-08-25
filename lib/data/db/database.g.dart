@@ -118,6 +118,21 @@ class $SourceAccountsTable extends SourceAccounts
         type: DriftSqlType.int,
         requiredDuringInsert: true,
       ).withConverter<DateTime>($SourceAccountsTable.$convertercreatedAt);
+  static const VerificationMeta _isOwnedMeta = const VerificationMeta(
+    'isOwned',
+  );
+  @override
+  late final GeneratedColumn<bool> isOwned = GeneratedColumn<bool>(
+    'is_owned',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_owned" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -130,6 +145,7 @@ class $SourceAccountsTable extends SourceAccounts
     offlineEntitled,
     lastVerifiedAt,
     createdAt,
+    isOwned,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -203,6 +219,12 @@ class $SourceAccountsTable extends SourceAccounts
         ),
       );
     }
+    if (data.containsKey('is_owned')) {
+      context.handle(
+        _isOwnedMeta,
+        isOwned.isAcceptableOrUnknown(data['is_owned']!, _isOwnedMeta),
+      );
+    }
     return context;
   }
 
@@ -258,6 +280,10 @@ class $SourceAccountsTable extends SourceAccounts
           data['${effectivePrefix}created_at'],
         )!,
       ),
+      isOwned: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_owned'],
+      )!,
     );
   }
 
@@ -295,6 +321,11 @@ class SourceAccount extends DataClass implements Insertable<SourceAccount> {
   final bool offlineEntitled;
   final DateTime? lastVerifiedAt;
   final DateTime createdAt;
+
+  /// Plex: your own server, or a library someone shared with you. A shared
+  /// library is not cacheable — see `MediaResolver.policyFor` — so an unset
+  /// value defaults to the restrictive answer rather than the convenient one.
+  final bool isOwned;
   const SourceAccount({
     required this.id,
     required this.provider,
@@ -306,6 +337,7 @@ class SourceAccount extends DataClass implements Insertable<SourceAccount> {
     required this.offlineEntitled,
     this.lastVerifiedAt,
     required this.createdAt,
+    required this.isOwned,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -338,6 +370,7 @@ class SourceAccount extends DataClass implements Insertable<SourceAccount> {
         $SourceAccountsTable.$convertercreatedAt.toSql(createdAt),
       );
     }
+    map['is_owned'] = Variable<bool>(isOwned);
     return map;
   }
 
@@ -361,6 +394,7 @@ class SourceAccount extends DataClass implements Insertable<SourceAccount> {
           ? const Value.absent()
           : Value(lastVerifiedAt),
       createdAt: Value(createdAt),
+      isOwned: Value(isOwned),
     );
   }
 
@@ -384,6 +418,7 @@ class SourceAccount extends DataClass implements Insertable<SourceAccount> {
       offlineEntitled: serializer.fromJson<bool>(json['offlineEntitled']),
       lastVerifiedAt: serializer.fromJson<DateTime?>(json['lastVerifiedAt']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      isOwned: serializer.fromJson<bool>(json['isOwned']),
     );
   }
   @override
@@ -402,6 +437,7 @@ class SourceAccount extends DataClass implements Insertable<SourceAccount> {
       'offlineEntitled': serializer.toJson<bool>(offlineEntitled),
       'lastVerifiedAt': serializer.toJson<DateTime?>(lastVerifiedAt),
       'createdAt': serializer.toJson<DateTime>(createdAt),
+      'isOwned': serializer.toJson<bool>(isOwned),
     };
   }
 
@@ -416,6 +452,7 @@ class SourceAccount extends DataClass implements Insertable<SourceAccount> {
     bool? offlineEntitled,
     Value<DateTime?> lastVerifiedAt = const Value.absent(),
     DateTime? createdAt,
+    bool? isOwned,
   }) => SourceAccount(
     id: id ?? this.id,
     provider: provider ?? this.provider,
@@ -431,6 +468,7 @@ class SourceAccount extends DataClass implements Insertable<SourceAccount> {
         ? lastVerifiedAt.value
         : this.lastVerifiedAt,
     createdAt: createdAt ?? this.createdAt,
+    isOwned: isOwned ?? this.isOwned,
   );
   SourceAccount copyWithCompanion(SourceAccountsCompanion data) {
     return SourceAccount(
@@ -456,6 +494,7 @@ class SourceAccount extends DataClass implements Insertable<SourceAccount> {
           ? data.lastVerifiedAt.value
           : this.lastVerifiedAt,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      isOwned: data.isOwned.present ? data.isOwned.value : this.isOwned,
     );
   }
 
@@ -471,7 +510,8 @@ class SourceAccount extends DataClass implements Insertable<SourceAccount> {
           ..write('keychainRef: $keychainRef, ')
           ..write('offlineEntitled: $offlineEntitled, ')
           ..write('lastVerifiedAt: $lastVerifiedAt, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('isOwned: $isOwned')
           ..write(')'))
         .toString();
   }
@@ -488,6 +528,7 @@ class SourceAccount extends DataClass implements Insertable<SourceAccount> {
     offlineEntitled,
     lastVerifiedAt,
     createdAt,
+    isOwned,
   );
   @override
   bool operator ==(Object other) =>
@@ -502,7 +543,8 @@ class SourceAccount extends DataClass implements Insertable<SourceAccount> {
           other.keychainRef == this.keychainRef &&
           other.offlineEntitled == this.offlineEntitled &&
           other.lastVerifiedAt == this.lastVerifiedAt &&
-          other.createdAt == this.createdAt);
+          other.createdAt == this.createdAt &&
+          other.isOwned == this.isOwned);
 }
 
 class SourceAccountsCompanion extends UpdateCompanion<SourceAccount> {
@@ -516,6 +558,7 @@ class SourceAccountsCompanion extends UpdateCompanion<SourceAccount> {
   final Value<bool> offlineEntitled;
   final Value<DateTime?> lastVerifiedAt;
   final Value<DateTime> createdAt;
+  final Value<bool> isOwned;
   final Value<int> rowid;
   const SourceAccountsCompanion({
     this.id = const Value.absent(),
@@ -528,6 +571,7 @@ class SourceAccountsCompanion extends UpdateCompanion<SourceAccount> {
     this.offlineEntitled = const Value.absent(),
     this.lastVerifiedAt = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.isOwned = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   SourceAccountsCompanion.insert({
@@ -541,6 +585,7 @@ class SourceAccountsCompanion extends UpdateCompanion<SourceAccount> {
     this.offlineEntitled = const Value.absent(),
     this.lastVerifiedAt = const Value.absent(),
     required DateTime createdAt,
+    this.isOwned = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        provider = Value(provider),
@@ -558,6 +603,7 @@ class SourceAccountsCompanion extends UpdateCompanion<SourceAccount> {
     Expression<bool>? offlineEntitled,
     Expression<int>? lastVerifiedAt,
     Expression<int>? createdAt,
+    Expression<bool>? isOwned,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -571,6 +617,7 @@ class SourceAccountsCompanion extends UpdateCompanion<SourceAccount> {
       if (offlineEntitled != null) 'offline_entitled': offlineEntitled,
       if (lastVerifiedAt != null) 'last_verified_at': lastVerifiedAt,
       if (createdAt != null) 'created_at': createdAt,
+      if (isOwned != null) 'is_owned': isOwned,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -586,6 +633,7 @@ class SourceAccountsCompanion extends UpdateCompanion<SourceAccount> {
     Value<bool>? offlineEntitled,
     Value<DateTime?>? lastVerifiedAt,
     Value<DateTime>? createdAt,
+    Value<bool>? isOwned,
     Value<int>? rowid,
   }) {
     return SourceAccountsCompanion(
@@ -599,6 +647,7 @@ class SourceAccountsCompanion extends UpdateCompanion<SourceAccount> {
       offlineEntitled: offlineEntitled ?? this.offlineEntitled,
       lastVerifiedAt: lastVerifiedAt ?? this.lastVerifiedAt,
       createdAt: createdAt ?? this.createdAt,
+      isOwned: isOwned ?? this.isOwned,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -644,6 +693,9 @@ class SourceAccountsCompanion extends UpdateCompanion<SourceAccount> {
         $SourceAccountsTable.$convertercreatedAt.toSql(createdAt.value),
       );
     }
+    if (isOwned.present) {
+      map['is_owned'] = Variable<bool>(isOwned.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -663,6 +715,7 @@ class SourceAccountsCompanion extends UpdateCompanion<SourceAccount> {
           ..write('offlineEntitled: $offlineEntitled, ')
           ..write('lastVerifiedAt: $lastVerifiedAt, ')
           ..write('createdAt: $createdAt, ')
+          ..write('isOwned: $isOwned, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -7350,6 +7403,7 @@ typedef $$SourceAccountsTableCreateCompanionBuilder =
       Value<bool> offlineEntitled,
       Value<DateTime?> lastVerifiedAt,
       required DateTime createdAt,
+      Value<bool> isOwned,
       Value<int> rowid,
     });
 typedef $$SourceAccountsTableUpdateCompanionBuilder =
@@ -7364,6 +7418,7 @@ typedef $$SourceAccountsTableUpdateCompanionBuilder =
       Value<bool> offlineEntitled,
       Value<DateTime?> lastVerifiedAt,
       Value<DateTime> createdAt,
+      Value<bool> isOwned,
       Value<int> rowid,
     });
 
@@ -7458,6 +7513,11 @@ class $$SourceAccountsTableFilterComposer
         builder: (column) => ColumnWithTypeConverterFilters(column),
       );
 
+  ColumnFilters<bool> get isOwned => $composableBuilder(
+    column: $table.isOwned,
+    builder: (column) => ColumnFilters(column),
+  );
+
   Expression<bool> tracksRefs(
     Expression<bool> Function($$TracksTableFilterComposer f) f,
   ) {
@@ -7542,6 +7602,11 @@ class $$SourceAccountsTableOrderingComposer
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get isOwned => $composableBuilder(
+    column: $table.isOwned,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SourceAccountsTableAnnotationComposer
@@ -7595,6 +7660,9 @@ class $$SourceAccountsTableAnnotationComposer
 
   GeneratedColumnWithTypeConverter<DateTime, int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get isOwned =>
+      $composableBuilder(column: $table.isOwned, builder: (column) => column);
 
   Expression<T> tracksRefs<T extends Object>(
     Expression<T> Function($$TracksTableAnnotationComposer a) f,
@@ -7662,6 +7730,7 @@ class $$SourceAccountsTableTableManager
                 Value<bool> offlineEntitled = const Value.absent(),
                 Value<DateTime?> lastVerifiedAt = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<bool> isOwned = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SourceAccountsCompanion(
                 id: id,
@@ -7674,6 +7743,7 @@ class $$SourceAccountsTableTableManager
                 offlineEntitled: offlineEntitled,
                 lastVerifiedAt: lastVerifiedAt,
                 createdAt: createdAt,
+                isOwned: isOwned,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -7688,6 +7758,7 @@ class $$SourceAccountsTableTableManager
                 Value<bool> offlineEntitled = const Value.absent(),
                 Value<DateTime?> lastVerifiedAt = const Value.absent(),
                 required DateTime createdAt,
+                Value<bool> isOwned = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SourceAccountsCompanion.insert(
                 id: id,
@@ -7700,6 +7771,7 @@ class $$SourceAccountsTableTableManager
                 offlineEntitled: offlineEntitled,
                 lastVerifiedAt: lastVerifiedAt,
                 createdAt: createdAt,
+                isOwned: isOwned,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

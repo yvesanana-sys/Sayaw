@@ -1,6 +1,8 @@
 import '../db/database.dart';
 import 'plex/plex_api_client.dart';
 import 'plex/plex_auth.dart';
+import 'plex/plex_importer.dart';
+import 'plex/plex_library.dart';
 import 'sources_access.dart';
 
 /// The real [SourcesAccess]: plex.tv, the keychain and the accounts table.
@@ -34,4 +36,17 @@ class SourcesService implements SourcesAccess {
 
   @override
   Future<void> disconnect(String accountId) => plex.disconnect(accountId);
+
+  @override
+  Future<List<PlexSection>> musicSections(String accountId) =>
+      plex.musicSections(accountId);
+
+  @override
+  Future<ImportReport> importSection(
+    String accountId,
+    String sectionKey, {
+    void Function(int imported, int total)? onProgress,
+  }) =>
+      PlexImporter(db: db, plex: plex)
+          .importSection(accountId, sectionKey, onProgress: onProgress);
 }

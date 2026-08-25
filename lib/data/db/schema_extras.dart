@@ -6,6 +6,20 @@
 /// straight after it.
 library;
 
+/// What to run to get a database from one schema version to the next, keyed by
+/// the version being moved *to*.
+///
+/// Kept as SQL next to the DDL it amends, so the statement that creates a
+/// column and the statement that adds it later are read side by side. New
+/// columns are appended rather than slotted in, so a database that was
+/// migrated and one that was created fresh end up identical.
+const Map<int, List<String>> schemaUpgrades = {
+  2: [
+    'ALTER TABLE source_accounts '
+        'ADD COLUMN is_owned INTEGER NOT NULL DEFAULT 0',
+  ],
+};
+
 /// Statements run once, in order, when the database file is first created.
 const List<String> schemaExtras = [
   // Unique per (source, account, id) — but only for remote tracks, since a

@@ -50,6 +50,11 @@ class FakeHttpAdapter implements HttpClientAdapter {
   FakeHttpAdapter([Map<String, FakeResponse>? routes]) : routes = {...?routes};
 
   final Map<String, FakeResponse> routes;
+
+  /// Routes that answer differently each time, for paging. The last entry
+  /// repeats once the list runs out.
+  final Map<String, List<FakeResponse>> sequences = {};
+
   final List<RecordedRequest> requests = [];
 
   /// Routes hit, in order, for asserting that a cached connection meant one
@@ -57,6 +62,10 @@ class FakeHttpAdapter implements HttpClientAdapter {
   List<String> get calls => [for (final r in requests) r.toString()];
 
   void on(String route, FakeResponse response) => routes[route] = response;
+
+  /// Answers [route] with each response in turn, then repeats the last.
+  void onSequence(String route, List<FakeResponse> responses) =>
+      sequences[route] = [...responses];
 
   int callsTo(String route) => calls.where((c) => c == route).length;
 
@@ -70,7 +79,7 @@ class FakeHttpAdapter implements HttpClientAdapter {
     final key = '${options.method} ${uri.host}${uri.path}';
     requests.add(RecordedRequest(options.method, uri, options.headers));
 
-    final response = routes[key];
+    final response = _next(key);
     if (response == null) {
       return ResponseBody.fromString('{"error":"no route for $key"}', 404,
           headers: _jsonHeaders);
@@ -100,6 +109,12 @@ class FakeHttpAdapter implements HttpClientAdapter {
       response.status,
       headers: _jsonHeaders,
     );
+  }
+
+  FakeResponse? _next(String route) {
+    final queued = sequences[route];
+    if (queued == null || queued.isEmpty) return routes[route];
+    return queued.length == 1 ? queued.first : queued.removeAt(0);
   }
 
   @override

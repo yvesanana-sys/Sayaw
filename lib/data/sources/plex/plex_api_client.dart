@@ -6,6 +6,7 @@ import '../../db/database.dart';
 import '../../media_resolver.dart';
 import '../secret_store.dart';
 import 'plex_identity.dart';
+import 'plex_library.dart';
 
 /// One way of reaching a server.
 ///
@@ -161,6 +162,7 @@ class PlexApiClient implements PlexClient {
       displayName: server.name,
       machineIdentifier: server.machineIdentifier,
       keychainRef: keychainRef,
+      owned: server.owned,
     );
 
     return server.machineIdentifier;
@@ -208,6 +210,75 @@ class PlexApiClient implements PlexClient {
 
     await accounts.rememberConnection(accountId, winner);
     return _resolved[accountId] = winner;
+  }
+
+  // -------------------------------------------------------------------------
+  // The library on a server
+  // -------------------------------------------------------------------------
+
+  /// The music libraries on a connected server.
+  Future<List<PlexSection>> musicSections(String accountId) async {
+    final body = await _get(accountId, '/library/sections');
+    return [
+      for (final directory in body['Directory'] as List? ?? const [])
+        if (directory is Map<String, dynamic>) ?PlexSection.fromJson(directory),
+    ];
+  }
+
+  /// One page of tracks from a section.
+  ///
+  /// Paged rather than fetched whole because a DJ's music library is routinely
+  /// tens of thousands of tracks and the server will happily try to serialise
+  /// all of them into one response.
+  Future<PlexPage> tracksIn(
+    String accountId,
+    String sectionKey, {
+    int start = 0,
+    int size = 200,
+  }) async {
+    final body = await _get(
+      accountId,
+      '/library/sections/$sectionKey/all',
+      // type=10 is a track. 8 is an artist and 9 an album.
+      query: {'type': '10'},
+      headers: {
+        'X-Plex-Container-Start': '$start',
+        'X-Plex-Container-Size': '$size',
+      },
+    );
+
+    return PlexPage(
+      total: body['totalSize'] as int? ?? body['size'] as int? ?? 0,
+      tracks: [
+        for (final item in body['Metadata'] as List? ?? const [])
+          if (item is Map<String, dynamic>) ?PlexTrack.fromJson(item),
+      ],
+    );
+  }
+
+  /// A GET against the server this account resolves to, unwrapped from the
+  /// `MediaContainer` every Plex endpoint wraps its answer in.
+  Future<Map<String, dynamic>> _get(
+    String accountId,
+    String path, {
+    Map<String, String> query = const {},
+    Map<String, String> headers = const {},
+  }) async {
+    final base = await bestConnection(accountId);
+    final response = await dio.getUri<Map<String, dynamic>>(
+      base.replace(path: path, queryParameters: query.isEmpty ? null : query),
+      options: Options(headers: {
+        ...identity.headers,
+        ...headers,
+        'X-Plex-Token': await token(accountId),
+      }),
+    );
+
+    final container = response.data?['MediaContainer'];
+    if (container is! Map<String, dynamic>) {
+      throw UnavailableOffline('The Plex server sent something unexpected');
+    }
+    return container;
   }
 
   /// Probes every address at once and takes the best one that answered.

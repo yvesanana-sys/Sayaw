@@ -185,6 +185,10 @@ class PlaylistRepository {
           ratingKey: track.sourceId!,
           partId: track.sourcePartId,
           partUpdatedAt: track.sourceUpdatedAt,
+          // What decides whether this track may ever be written to disk. It is
+          // recorded on the account when the server is connected, so the
+          // answer survives a restart rather than being assumed.
+          isOwnedServer: account.isOwned,
         );
 
       case SourceType.tidal:

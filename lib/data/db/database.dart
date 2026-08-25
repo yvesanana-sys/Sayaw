@@ -42,7 +42,7 @@ class SayawDatabase extends _$SayawDatabase {
   SayawDatabase(super.e);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -50,6 +50,13 @@ class SayawDatabase extends _$SayawDatabase {
           await m.createAll();
           for (final statement in schemaExtras) {
             await customStatement(statement);
+          }
+        },
+        onUpgrade: (m, from, to) async {
+          for (var version = from + 1; version <= to; version++) {
+            for (final statement in schemaUpgrades[version] ?? const []) {
+              await customStatement(statement);
+            }
           }
         },
         beforeOpen: (details) async {

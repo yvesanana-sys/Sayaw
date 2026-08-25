@@ -24,7 +24,11 @@ CREATE TABLE source_accounts (
   keychain_ref        TEXT NOT NULL,
   offline_entitled    INTEGER NOT NULL DEFAULT 0,  -- TIDAL offline license grant
   last_verified_at    INTEGER,
-  created_at          INTEGER NOT NULL
+  created_at          INTEGER NOT NULL,
+  -- Plex: your own server or a library shared with you. Defaults to shared,
+  -- because a caching decision made from a missing value should be the
+  -- restrictive one. Set when the server is connected.
+  is_owned            INTEGER NOT NULL DEFAULT 0
 );
 
 -- ---------------------------------------------------------------------------

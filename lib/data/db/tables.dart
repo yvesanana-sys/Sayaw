@@ -42,6 +42,11 @@ class SourceAccounts extends Table {
       integer().nullable().map(const MillisConverter())();
   IntColumn get createdAt => integer().map(const MillisConverter())();
 
+  /// Plex: your own server, or a library someone shared with you. A shared
+  /// library is not cacheable — see `MediaResolver.policyFor` — so an unset
+  /// value defaults to the restrictive answer rather than the convenient one.
+  BoolColumn get isOwned => boolean().withDefault(const Constant(false))();
+
   @override
   Set<Column> get primaryKey => {id};
 
