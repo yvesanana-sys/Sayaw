@@ -1,5 +1,5 @@
 import '../audio/announcement_engine.dart';
-import '../audio/crossfade_engine.dart' show AnnounceMode;
+import '../audio/crossfade_engine.dart' show AnnounceMode, QueueEntry;
 import 'cache/media_downloader.dart';
 import 'db/database.dart';
 import 'media_resolver.dart';
@@ -213,10 +213,12 @@ class EventPreflight {
     }
 
     try {
-      final existing = await db.cacheDao.byTrack(track.id);
-      if (existing?.state != CacheState.complete) {
-        await downloader.download(track);
-      }
+      // Asking the cache rather than the row: a row can say `complete` while
+      // the file behind it has been deleted to make space, or while its
+      // expiry has passed. Trusting the row would report a track as ready for
+      // tonight when there is nothing on disk to play.
+      final onDisk = await repository.resolver.cache.completeFileFor(source);
+      if (onDisk == null) await downloader.download(track);
 
       // Pinned so tonight's set survives an eviction triggered by anything
       // else that gets downloaded between now and the last dance.
@@ -262,10 +264,21 @@ class EventPreflight {
 
       if (entry.spec.announceMode == AnnounceMode.off) continue;
 
+      // A row with no dance type and no words on it never wanted an
+      // announcement. Counting those as failures would report a set of
+      // untagged files as "0 rendered, 318 could not be", which is alarming
+      // and wrong.
+      if (!_wantsAnnouncement(entry)) continue;
+
       final clip = await announcements.clipFor(entry);
       clip == null ? missing++ : rendered++;
     }
 
     return (rendered, missing);
   }
+
+  static bool _wantsAnnouncement(QueueEntry entry) =>
+      (entry.announcementText?.isNotEmpty ?? false) ||
+      (entry.announcementClipPath?.isNotEmpty ?? false) ||
+      (entry.danceTypeName?.isNotEmpty ?? false);
 }
