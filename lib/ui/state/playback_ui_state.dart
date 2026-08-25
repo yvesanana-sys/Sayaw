@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../audio/crossfade_engine.dart' show EnginePhase;
 import '../../data/fractional_order.dart';
+import 'library_access.dart';
 import 'playback_session.dart';
 
 /// Which of the two music decks.
@@ -193,10 +194,15 @@ class PlaybackController extends Notifier<PlaybackUiState> {
   PlaybackSession? _session;
 
   /// Called by [PlaybackSession] as it is constructed.
-  void attach(PlaybackSession session) => _session = session;
+  void attach(PlaybackSession session) {
+    _session = session;
+    ref.read(playbackSessionProvider.notifier).set(session);
+  }
 
   void detach(PlaybackSession session) {
-    if (identical(_session, session)) _session = null;
+    if (!identical(_session, session)) return;
+    _session = null;
+    ref.read(playbackSessionProvider.notifier).set(null);
   }
 
   /// The queue as last drawn. The session needs it to translate between the
@@ -370,6 +376,33 @@ class PlaybackController extends Notifier<PlaybackUiState> {
 final playbackProvider =
     NotifierProvider<PlaybackController, PlaybackUiState>(
   PlaybackController.new,
+);
+
+/// The live session, or null where there is no audio behind the screen — every
+/// widget test, and the moment before the runtime has finished starting.
+///
+/// Widgets that need the library or the database reach it through here rather
+/// than holding a database of their own, which keeps them renderable without
+/// one.
+final playbackSessionProvider =
+    NotifierProvider<PlaybackSessionHolder, PlaybackSession?>(
+  PlaybackSessionHolder.new,
+);
+
+class PlaybackSessionHolder extends Notifier<PlaybackSession?> {
+  @override
+  PlaybackSession? build() => null;
+
+  void set(PlaybackSession? session) => state = session;
+}
+
+/// The library, narrowed to what browsing it needs.
+///
+/// Separate from [playbackSessionProvider] so a widget test can stand a
+/// library up without an engine, and so the pane cannot reach for playback
+/// controls it has no business touching.
+final libraryAccessProvider = Provider<LibraryAccess?>(
+  (ref) => ref.watch(playbackSessionProvider),
 );
 
 /// Narrow selector so the wakelock listener does not rebuild on every position

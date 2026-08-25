@@ -31,10 +31,10 @@ a set that keeps running when the venue wifi dies.
 
 ## Status
 
-Early, but it runs. The audio engine, the database, the deck screen and the
-wiring between them are in place, and a set of local files plays end to end
-with crossfades and announcements. Not yet written: Plex and TIDAL auth and
-their clients, the library scanner, downloading and caching, and Event Mode's
+Early, but it runs. Point it at a folder of music on Windows or macOS and it
+imports it, searches it, and plays a set end to end with crossfades and
+announcements. Not yet written: Plex and TIDAL auth and their clients, library
+import on Android and iOS, downloading and caching, and Event Mode's
 pre-flight check. See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the design.
 
 ## Layout
@@ -49,6 +49,7 @@ lib/audio/sayaw_audio_handler.dart   background playback and lock-screen control
 lib/data/media_resolver.dart         source-polymorphic resolution and cache policy
 lib/data/db/                         Drift tables and the playlist, track and
                                      announcement accessors
+lib/data/library/                    folder scanning and tag reading
 lib/data/playlist_repository.dart    stored rows -> engine-ready queue entries
 lib/ui/screens/deck_screen.dart      the operator's screen
 lib/ui/state/playback_session.dart   the seam between the engine and the screen

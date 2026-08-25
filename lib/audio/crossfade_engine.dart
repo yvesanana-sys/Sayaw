@@ -188,6 +188,21 @@ class CrossfadeEngine {
     if (_queue.isNotEmpty) await _advanceToNext(immediate: true);
   }
 
+  /// Adds an item to the end of the running set.
+  ///
+  /// Deliberately not a reload: the standby deck is already loaded and
+  /// prerolled, and tearing that down to add a track at the end would put a
+  /// hole in a transition that might be seconds away. The one case that does
+  /// need work is a set that had run out of anything to play next, where this
+  /// is now the next thing.
+  Future<void> appendToQueue(QueueEntry entry) async {
+    _queue = List.unmodifiable([..._queue, entry]);
+
+    if (_standbyEntry == null && _phase != EnginePhase.idle) {
+      await _preloadNext();
+    }
+  }
+
   Future<void> play() async {
     if (_activeEntry == null) return;
     await _active.play();

@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sayaw/ui/state/playback_ui_state.dart';
 import 'package:sayaw/ui/screens/deck_screen.dart';
 
+import '../fakes/fake_library.dart';
 import 'harness.dart';
 
 /// Goldens for the three breakpoints.
@@ -31,6 +32,9 @@ void main() {
       const DeckScreen(),
       size: size,
       queue: testQueue(),
+      // The library pane draws rows in the expanded golden, so the layout
+      // being pinned is the one an operator sees rather than an empty state.
+      overrides: [libraryAccessProvider.overrideWithValue(FakeLibrary())],
     );
 
     final controller = container.read(playbackProvider.notifier);

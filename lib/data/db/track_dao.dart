@@ -31,6 +31,14 @@ class TrackDao extends DatabaseAccessor<SayawDatabase> with _$TrackDaoMixin {
   Future<int> deleteById(String id) =>
       (delete(tracks)..where((t) => t.id.equals(id))).go();
 
+  /// What arrived most recently, for the library pane before anyone has typed
+  /// anything. A freshly imported folder is the thing an operator is most
+  /// likely to be looking for.
+  Future<List<Track>> recentlyAdded({int limit = 50}) => (select(tracks)
+        ..orderBy([(t) => OrderingTerm.desc(t.addedAt)])
+        ..limit(limit))
+      .get();
+
   /// Full-text search over title, artist and album, ranked by bm25.
   ///
   /// The last word is treated as a prefix so results narrow as the operator

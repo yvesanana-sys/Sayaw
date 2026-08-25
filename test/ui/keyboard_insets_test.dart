@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sayaw/ui/widgets/keyboard_safe_area.dart';
+import 'package:sayaw/ui/state/playback_ui_state.dart';
 import 'package:sayaw/ui/widgets/library_pane.dart';
+
+import '../fakes/fake_library.dart';
 
 import 'harness.dart';
 
@@ -63,7 +66,7 @@ void main() {
       tester,
       withKeyboard(320, const Scaffold(body: LibraryPane())),
       size: kCompactSize,
-      queue: testQueue(),
+      overrides: [libraryAccessProvider.overrideWithValue(FakeLibrary())],
     );
 
     expect(tester.takeException(), isNull);
@@ -85,7 +88,7 @@ void main() {
       tester,
       withKeyboard(320, const Scaffold(body: LibraryPane())),
       size: kCompactSize,
-      queue: testQueue(),
+      overrides: [libraryAccessProvider.overrideWithValue(FakeLibrary())],
     );
 
     await tester.tap(find.byType(TextField));

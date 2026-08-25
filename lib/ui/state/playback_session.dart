@@ -1,7 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 
 import '../../audio/crossfade_engine.dart';
+import '../../data/db/database.dart';
+import '../../data/library/library_scanner.dart';
+import '../../data/media_resolver.dart' show UnavailableOffline;
 import '../../data/playlist_repository.dart';
+import 'library_access.dart';
 import 'playback_ui_state.dart';
 
 /// The seam between the audio engine and what the screen draws.
@@ -14,7 +19,7 @@ import 'playback_ui_state.dart';
 /// It lives in `ui/state` rather than `audio/` on purpose — the audio layer
 /// stays free of any dependency on the UI, which is what keeps its whole test
 /// suite runnable without a widget tree.
-class PlaybackSession {
+class PlaybackSession implements LibraryAccess {
   PlaybackSession({
     required this.engine,
     required this.repository,
@@ -136,6 +141,75 @@ class PlaybackSession {
           existing.copyWith(position: row.item.position),
     ]);
   }
+
+  // -------------------------------------------------------------------------
+  // The library
+  // -------------------------------------------------------------------------
+
+  /// Aggregated search across everything in the local mirror.
+  ///
+  /// Local files, Plex and TIDAL all live in one table, so this keeps working
+  /// with the venue wifi down — the aggregation happened at import time.
+  @override
+  Future<List<Track>> searchLibrary(String query, {int limit = 50}) =>
+      repository.db.trackDao.search(query, limit: limit);
+
+  @override
+  Future<List<Track>> recentTracks({int limit = 50}) =>
+      repository.db.trackDao.recentlyAdded(limit: limit);
+
+  /// Adds a track to the end of the open set.
+  ///
+  /// Written to the database first, then handed to the engine, which appends
+  /// without disturbing whatever is already loaded and prerolled.
+  @override
+  Future<void> addToSet(String trackId) async {
+    final playlistId = _playlistId;
+    if (playlistId == null) return;
+
+    final itemId = await repository.db.playlistDao
+        .appendTrack(playlistId: playlistId, trackId: trackId);
+
+    final rows = await repository.db.playlistDao.itemsOf(playlistId);
+    final row = rows.firstWhere((r) => r.item.id == itemId);
+    final playlist = (await repository.db.playlistDao.byId(playlistId))!;
+
+    controller.setQueue([
+      ...controller.queueSnapshot,
+      QueueItemUi(
+        id: row.item.id,
+        title: row.track?.title ?? 'Untitled',
+        artist: row.track?.artist ?? '',
+        danceType: row.danceType?.name,
+        duration: row.track?.durationMs,
+        position: row.item.position,
+      ),
+    ]);
+
+    try {
+      final entry = await repository.resolveRow(row, playlist: playlist);
+      _engineItemIds = [..._engineItemIds, entry.itemId];
+      await engine.appendToQueue(entry);
+    } on UnavailableOffline {
+      // It is in the set and on screen; the engine will simply never reach it.
+      // Reopening the set is what turns that into a labelled row, and that is
+      // not something to do underneath a running transition.
+    }
+
+    _publish();
+  }
+
+  /// Imports folders of music into the library.
+  ///
+  /// Only meaningful where `dart:io` paths are: on Android a folder picker
+  /// hands back a SAF tree URI rather than a path, which is a different import
+  /// route and is not built yet.
+  @override
+  Future<ScanReport> scanFolders(
+    Iterable<Directory> folders, {
+    void Function(int filesSeen, String path)? onProgress,
+  }) =>
+      LibraryScanner(db: repository.db).scan(folders, onProgress: onProgress);
 
   Future<void> dispose() async {
     _ticker?.cancel();

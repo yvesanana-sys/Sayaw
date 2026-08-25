@@ -255,6 +255,78 @@ void main() {
     });
   });
 
+  group('the library', () {
+    test('search finds what a scan imported', () async {
+      _touch(music, 'library/kiss-of-fire.flac');
+      await session.scanFolders([Directory('${music.path}/library')]);
+
+      final found = await session.searchLibrary('kiss');
+      expect([for (final t in found) t.title], ['kiss-of-fire']);
+    });
+
+    test('adding a track puts it in the set, on screen and in the engine',
+        () async {
+      await _addTracks(db, set, music, ['a']);
+      await session.openPlaylist(set);
+      final track = await _importOne(db, music, 'later');
+
+      await session.addToSet(track);
+      await _settle();
+
+      expect([
+        for (final row in await db.playlistDao.itemsOf(set)) row.track!.title
+      ], [
+        'Track a',
+        'Track later'
+      ]);
+      expect([for (final item in container.read(playbackProvider).queue) item.title],
+          ['Track a', 'Track later']);
+      expect(session.willPlay(
+          (await db.playlistDao.itemsOf(set)).last.item.id), isTrue);
+    });
+
+    test('a set that had run out picks the new track up as its next', () async {
+      await _addTracks(db, set, music, ['a']);
+      await session.openPlaylist(set);
+      await session.play();
+      await _settle();
+
+      // One track in, nothing cued behind it.
+      expect(engine.standbyEntry, isNull);
+
+      await session.addToSet(await _importOne(db, music, 'later'));
+      await _settle();
+
+      expect(engine.standbyEntry!.title, 'Track later');
+    });
+
+    test('adding does not disturb the track already cued up', () async {
+      await _addTracks(db, set, music, ['a', 'b']);
+      await session.openPlaylist(set);
+      await session.play();
+      await _settle();
+
+      final cued = engine.standbyEntry;
+      final loadsBefore = deckB.calls.where((c) => c == 'load').length;
+
+      await session.addToSet(await _importOne(db, music, 'later'));
+      await _settle();
+
+      // Reloading the standby deck to honour an append would put a hole in a
+      // transition that might be seconds away.
+      expect(engine.standbyEntry, same(cued));
+      expect(deckB.calls.where((c) => c == 'load').length, loadsBefore);
+    });
+
+    test('adding before a set is open does nothing rather than throwing',
+        () async {
+      final track = await _importOne(db, music, 'orphan');
+      await session.addToSet(track);
+
+      expect(await db.select(db.playlistItems).get(), isEmpty);
+    });
+  });
+
   group('detaching', () {
     test('the controller goes back to moving its own state', () async {
       await _addTracks(db, set, music, ['a', 'b']);
@@ -276,6 +348,27 @@ void main() {
 /// state to arrive.
 Future<void> _settle([Duration duration = const Duration(milliseconds: 80)]) =>
     Future<void>.delayed(duration);
+
+/// Puts one file on disk and one row in the library, and returns its track id.
+Future<String> _importOne(
+    SayawDatabase db, Directory music, String id) async {
+  _touch(music, '$id.flac');
+  await db.trackDao.upsert(TracksCompanion.insert(
+    id: id,
+    sourceType: SourceType.local,
+    localPath: Value('${music.path}/$id.flac'),
+    title: 'Track $id',
+    addedAt: clock.now(),
+    updatedAt: clock.now(),
+  ));
+  return id;
+}
+
+void _touch(Directory root, String relativePath) {
+  final file = File('${root.path}/$relativePath');
+  file.parent.createSync(recursive: true);
+  file.writeAsStringSync('not really audio');
+}
 
 Future<void> _addTracks(
   SayawDatabase db,
