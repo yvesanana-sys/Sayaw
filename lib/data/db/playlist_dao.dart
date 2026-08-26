@@ -63,6 +63,26 @@ class PlaylistDao extends DatabaseAccessor<SayawDatabase> with _$PlaylistDaoMixi
     return rowId;
   }
 
+  /// How the set is shaped: stop after [songLimit] songs, playing
+  /// [targetDuration] of each.
+  ///
+  /// Both are required and both are nullable, so a caller has to say what it
+  /// means for each — passing null is "no limit", not "leave it alone". A
+  /// rotation that has been turned back into an ordinary set needs to be able
+  /// to clear these, and an optional argument could not express it.
+  Future<void> setShape(
+    String playlistId, {
+    required int? songLimit,
+    required Duration? targetDuration,
+  }) =>
+      (update(playlists)..where((p) => p.id.equals(playlistId))).write(
+        PlaylistsCompanion(
+          songLimit: Value(songLimit),
+          targetDurationMs: Value(targetDuration),
+          updatedAt: Value(clock.now()),
+        ),
+      );
+
   // ---------------------------------------------------------------------
   // Rows
   // ---------------------------------------------------------------------

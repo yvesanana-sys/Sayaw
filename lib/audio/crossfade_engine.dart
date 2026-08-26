@@ -173,6 +173,28 @@ class CrossfadeEngine {
   /// unplayable entries are skipped during preload.
   int _standbyIndex = -1;
 
+  /// Stop after this many songs. Null plays the queue out.
+  int? _songLimit;
+  int? get songLimit => _songLimit;
+
+  /// Where the set was started from, so a limit counts songs played rather
+  /// than rows of the playlist.
+  int _startIndex = 0;
+
+  /// How many songs of the set have been reached, counting the one playing.
+  /// Zero before anything starts, which is what a "0 of 5" readout wants.
+  int get songsPlayed => _index < _startIndex ? 0 : _index - _startIndex + 1;
+
+  /// Whether the set has played as many songs as it was told to.
+  ///
+  /// Nothing is preloaded past this point, so the transition that would have
+  /// followed takes the same path the end of the queue takes: fade out and
+  /// stop, rather than cut to silence.
+  bool get _limitReached {
+    final limit = _songLimit;
+    return limit != null && songsPlayed >= limit;
+  }
+
   /// The row after standby, re-resolved ahead of time. There are only two
   /// decks, so this is resolved and not buffered.
   ///
@@ -230,9 +252,15 @@ class CrossfadeEngine {
   // Queue control
   // -------------------------------------------------------------------------
 
-  Future<void> loadQueue(List<QueueEntry> entries, {int startIndex = 0}) async {
+  Future<void> loadQueue(
+    List<QueueEntry> entries, {
+    int startIndex = 0,
+    int? songLimit,
+  }) async {
     await stop();
     _queue = List.unmodifiable(entries);
+    _songLimit = songLimit;
+    _startIndex = startIndex;
     _index = startIndex - 1;
     if (_queue.isNotEmpty) await _advanceToNext(immediate: true);
   }
@@ -698,6 +726,12 @@ class CrossfadeEngine {
   /// announcement engine to render its clip now — so the transition costs
   /// nothing but a gain ramp when it arrives.
   Future<void> _preloadNext() async {
+    if (_limitReached) {
+      _standbyEntry = null;
+      _standbyIndex = -1;
+      return;
+    }
+
     for (var i = _index + 1; i < _queue.length; i++) {
       final next = _takeLookahead(i) ?? _queue[i];
       try {

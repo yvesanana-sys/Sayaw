@@ -130,7 +130,11 @@ class PlaylistRepository {
       announcementText: announcementTextFor(row, next: nextDanceTypeName),
       announcementClipPath:
           item.announcementClipPath ?? row.danceType?.customClipPath,
-      targetDuration: item.targetDurationMs,
+      // The row's own cap first, then the set's. Null on both plays the track
+      // to its end, which is what a set built song by song wants; a rotation
+      // or a competition round sets one on the playlist and every row inherits
+      // it without forty identical overrides.
+      targetDuration: item.targetDurationMs ?? playlist.targetDurationMs,
       title: track.title,
       artist: track.artist ?? '',
     );

@@ -1215,6 +1215,161 @@ void main() {
       });
     });
   });
+
+  group('the shape of a set', () {
+    test('a song limit stops the set after that many, mid-playlist', () {
+      // "Play exactly three and stop", over a playlist of six.
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(seconds: 6));
+        rig.engine.loadQueue(
+          [for (var i = 1; i <= 6; i++) _entry('t$i')],
+          songLimit: 3,
+        );
+        async.flushMicrotasks();
+        rig.engine.play();
+        async.flushMicrotasks();
+
+        async.elapse(const Duration(minutes: 2));
+        async.flushMicrotasks();
+
+        expect(rig.engine.songsPlayed, 3);
+        expect(rig.activeItems, ['t1', 't2', 't3']);
+        expect(rig.engine.phase, EnginePhase.idle);
+      });
+    });
+
+    test('it fades out rather than cutting to silence', () {
+      // Same path the end of a playlist takes. A hard cut on a full floor is
+      // the thing the whole engine exists to avoid.
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(seconds: 6));
+        rig.engine.loadQueue([_entry('one'), _entry('two')], songLimit: 1);
+        async.flushMicrotasks();
+        rig.engine.play();
+        async.flushMicrotasks();
+
+        async.elapse(const Duration(seconds: 30));
+        async.flushMicrotasks();
+
+        expect(rig.firstAt(EnginePhase.fadingOut), isNotNull);
+        expect(rig.engine.phase, EnginePhase.idle);
+      });
+    });
+
+    test('a limit of one plays one song and nothing is ever cued behind it',
+        () {
+      fakeAsync((async) {
+        final rig = _Rig();
+        rig.engine.loadQueue([_entry('one'), _entry('two')], songLimit: 1);
+        async.flushMicrotasks();
+
+        expect(rig.engine.currentEntry!.itemId, 'one');
+        expect(rig.engine.standbyEntry, isNull);
+        expect(rig.b.calls, isNot(contains('load')));
+      });
+    });
+
+    test('skipping does not get past the limit', () {
+      fakeAsync((async) {
+        final rig = _Rig();
+        rig.engine.loadQueue(
+          [_entry('one'), _entry('two'), _entry('three')],
+          songLimit: 2,
+        );
+        async.flushMicrotasks();
+        rig.engine.play();
+        async.flushMicrotasks();
+
+        // Long enough to settle the crossfade, short enough that the second
+        // track has not run itself out.
+        rig.engine.skipNext();
+        async.elapse(const Duration(seconds: 5));
+        async.flushMicrotasks();
+        expect(rig.engine.currentEntry!.itemId, 'two');
+
+        rig.engine.skipNext();
+        async.elapse(const Duration(seconds: 10));
+        async.flushMicrotasks();
+
+        expect(rig.engine.phase, EnginePhase.idle);
+        expect(rig.activeItems, ['one', 'two']);
+      });
+    });
+
+    test('no limit plays the whole list', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(seconds: 6));
+        rig.start([_entry('one'), _entry('two'), _entry('three')], async);
+
+        async.elapse(const Duration(minutes: 1));
+        async.flushMicrotasks();
+
+        expect(rig.activeItems, ['one', 'two', 'three']);
+      });
+    });
+
+    test('a limit counts songs played, not rows of the playlist', () {
+      // Starting a six-row set at row three with a limit of two plays two
+      // songs, not none.
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(seconds: 6));
+        rig.engine.loadQueue(
+          [for (var i = 1; i <= 6; i++) _entry('t$i')],
+          startIndex: 2,
+          songLimit: 2,
+        );
+        async.flushMicrotasks();
+        rig.engine.play();
+        async.flushMicrotasks();
+
+        async.elapse(const Duration(minutes: 1));
+        async.flushMicrotasks();
+
+        expect(rig.activeItems, ['t3', 't4']);
+      });
+    });
+
+    test('the readout counts from zero before anything starts', () {
+      fakeAsync((async) {
+        final rig = _Rig();
+        expect(rig.engine.songsPlayed, 0);
+
+        rig.engine.loadQueue([_entry('one'), _entry('two')], songLimit: 5);
+        async.flushMicrotasks();
+
+        expect(rig.engine.songsPlayed, 1);
+        expect(rig.engine.songLimit, 5);
+      });
+    });
+
+    test('a per-song cap hands over early, without trimming the file', () {
+      // "Two minutes of every track": the deck still holds a four-minute file,
+      // and the transition comes at two.
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(minutes: 4));
+        rig.start([
+          _entry('one',
+              targetDuration: const Duration(seconds: 20),
+              crossfade: const Duration(seconds: 2)),
+          _entry('two'),
+        ], async);
+
+        async.elapse(const Duration(seconds: 15));
+        async.flushMicrotasks();
+        expect(rig.engine.currentEntry!.itemId, 'one',
+            reason: 'still inside the capped span');
+        expect(rig.a.duration, const Duration(minutes: 4),
+            reason: 'the deck still holds the whole file; the cap is a hand-'
+                'over point, not a trim');
+
+        async.elapse(const Duration(seconds: 10));
+        async.flushMicrotasks();
+
+        expect(rig.engine.currentEntry!.itemId, 'two');
+      });
+    });
+  });
 }
+
 
 

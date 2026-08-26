@@ -18,6 +18,14 @@ const Map<int, List<String>> schemaUpgrades = {
     'ALTER TABLE source_accounts '
         'ADD COLUMN is_owned INTEGER NOT NULL DEFAULT 0',
   ],
+
+  // Set shape. Both nullable with no default, so every playlist already on
+  // disk keeps playing exactly as it did — the list as written, each track to
+  // its end.
+  3: [
+    'ALTER TABLE playlists ADD COLUMN song_limit INTEGER',
+    'ALTER TABLE playlists ADD COLUMN target_duration_ms INTEGER',
+  ],
 };
 
 /// Statements run once, in order, when the database file is first created.

@@ -147,7 +147,18 @@ CREATE TABLE playlists (
 
   is_archived            INTEGER NOT NULL DEFAULT 0,
   created_at             INTEGER NOT NULL,
-  updated_at             INTEGER NOT NULL
+  updated_at             INTEGER NOT NULL,
+
+  -- How the set is shaped. Both NULL means "play the list as written", which
+  -- is what a set built track by track wants.
+  --
+  -- Last, and after created_at/updated_at, because that is where ALTER TABLE
+  -- puts them: an install that upgraded and one created fresh must end up with
+  -- the same table, down to column order.
+  song_limit             INTEGER CHECK (song_limit IS NULL OR song_limit > 0),
+  target_duration_ms     INTEGER                   -- per song; items override
+                           CHECK (target_duration_ms IS NULL
+                                  OR target_duration_ms > 0)
 );
 
 -- ---------------------------------------------------------------------------

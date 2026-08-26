@@ -220,6 +220,23 @@ class Playlists extends Table {
   IntColumn get createdAt => integer().map(const MillisConverter())();
   IntColumn get updatedAt => integer().map(const MillisConverter())();
 
+  // How the set is shaped ---------------------------------------------------
+  //
+  // Declared last, after the timestamps, because that is where `ALTER TABLE
+  // ADD COLUMN` puts them. An install that upgraded and one created fresh have
+  // to end up with the same table, down to column order —
+  // `test/data/schema_migration_test.dart` asserts exactly that.
+
+  /// Stop after this many songs. Null plays the list as written, which is what
+  /// a set built track by track wants.
+  IntColumn get songLimit => integer().nullable()();
+
+  /// How much of each song to play before handing over — two minutes of every
+  /// track in a rotation, a competition round's ninety seconds. Null plays
+  /// each track to its end. A row's own `targetDurationMs` overrides this.
+  IntColumn get targetDurationMs =>
+      integer().nullable().map(const MillisDurationConverter())();
+
   @override
   Set<Column> get primaryKey => {id};
 

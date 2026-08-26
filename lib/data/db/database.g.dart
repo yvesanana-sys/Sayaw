@@ -3279,6 +3279,26 @@ class $PlaylistsTable extends Playlists
         type: DriftSqlType.int,
         requiredDuringInsert: true,
       ).withConverter<DateTime>($PlaylistsTable.$converterupdatedAt);
+  static const VerificationMeta _songLimitMeta = const VerificationMeta(
+    'songLimit',
+  );
+  @override
+  late final GeneratedColumn<int> songLimit = GeneratedColumn<int>(
+    'song_limit',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<Duration?, int> targetDurationMs =
+      GeneratedColumn<int>(
+        'target_duration_ms',
+        aliasedName,
+        true,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+      ).withConverter<Duration?>($PlaylistsTable.$convertertargetDurationMsn);
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3300,6 +3320,8 @@ class $PlaylistsTable extends Playlists
     isArchived,
     createdAt,
     updatedAt,
+    songLimit,
+    targetDurationMs,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3372,6 +3394,12 @@ class $PlaylistsTable extends Playlists
       context.handle(
         _isArchivedMeta,
         isArchived.isAcceptableOrUnknown(data['is_archived']!, _isArchivedMeta),
+      );
+    }
+    if (data.containsKey('song_limit')) {
+      context.handle(
+        _songLimitMeta,
+        songLimit.isAcceptableOrUnknown(data['song_limit']!, _songLimitMeta),
       );
     }
     return context;
@@ -3479,6 +3507,16 @@ class $PlaylistsTable extends Playlists
           data['${effectivePrefix}updated_at'],
         )!,
       ),
+      songLimit: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}song_limit'],
+      ),
+      targetDurationMs: $PlaylistsTable.$convertertargetDurationMsn.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}target_duration_ms'],
+        ),
+      ),
     );
   }
 
@@ -3511,6 +3549,10 @@ class $PlaylistsTable extends Playlists
       const MillisConverter();
   static TypeConverter<DateTime, int> $converterupdatedAt =
       const MillisConverter();
+  static TypeConverter<Duration, int> $convertertargetDurationMs =
+      const MillisDurationConverter();
+  static TypeConverter<Duration?, int?> $convertertargetDurationMsn =
+      NullAwareTypeConverter.wrap($convertertargetDurationMs);
 }
 
 class Playlist extends DataClass implements Insertable<Playlist> {
@@ -3538,6 +3580,15 @@ class Playlist extends DataClass implements Insertable<Playlist> {
   final bool isArchived;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  /// Stop after this many songs. Null plays the list as written, which is what
+  /// a set built track by track wants.
+  final int? songLimit;
+
+  /// How much of each song to play before handing over — two minutes of every
+  /// track in a rotation, a competition round's ninety seconds. Null plays
+  /// each track to its end. A row's own `targetDurationMs` overrides this.
+  final Duration? targetDurationMs;
   const Playlist({
     required this.id,
     required this.name,
@@ -3558,6 +3609,8 @@ class Playlist extends DataClass implements Insertable<Playlist> {
     required this.isArchived,
     required this.createdAt,
     required this.updatedAt,
+    this.songLimit,
+    this.targetDurationMs,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3627,6 +3680,14 @@ class Playlist extends DataClass implements Insertable<Playlist> {
         $PlaylistsTable.$converterupdatedAt.toSql(updatedAt),
       );
     }
+    if (!nullToAbsent || songLimit != null) {
+      map['song_limit'] = Variable<int>(songLimit);
+    }
+    if (!nullToAbsent || targetDurationMs != null) {
+      map['target_duration_ms'] = Variable<int>(
+        $PlaylistsTable.$convertertargetDurationMsn.toSql(targetDurationMs),
+      );
+    }
     return map;
   }
 
@@ -3659,6 +3720,12 @@ class Playlist extends DataClass implements Insertable<Playlist> {
       isArchived: Value(isArchived),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
+      songLimit: songLimit == null && nullToAbsent
+          ? const Value.absent()
+          : Value(songLimit),
+      targetDurationMs: targetDurationMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(targetDurationMs),
     );
   }
 
@@ -3695,6 +3762,10 @@ class Playlist extends DataClass implements Insertable<Playlist> {
       isArchived: serializer.fromJson<bool>(json['isArchived']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      songLimit: serializer.fromJson<int?>(json['songLimit']),
+      targetDurationMs: serializer.fromJson<Duration?>(
+        json['targetDurationMs'],
+      ),
     );
   }
   @override
@@ -3726,6 +3797,8 @@ class Playlist extends DataClass implements Insertable<Playlist> {
       'isArchived': serializer.toJson<bool>(isArchived),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'songLimit': serializer.toJson<int?>(songLimit),
+      'targetDurationMs': serializer.toJson<Duration?>(targetDurationMs),
     };
   }
 
@@ -3749,6 +3822,8 @@ class Playlist extends DataClass implements Insertable<Playlist> {
     bool? isArchived,
     DateTime? createdAt,
     DateTime? updatedAt,
+    Value<int?> songLimit = const Value.absent(),
+    Value<Duration?> targetDurationMs = const Value.absent(),
   }) => Playlist(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -3769,6 +3844,10 @@ class Playlist extends DataClass implements Insertable<Playlist> {
     isArchived: isArchived ?? this.isArchived,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
+    songLimit: songLimit.present ? songLimit.value : this.songLimit,
+    targetDurationMs: targetDurationMs.present
+        ? targetDurationMs.value
+        : this.targetDurationMs,
   );
   Playlist copyWithCompanion(PlaylistsCompanion data) {
     return Playlist(
@@ -3811,6 +3890,10 @@ class Playlist extends DataClass implements Insertable<Playlist> {
           : this.isArchived,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      songLimit: data.songLimit.present ? data.songLimit.value : this.songLimit,
+      targetDurationMs: data.targetDurationMs.present
+          ? data.targetDurationMs.value
+          : this.targetDurationMs,
     );
   }
 
@@ -3835,13 +3918,15 @@ class Playlist extends DataClass implements Insertable<Playlist> {
           ..write('ttsPitch: $ttsPitch, ')
           ..write('isArchived: $isArchived, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('songLimit: $songLimit, ')
+          ..write('targetDurationMs: $targetDurationMs')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     name,
     description,
@@ -3861,7 +3946,9 @@ class Playlist extends DataClass implements Insertable<Playlist> {
     isArchived,
     createdAt,
     updatedAt,
-  );
+    songLimit,
+    targetDurationMs,
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3884,7 +3971,9 @@ class Playlist extends DataClass implements Insertable<Playlist> {
           other.ttsPitch == this.ttsPitch &&
           other.isArchived == this.isArchived &&
           other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.songLimit == this.songLimit &&
+          other.targetDurationMs == this.targetDurationMs);
 }
 
 class PlaylistsCompanion extends UpdateCompanion<Playlist> {
@@ -3907,6 +3996,8 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
   final Value<bool> isArchived;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
+  final Value<int?> songLimit;
+  final Value<Duration?> targetDurationMs;
   final Value<int> rowid;
   const PlaylistsCompanion({
     this.id = const Value.absent(),
@@ -3928,6 +4019,8 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
     this.isArchived = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.songLimit = const Value.absent(),
+    this.targetDurationMs = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   PlaylistsCompanion.insert({
@@ -3950,6 +4043,8 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
     this.isArchived = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
+    this.songLimit = const Value.absent(),
+    this.targetDurationMs = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name),
@@ -3975,6 +4070,8 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
     Expression<bool>? isArchived,
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
+    Expression<int>? songLimit,
+    Expression<int>? targetDurationMs,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3997,6 +4094,8 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
       if (isArchived != null) 'is_archived': isArchived,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (songLimit != null) 'song_limit': songLimit,
+      if (targetDurationMs != null) 'target_duration_ms': targetDurationMs,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -4021,6 +4120,8 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
     Value<bool>? isArchived,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
+    Value<int?>? songLimit,
+    Value<Duration?>? targetDurationMs,
     Value<int>? rowid,
   }) {
     return PlaylistsCompanion(
@@ -4043,6 +4144,8 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
       isArchived: isArchived ?? this.isArchived,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      songLimit: songLimit ?? this.songLimit,
+      targetDurationMs: targetDurationMs ?? this.targetDurationMs,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -4129,6 +4232,16 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
         $PlaylistsTable.$converterupdatedAt.toSql(updatedAt.value),
       );
     }
+    if (songLimit.present) {
+      map['song_limit'] = Variable<int>(songLimit.value);
+    }
+    if (targetDurationMs.present) {
+      map['target_duration_ms'] = Variable<int>(
+        $PlaylistsTable.$convertertargetDurationMsn.toSql(
+          targetDurationMs.value,
+        ),
+      );
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -4157,6 +4270,8 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
           ..write('isArchived: $isArchived, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('songLimit: $songLimit, ')
+          ..write('targetDurationMs: $targetDurationMs, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -9669,6 +9784,8 @@ typedef $$PlaylistsTableCreateCompanionBuilder = PlaylistsCompanion Function({
   Value<bool> isArchived,
   required DateTime createdAt,
   required DateTime updatedAt,
+  Value<int?> songLimit,
+  Value<Duration?> targetDurationMs,
   Value<int> rowid,
 });
 typedef $$PlaylistsTableUpdateCompanionBuilder = PlaylistsCompanion Function({
@@ -9691,6 +9808,8 @@ typedef $$PlaylistsTableUpdateCompanionBuilder = PlaylistsCompanion Function({
   Value<bool> isArchived,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
+  Value<int?> songLimit,
+  Value<Duration?> targetDurationMs,
   Value<int> rowid,
 });
 
@@ -9849,6 +9968,17 @@ class $$PlaylistsTableFilterComposer
         builder: (column) => ColumnWithTypeConverterFilters(column),
       );
 
+  ColumnFilters<int> get songLimit => $composableBuilder(
+    column: $table.songLimit,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<Duration?, Duration, int>
+  get targetDurationMs => $composableBuilder(
+    column: $table.targetDurationMs,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
   Expression<bool> playlistItemsRefs(
     Expression<bool> Function($$PlaylistItemsTableFilterComposer f) f,
   ) {
@@ -10003,6 +10133,16 @@ class $$PlaylistsTableOrderingComposer
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get songLimit => $composableBuilder(
+    column: $table.songLimit,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get targetDurationMs => $composableBuilder(
+    column: $table.targetDurationMs,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$PlaylistsTableAnnotationComposer
@@ -10097,6 +10237,15 @@ class $$PlaylistsTableAnnotationComposer
 
   GeneratedColumnWithTypeConverter<DateTime, int> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get songLimit =>
+      $composableBuilder(column: $table.songLimit, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<Duration?, int> get targetDurationMs =>
+      $composableBuilder(
+        column: $table.targetDurationMs,
+        builder: (column) => column,
+      );
 
   Expression<T> playlistItemsRefs<T extends Object>(
     Expression<T> Function($$PlaylistItemsTableAnnotationComposer a) f,
@@ -10196,6 +10345,8 @@ class $$PlaylistsTableTableManager
                 Value<bool> isArchived = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<int?> songLimit = const Value.absent(),
+                Value<Duration?> targetDurationMs = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PlaylistsCompanion(
                 id: id,
@@ -10217,6 +10368,8 @@ class $$PlaylistsTableTableManager
                 isArchived: isArchived,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                songLimit: songLimit,
+                targetDurationMs: targetDurationMs,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -10240,6 +10393,8 @@ class $$PlaylistsTableTableManager
                 Value<bool> isArchived = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
+                Value<int?> songLimit = const Value.absent(),
+                Value<Duration?> targetDurationMs = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PlaylistsCompanion.insert(
                 id: id,
@@ -10261,6 +10416,8 @@ class $$PlaylistsTableTableManager
                 isArchived: isArchived,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                songLimit: songLimit,
+                targetDurationMs: targetDurationMs,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

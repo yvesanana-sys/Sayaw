@@ -504,6 +504,43 @@ void main() {
       expect(container.read(playbackProvider).currentIndex, 0);
     });
   });
+
+  group('the shape of the set reaches the engine', () {
+    test('a song limit set on the playlist is what the engine plays to',
+        () async {
+      await _addTracks(db, set, music, ['a', 'b', 'c', 'd']);
+      await db.playlistDao
+          .setShape(set, songLimit: 2, targetDuration: null);
+
+      await session.openPlaylist(set);
+
+      expect(engine.songLimit, 2);
+      // All four rows are still on screen: the operator built them, and a set
+      // that stops early is not a set with rows missing from the list.
+      expect(container.read(playbackProvider).queue, hasLength(4));
+      expect(engine.standbyEntry!.itemId, 'item-b');
+    });
+
+    test('a set with no limit plays the list as written', () async {
+      await _addTracks(db, set, music, ['a', 'b']);
+      await session.openPlaylist(set);
+
+      expect(engine.songLimit, isNull);
+    });
+
+    test('the per-song cap arrives on every entry', () async {
+      await _addTracks(db, set, music, ['a', 'b']);
+      await db.playlistDao.setShape(set,
+          songLimit: null, targetDuration: const Duration(seconds: 90));
+
+      final resolved = await session.openPlaylist(set);
+
+      expect(
+        [for (final entry in resolved.entries) entry.targetDuration],
+        everyElement(const Duration(seconds: 90)),
+      );
+    });
+  });
 }
 
 // ---------------------------------------------------------------------------

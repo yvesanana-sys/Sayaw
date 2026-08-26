@@ -93,7 +93,13 @@ class PlaybackSession implements LibraryAccess, EventModeAccess {
         ),
     ]);
 
-    await engine.loadQueue(resolved.entries);
+    // The set's own shape, not the engine's: how many songs to play is a
+    // property of the night the operator planned, and the engine is told it
+    // rather than asked to work it out.
+    await engine.loadQueue(
+      resolved.entries,
+      songLimit: (await repository.db.playlistDao.byId(playlistId))?.songLimit,
+    );
     _publish();
     return resolved;
   }

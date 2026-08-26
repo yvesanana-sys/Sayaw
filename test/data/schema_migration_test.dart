@@ -1,4 +1,4 @@
-import 'package:drift/drift.dart' hide isNotNull;
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sayaw/data/db/database.dart';
@@ -22,6 +22,33 @@ CREATE TABLE source_accounts (
   offline_entitled    INTEGER NOT NULL DEFAULT 0,
   last_verified_at    INTEGER,
   created_at          INTEGER NOT NULL
+);
+''';
+
+/// `playlists` exactly as version 2 had it, before the set shape was added.
+const _v2Playlists = '''
+CREATE TABLE playlists (
+  id                     TEXT NOT NULL PRIMARY KEY,
+  name                   TEXT NOT NULL,
+  description            TEXT,
+  event_kind             TEXT,
+  event_date             INTEGER,
+  crossfade_ms           INTEGER NOT NULL DEFAULT 4000,
+  fade_in_curve          TEXT NOT NULL DEFAULT 'equalPower',
+  fade_out_curve         TEXT NOT NULL DEFAULT 'equalPower',
+  announce_mode          TEXT NOT NULL DEFAULT 'beforeMusic',
+  -- 0.2, not 0.20: a real version 2 database was created by Drift, not by
+  -- schema.sql, and this has to be the table that is actually on disk.
+  duck_level             REAL NOT NULL DEFAULT 0.2,
+  duck_fade_ms           INTEGER NOT NULL DEFAULT 600,
+  duck_hold_ms           INTEGER NOT NULL DEFAULT 250,
+  duck_restore_fade_ms   INTEGER NOT NULL DEFAULT 900,
+  tts_voice_id           TEXT,
+  tts_rate               REAL NOT NULL DEFAULT 0.5,
+  tts_pitch              REAL NOT NULL DEFAULT 1.0,
+  is_archived            INTEGER NOT NULL DEFAULT 0,
+  created_at             INTEGER NOT NULL,
+  updated_at             INTEGER NOT NULL
 );
 ''';
 
@@ -78,6 +105,59 @@ void main() {
       0,
     );
   });
+
+  test('an install from version 2 ends up with the table version 3 creates',
+      () async {
+    driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+
+    final upgraded = raw.sqlite3.openInMemory()..execute(_v2Playlists);
+    addTearDown(upgraded.close);
+
+    for (final statement in schemaUpgrades[3]!) {
+      upgraded.execute(statement);
+    }
+
+    final columnsAfterUpgrade = _columns([
+      for (final row in upgraded.select('PRAGMA table_info(playlists)'))
+        Map<String, Object?>.from(row),
+    ]);
+
+    final fresh = SayawDatabase(NativeDatabase.memory());
+    addTearDown(fresh.close);
+
+    expect(
+      columnsAfterUpgrade,
+      _columns([
+        for (final row
+            in await fresh.customSelect('PRAGMA table_info(playlists)').get())
+          row.data,
+      ]),
+    );
+  });
+
+  test('a set that predates the shape columns keeps playing as it always did',
+      () async {
+    // No limit and no per-song cap: the list as written, each track to its
+    // end. Anything else would silently change how someone's saved night runs
+    // the first time they open the new version.
+    final upgraded = raw.sqlite3.openInMemory()..execute(_v2Playlists);
+    addTearDown(upgraded.close);
+
+    upgraded.execute(
+      "INSERT INTO playlists (id, name, created_at, updated_at) "
+      "VALUES ('p', 'Saturday Social', 0, 0)",
+    );
+    for (final statement in schemaUpgrades[3]!) {
+      upgraded.execute(statement);
+    }
+
+    final row = upgraded
+        .select('SELECT song_limit, target_duration_ms FROM playlists')
+        .single;
+    expect(row['song_limit'], isNull);
+    expect(row['target_duration_ms'], isNull);
+  });
+
 
   test('every version between one and the current one has a step', () {
     final db = SayawDatabase(NativeDatabase.memory());

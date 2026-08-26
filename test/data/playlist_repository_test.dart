@@ -406,7 +406,66 @@ void main() {
       expect(() => repo.refreshEntry(entry), throwsStateError);
     });
   });
+
+  group('the shape of a set', () {
+    test('every row inherits the set-wide per-song cap', () async {
+      // "Two minutes of each track" is one setting on the night, not forty
+      // identical overrides on forty rows.
+      await _appendLocal(db, set, music, 'a');
+      await _appendLocal(db, set, music, 'b');
+      await db.playlistDao.setShape(set,
+          songLimit: null, targetDuration: const Duration(minutes: 2));
+
+      final resolved = await repo.buildQueue(set);
+
+      expect(
+        [for (final entry in resolved.entries) entry.targetDuration],
+        [const Duration(minutes: 2), const Duration(minutes: 2)],
+      );
+    });
+
+    test("a row's own cap wins over the set's", () async {
+      // A competition round in the middle of a social set.
+      await _appendLocal(db, set, music, 'a');
+      await _appendLocal(db, set, music, 'b');
+      await db.playlistDao.setShape(set,
+          songLimit: null, targetDuration: const Duration(minutes: 2));
+      await (db.update(db.playlistItems)
+            ..where((i) => i.id.equals('item-b')))
+          .write(const PlaylistItemsCompanion(
+              targetDurationMs: Value(Duration(seconds: 105))));
+
+      final resolved = await repo.buildQueue(set);
+
+      expect(
+        [for (final entry in resolved.entries) entry.targetDuration],
+        [const Duration(minutes: 2), const Duration(seconds: 105)],
+      );
+    });
+
+    test('no cap anywhere plays each track to its end', () async {
+      await _appendLocal(db, set, music, 'a');
+
+      final resolved = await repo.buildQueue(set);
+
+      expect(resolved.entries.single.targetDuration, isNull);
+    });
+
+    test('the shape can be cleared again', () async {
+      await db.playlistDao.setShape(set,
+          songLimit: 5, targetDuration: const Duration(minutes: 2));
+      expect((await db.playlistDao.byId(set))!.songLimit, 5);
+
+      await db.playlistDao
+          .setShape(set, songLimit: null, targetDuration: null);
+
+      final playlist = (await db.playlistDao.byId(set))!;
+      expect(playlist.songLimit, isNull);
+      expect(playlist.targetDurationMs, isNull);
+    });
+  });
 }
+
 
 // ---------------------------------------------------------------------------
 
