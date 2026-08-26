@@ -79,6 +79,17 @@ void main() {
   });
 
   group('what a scan learns', () {
+    test('a file with no tempo tag leaves the column empty', () async {
+      // Most of a DJ library. A zero here would sort to the front of every
+      // tempo-ordered set, so absence has to stay absence.
+      _touch(music, 'untagged.mp3');
+      reader.tags['untagged.mp3'] = const TrackMetadata(title: 'Untagged');
+
+      await scan();
+
+      expect((await db.select(db.tracks).get()).single.bpm, isNull);
+    });
+
     test('tags land in the columns the library searches on', () async {
       _touch(music, 'sway.mp3');
       reader.tags['sway.mp3'] = const TrackMetadata(
@@ -89,6 +100,7 @@ void main() {
         duration: Duration(minutes: 2, seconds: 42),
         bitrateKbps: 320,
         sampleRateHz: 44100,
+        bpm: 106.5,
       );
 
       await scan();
@@ -98,6 +110,8 @@ void main() {
       expect(track.artist, 'Dean Martin');
       expect(track.album, 'Dino: The Essential');
       expect(track.year, 1954);
+      expect(track.bpm, 106.5,
+          reason: 'the column the tempo-ordered modes sort on');
       expect(track.durationMs, const Duration(minutes: 2, seconds: 42));
       expect(track.bitrateKbps, 320);
       expect(track.sampleRateHz, 44100);

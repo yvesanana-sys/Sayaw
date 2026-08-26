@@ -200,6 +200,11 @@ class LibraryScanner {
         codec: Value(_codecFor(path)),
         bitrateKbps: Value(metadata?.bitrateKbps),
         sampleRateHz: Value(metadata?.sampleRateHz),
+        // Null where the file does not say. Keeping a BPM someone typed in by
+        // hand would need a "who last wrote this" column, and a rescan that
+        // silently reverted it is the worse of the two failures — so for now
+        // the tag is the only source and the column follows it.
+        bpm: Value(metadata?.bpm),
         addedAt: Value(known?.addedAt ?? now),
         updatedAt: Value(now),
         lastVerifiedAt: Value(now),
