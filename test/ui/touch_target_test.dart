@@ -108,7 +108,7 @@ void main() {
 
         final undersized = <String>[];
         _visitTappables(
-          tester.binding.pipelineOwner.semanticsOwner!.rootSemanticsNode!,
+          _semanticsRoot(tester),
           (node) {
             final rect = node.rect;
             if (rect.width + 0.01 < kMinTouchTarget ||
@@ -145,7 +145,7 @@ void _visitTappables(
 ) {
   final data = node.getSemanticsData();
 
-  final isButton = data.hasFlag(SemanticsFlag.isButton);
+  final isButton = data.flagsCollection.isButton;
   final tappable = data.hasAction(SemanticsAction.tap);
 
   // A scrollable reports tap for its scroll affordance; measuring it would be
@@ -164,3 +164,12 @@ void _visitTappables(
     return true;
   });
 }
+
+/// The root of the semantics tree.
+///
+/// Via the binding's render views rather than `binding.pipelineOwner`, which
+/// is deprecated: the binding can manage several views, so there is no single
+/// pipeline owner to ask any more. A widget test has exactly one, and taking
+/// `.first` says so rather than pretending otherwise.
+SemanticsNode _semanticsRoot(WidgetTester tester) =>
+    tester.binding.renderViews.first.owner!.semanticsOwner!.rootSemanticsNode!;

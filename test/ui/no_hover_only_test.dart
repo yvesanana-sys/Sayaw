@@ -56,10 +56,10 @@ void main() {
 
       final unlabelled = <String>[];
       _visit(
-        tester.binding.pipelineOwner.semanticsOwner!.rootSemanticsNode!,
+        _semanticsRoot(tester),
         (node) {
           final data = node.getSemanticsData();
-          if (!data.hasFlag(SemanticsFlag.isButton)) return;
+          if (!data.flagsCollection.isButton) return;
           if (data.label.trim().isEmpty && data.tooltip.trim().isEmpty) {
             unlabelled.add('${node.id} at ${node.rect}');
           }
@@ -109,3 +109,12 @@ void _visit(SemanticsNode node, void Function(SemanticsNode) visitor) {
     return true;
   });
 }
+
+/// The root of the semantics tree.
+///
+/// Via the binding's render views rather than `binding.pipelineOwner`, which
+/// is deprecated: the binding can manage several views, so there is no single
+/// pipeline owner to ask any more. A widget test has exactly one, and taking
+/// `.first` says so rather than pretending otherwise.
+SemanticsNode _semanticsRoot(WidgetTester tester) =>
+    tester.binding.renderViews.first.owner!.semanticsOwner!.rootSemanticsNode!;
