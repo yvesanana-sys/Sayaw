@@ -58,6 +58,7 @@ void main() {
           shape: const SetShape(
             songLimit: 8,
             songDuration: Duration(seconds: 90),
+            rotationGap: Duration(seconds: 15),
           ),
         ),
       );
@@ -67,6 +68,7 @@ void main() {
       }
       expect(find.text('8'), findsOneWidget);
       expect(find.text('90'), findsOneWidget);
+      expect(find.text('15'), findsOneWidget);
     });
   });
 
@@ -191,6 +193,61 @@ void main() {
     });
   });
 
+
+  group('the rotation', () {
+    testWidgets('says what the floor is going to experience', (tester) async {
+      final access = FakeSetShape(
+        shape: const SetShape(
+          songLimit: 5,
+          songDuration: Duration(minutes: 2),
+          rotationGap: Duration(seconds: 10),
+        ),
+      );
+      await pumpDialog(tester, access);
+
+      expect(find.textContaining('holding 10 seconds of silence between them'),
+          findsOneWidget);
+      expect(find.textContaining('change partners'), findsOneWidget);
+    });
+
+    testWidgets('is off on an ordinary set', (tester) async {
+      await pumpDialog(tester, FakeSetShape());
+
+      expect(
+        find.text('Plays the set as written: every row, each track to its end.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('turning it on writes a gap', (tester) async {
+      final access = FakeSetShape();
+      await pumpDialog(tester, access);
+
+      await tester.tap(find.byType(Switch).at(2));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(access.writes.single.rotationGap, const Duration(seconds: 10));
+      expect(access.writes.single.isRotation, isTrue);
+    });
+
+    testWidgets('turning it off puts the set back to an ordinary one',
+        (tester) async {
+      final access =
+          FakeSetShape(shape: const SetShape(rotationGap: Duration(seconds: 10)));
+      await pumpDialog(tester, access);
+
+      await tester.tap(find.byType(Switch).at(2));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(access.writes.single.rotationGap, Duration.zero);
+      expect(access.writes.single.isPlainList, isTrue);
+    });
+  });
+
   testWidgets('a running set is told what did not take effect yet',
       (tester) async {
     // The operator changed a number and watched the dialog close. Without
@@ -205,7 +262,7 @@ void main() {
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('applies the next time this set is opened'),
+    expect(find.textContaining('apply the next time this set is opened'),
         findsOneWidget);
   });
 

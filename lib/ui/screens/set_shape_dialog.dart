@@ -27,10 +27,16 @@ class _SetShapeDialogState extends ConsumerState<SetShapeDialog> {
   static const _defaultSongs = 5;
   static const _defaultSeconds = 120;
 
+  /// Long enough to find a partner across a busy floor, short enough that the
+  /// room does not go flat. Ten is what a caller usually gives.
+  static const _defaultGap = 10;
+
   bool _limitSongs = false;
   bool _limitLength = false;
+  bool _rotate = false;
   int _songs = _defaultSongs;
   int _seconds = _defaultSeconds;
+  int _gap = _defaultGap;
 
   bool _loaded = false;
   bool _saving = false;
@@ -50,6 +56,8 @@ class _SetShapeDialogState extends ConsumerState<SetShapeDialog> {
       _songs = shape.songLimit ?? _defaultSongs;
       _limitLength = shape.songDuration != null;
       _seconds = shape.songDuration?.inSeconds ?? _defaultSeconds;
+      _rotate = shape.isRotation;
+      _gap = shape.isRotation ? shape.rotationGap.inSeconds : _defaultGap;
       _loaded = true;
     });
   }
@@ -66,6 +74,7 @@ class _SetShapeDialogState extends ConsumerState<SetShapeDialog> {
     final full = await widget.access.writeSetShape(SetShape(
       songLimit: _limitSongs ? _songs : null,
       songDuration: _limitLength ? Duration(seconds: _seconds) : null,
+      rotationGap: _rotate ? Duration(seconds: _gap) : Duration.zero,
     ));
 
     if (!mounted) return;
@@ -76,8 +85,8 @@ class _SetShapeDialogState extends ConsumerState<SetShapeDialog> {
     // know half of it is waiting for the next set.
     if (!full) {
       messenger.showSnackBar(const SnackBar(
-        content: Text('Song length applies the next time this set is opened — '
-            'the one playing keeps the length it started with.'),
+        content: Text('Song length and rotation apply the next time this set '
+            'is opened — the one playing keeps what it started with.'),
       ));
     }
   }
@@ -123,6 +132,19 @@ class _SetShapeDialogState extends ConsumerState<SetShapeDialog> {
                       onToggled: (on) => setState(() => _limitLength = on),
                       onChanged: (v) => setState(() => _seconds = v),
                     ),
+                    const SizedBox(height: 8),
+                    _Row(
+                      label: 'Rotate after',
+                      unit: 'sec gap',
+                      enabled: _rotate,
+                      value: _gap,
+                      min: 2,
+                      max: 120,
+                      step: 5,
+                      semanticsLabel: 'Seconds of silence for partner rotation',
+                      onToggled: (on) => setState(() => _rotate = on),
+                      onChanged: (v) => setState(() => _gap = v),
+                    ),
                     const SizedBox(height: 16),
                     Text(
                       _summary(),
@@ -151,19 +173,35 @@ class _SetShapeDialogState extends ConsumerState<SetShapeDialog> {
   /// The setting read back as a sentence, because two numbers and two
   /// switches do not say what the night will do.
   String _summary() {
-    if (!_limitSongs && !_limitLength) {
+    if (!_limitSongs && !_limitLength && !_rotate) {
       return 'Plays the set as written: every row, each track to its end.';
     }
-    if (_limitSongs && !_limitLength) {
+
+    final of = _limitLength
+        ? '${_describeSeconds(_seconds)} of each track'
+        : 'each track in full';
+    final times = _limitSongs
+        ? ', $_songs ${_songs == 1 ? 'time' : 'times'},'
+        : ',';
+    final ending = _limitSongs ? ' then fades out and stops.' : '';
+
+    if (_rotate) {
+      // The whole shape of The Mixer, said in one sentence, because this is
+      // the setting a caller has to be sure of before a floor is waiting.
+      return 'Plays $of$times fading out and holding '
+          '${_describeSeconds(_gap)} of silence between them for the floor to '
+          'change partners.${ending.isEmpty ? '' : ' Stops after $_songs.'}';
+    }
+
+    if (!_limitLength) {
       return 'Plays $_songs ${_songs == 1 ? 'song' : 'songs'} in full, then '
           'fades out and stops.';
     }
-
-    final length = _describeSeconds(_seconds);
     if (!_limitSongs) {
-      return 'Plays $length of every track, then crossfades to the next.';
+      return 'Plays ${_describeSeconds(_seconds)} of every track, then '
+          'crossfades to the next.';
     }
-    return 'Plays $length of each track, $_songs '
+    return 'Plays ${_describeSeconds(_seconds)} of each track, $_songs '
         '${_songs == 1 ? 'time' : 'times'}, then fades out and stops.';
   }
 

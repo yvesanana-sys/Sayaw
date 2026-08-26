@@ -159,6 +159,7 @@ class PlaybackSession
     return SetShape(
       songLimit: playlist?.songLimit,
       songDuration: playlist?.targetDurationMs,
+      rotationGap: playlist?.rotationGapMs ?? Duration.zero,
     );
   }
 
@@ -185,6 +186,7 @@ class PlaybackSession
       playlistId,
       songLimit: shape.songLimit,
       targetDuration: shape.songDuration,
+      rotationGap: shape.rotationGap,
     );
 
     if (!isRunning) {
@@ -193,7 +195,11 @@ class PlaybackSession
     }
 
     engine.setSongLimit(shape.songLimit);
-    return shape.songDuration == before.songDuration;
+
+    // Both of these are baked into the queue entries when the set is opened,
+    // so neither can change under a running set.
+    return shape.songDuration == before.songDuration &&
+        shape.rotationGap == before.rotationGap;
   }
 
   // -------------------------------------------------------------------------

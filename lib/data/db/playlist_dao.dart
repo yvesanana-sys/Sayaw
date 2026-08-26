@@ -74,11 +74,13 @@ class PlaylistDao extends DatabaseAccessor<SayawDatabase> with _$PlaylistDaoMixi
     String playlistId, {
     required int? songLimit,
     required Duration? targetDuration,
+    Duration rotationGap = Duration.zero,
   }) =>
       (update(playlists)..where((p) => p.id.equals(playlistId))).write(
         PlaylistsCompanion(
           songLimit: Value(songLimit),
           targetDurationMs: Value(targetDuration),
+          rotationGapMs: Value(rotationGap),
           updatedAt: Value(clock.now()),
         ),
       );

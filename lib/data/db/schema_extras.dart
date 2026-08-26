@@ -26,6 +26,13 @@ const Map<int, List<String>> schemaUpgrades = {
     'ALTER TABLE playlists ADD COLUMN song_limit INTEGER',
     'ALTER TABLE playlists ADD COLUMN target_duration_ms INTEGER',
   ],
+
+  // Partner rotation. Zero, so every set already on disk keeps transitioning
+  // the way it did rather than acquiring a silence between tracks.
+  4: [
+    'ALTER TABLE playlists '
+        'ADD COLUMN rotation_gap_ms INTEGER NOT NULL DEFAULT 0',
+  ],
 };
 
 /// Statements run once, in order, when the database file is first created.

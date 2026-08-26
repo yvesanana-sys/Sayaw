@@ -33,6 +33,7 @@ class TransitionSpec {
     this.duckFade = const Duration(milliseconds: 600),
     this.duckHold = const Duration(milliseconds: 250),
     this.duckRestoreFade = const Duration(milliseconds: 900),
+    this.rotationGap = Duration.zero,
     this.pauseAfter = false,
   });
 
@@ -47,10 +48,23 @@ class TransitionSpec {
   final Duration duckHold;
   final Duration duckRestoreFade;
 
+  /// Silence held after the announcement, before the next song starts, so a
+  /// floor can change partners.
+  final Duration rotationGap;
+
   /// Stop after this item and wait for the operator (applause, MC handover).
   final bool pauseAfter;
 
   bool get isGapless => crossfade <= Duration.zero;
+
+  /// Whether this transition takes the sequential shape: music out, voice,
+  /// then music in — as opposed to an overlap.
+  ///
+  /// A rotation gap forces it whatever the row asked for. There is nowhere to
+  /// put a silence inside a crossfade, and a rotation that happens under a
+  /// track still playing is not a rotation.
+  bool get isSequential =>
+      announceMode == AnnounceMode.beforeMusic || rotationGap > Duration.zero;
 }
 
 /// One playable row of a playlist, resolved and ready for a deck.
@@ -108,7 +122,19 @@ class QueueEntry {
 /// and source accounts and the engine deliberately knows about neither.
 typedef EntryRefresher = Future<QueueEntry> Function(QueueEntry entry);
 
-enum EnginePhase { idle, playing, fadingOut, announcing, crossfading, paused }
+enum EnginePhase {
+  idle,
+  playing,
+  fadingOut,
+  announcing,
+
+  /// The silence between two songs of a rotation. The set is running and will
+  /// start the next track by itself; nobody needs to press anything.
+  rotating,
+
+  crossfading,
+  paused,
+}
 
 class EngineEvent {
   const EngineEvent(this.phase, {this.currentIndex, this.entry});
@@ -527,35 +553,30 @@ class CrossfadeEngine {
 
     final spec = incoming.spec;
 
-    switch (spec.announceMode) {
-      case AnnounceMode.off:
-        await _runCrossfade(spec);
+    if (spec.isSequential) {
+      if (!await _runSequential(spec, incoming)) {
+        _transitionInFlight = false;
+        return;
+      }
+    } else {
+      switch (spec.announceMode) {
+        case AnnounceMode.off:
+          await _runCrossfade(spec);
 
-      case AnnounceMode.duckOver:
-        // The duck and the crossfade run concurrently. Because the duck is a
-        // separate multiplicative stage, it attenuates both decks equally and
-        // leaves the crossfade ratio untouched.
-        final clip = await announcements.clipFor(incoming);
-        unawaited(_runCrossfade(spec));
-        if (clip != null) {
-          await announcements.announceWithDuck(clip, spec: spec, bus: bus);
-        }
+        case AnnounceMode.duckOver:
+          // The duck and the crossfade run concurrently. Because the duck is a
+          // separate multiplicative stage, it attenuates both decks equally and
+          // leaves the crossfade ratio untouched.
+          final clip = await announcements.clipFor(incoming);
+          unawaited(_runCrossfade(spec));
+          if (clip != null) {
+            await announcements.announceWithDuck(clip, spec: spec, bus: bus);
+          }
 
-      case AnnounceMode.beforeMusic:
-        // Sequential: silence, then voice, then music.
-        _setPhase(EnginePhase.fadingOut);
-        if (!await _fadeActiveToSilence(spec.crossfade, spec.fadeOutCurve)) {
-          _transitionInFlight = false;
-          return;
-        }
-        await _active.stop();
-
-        final clip = await announcements.clipFor(incoming);
-        if (clip != null) {
-          _setPhase(EnginePhase.announcing);
-          await announcements.announceSolo(clip);
-        }
-        await _startIncoming(spec);
+        case AnnounceMode.beforeMusic:
+          // Handled above: beforeMusic is the sequential shape.
+          break;
+      }
     }
 
     _transitionInFlight = false;
@@ -563,6 +584,47 @@ class CrossfadeEngine {
     if (spec.pauseAfter) {
       await pause();
     }
+  }
+
+  /// Music out, voice, wait, music in — with no overlap at any point.
+  ///
+  /// Returns false if it was abandoned part way, which is what pausing or
+  /// stopping mid-transition does.
+  Future<bool> _runSequential(TransitionSpec spec, QueueEntry incoming) async {
+    _setPhase(EnginePhase.fadingOut);
+    if (!await _fadeActiveToSilence(spec.crossfade, spec.fadeOutCurve)) {
+      return false;
+    }
+    await _active.stop();
+
+    final clip = await announcements.clipFor(incoming);
+    if (clip != null) {
+      _setPhase(EnginePhase.announcing);
+      await announcements.announceSolo(clip);
+    }
+
+    if (!await _holdRotationGap(spec.rotationGap)) return false;
+
+    await _startIncoming(spec);
+    return true;
+  }
+
+  /// The silence a floor changes partners in.
+  ///
+  /// Waited out in [tick]-sized steps rather than one long sleep so that
+  /// pausing during it takes effect when the operator presses the button, not
+  /// eight seconds later with the next track already starting.
+  Future<bool> _holdRotationGap(Duration gap) async {
+    if (gap <= Duration.zero) return true;
+
+    _setPhase(EnginePhase.rotating);
+
+    final until = clock.now().add(gap);
+    while (clock.now().isBefore(until)) {
+      if (_phase != EnginePhase.rotating) return false; // paused or stopped
+      await Future<void>.delayed(tick);
+    }
+    return _phase == EnginePhase.rotating;
   }
 
   /// Overlapping crossfade: start standby, ramp both decks in opposite

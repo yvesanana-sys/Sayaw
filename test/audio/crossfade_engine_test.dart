@@ -25,6 +25,7 @@ QueueEntry _entry(
   Duration duckFade = const Duration(milliseconds: 600),
   Duration duckHold = const Duration(milliseconds: 250),
   Duration duckRestoreFade = const Duration(milliseconds: 900),
+  Duration rotationGap = Duration.zero,
 }) {
   return QueueEntry(
     itemId: id,
@@ -41,6 +42,7 @@ QueueEntry _entry(
       duckFade: duckFade,
       duckHold: duckHold,
       duckRestoreFade: duckRestoreFade,
+      rotationGap: rotationGap,
     ),
     targetDuration: targetDuration,
     danceTypeName: danceTypeName,
@@ -1369,7 +1371,191 @@ void main() {
       });
     });
   });
+
+  group('partner rotation', () {
+    test('the music stops, the floor is told, and then it waits', () {
+      fakeAsync((async) {
+        final rig = _Rig(
+          track: const Duration(seconds: 8),
+          clip: const Duration(seconds: 2),
+        );
+        rig.start([
+          _entry('one'),
+          _entry('two',
+              mode: AnnounceMode.beforeMusic,
+              danceTypeName: 'Waltz',
+              rotationGap: const Duration(seconds: 6)),
+        ], async);
+
+        async.elapse(const Duration(seconds: 30));
+        async.flushMicrotasks();
+
+        final order = [for (final p in rig.phases) p.phase];
+        expect(
+          order,
+          containsAllInOrder([
+            EnginePhase.fadingOut,
+            EnginePhase.announcing,
+            EnginePhase.rotating,
+            EnginePhase.crossfading,
+          ]),
+          reason: 'music out, chime, wait, music in — in that order',
+        );
+      });
+    });
+
+    test('nothing is audible for the whole gap', () {
+      // The point of the thing. A rotation under a track still playing is not
+      // a rotation.
+      fakeAsync((async) {
+        final rig = _Rig(
+          track: const Duration(seconds: 8),
+          clip: const Duration(seconds: 1),
+        );
+        rig.start([
+          _entry('one'),
+          _entry('two',
+              mode: AnnounceMode.off,
+              rotationGap: const Duration(seconds: 5)),
+        ], async);
+
+        async.elapse(const Duration(seconds: 30));
+        async.flushMicrotasks();
+
+        final gapStart = rig.firstAt(EnginePhase.rotating)!;
+        final musicBack = rig.firstAt(EnginePhase.crossfading)!;
+
+        final audible = [
+          ...rig.a.volumeEvents,
+          ...rig.b.volumeEvents,
+        ].where((e) => e.at >= gapStart && e.at < musicBack && e.volume > 0.001);
+
+        expect(audible, isEmpty, reason: 'sound during the gap: $audible');
+      });
+    });
+
+    test('the gap lasts as long as it was told to', () {
+      fakeAsync((async) {
+        final rig = _Rig(
+          track: const Duration(seconds: 8),
+          clip: const Duration(seconds: 1),
+        );
+        rig.start([
+          _entry('one'),
+          _entry('two',
+              mode: AnnounceMode.off,
+              rotationGap: const Duration(seconds: 6)),
+        ], async);
+
+        async.elapse(const Duration(seconds: 40));
+        async.flushMicrotasks();
+
+        final gapStart = rig.firstAt(EnginePhase.rotating)!;
+        final musicBack = rig.firstAt(EnginePhase.crossfading)!;
+
+        expect((musicBack - gapStart).inMilliseconds,
+            closeTo(const Duration(seconds: 6).inMilliseconds, 100));
+      });
+    });
+
+    test('a gap forces the sequential shape even on an overlapping row', () {
+      // There is nowhere to put a silence inside a crossfade.
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(seconds: 8));
+        rig.start([
+          _entry('one'),
+          _entry('two',
+              mode: AnnounceMode.duckOver,
+              rotationGap: const Duration(seconds: 3)),
+        ], async);
+
+        async.elapse(const Duration(seconds: 30));
+        async.flushMicrotasks();
+
+        expect(rig.firstAt(EnginePhase.rotating), isNotNull);
+        // The outgoing deck reached silence before the incoming one came up,
+        // which an overlap never does.
+        final aSilent = rig.a.volumeEvents
+            .lastWhere((e) => e.volume > 0.001)
+            .at;
+        final bUp = rig.b.volumeEvents.firstWhere((e) => e.volume > 0.001).at;
+        expect(aSilent, lessThan(bUp));
+      });
+    });
+
+    test('no gap leaves an ordinary set exactly as it was', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(seconds: 8));
+        rig.start([_entry('one'), _entry('two', mode: AnnounceMode.off)], async);
+
+        async.elapse(const Duration(seconds: 30));
+        async.flushMicrotasks();
+
+        expect(rig.firstAt(EnginePhase.rotating), isNull);
+      });
+    });
+
+    test('pausing during the gap stops the next song starting behind it', () {
+      // The operator pressed pause in the silence. Coming back eight seconds
+      // later to find the set had carried on regardless is the failure.
+      fakeAsync((async) {
+        final rig = _Rig(
+          track: const Duration(seconds: 8),
+          clip: const Duration(seconds: 1),
+        );
+        rig.start([
+          _entry('one'),
+          _entry('two',
+              mode: AnnounceMode.off,
+              rotationGap: const Duration(seconds: 10)),
+        ], async);
+
+        // Into the gap, then pause.
+        while (rig.engine.phase != EnginePhase.rotating) {
+          async.elapse(const Duration(milliseconds: 100));
+          async.flushMicrotasks();
+        }
+        rig.engine.pause();
+        async.flushMicrotasks();
+
+        async.elapse(const Duration(seconds: 30));
+        async.flushMicrotasks();
+
+        expect(rig.engine.phase, EnginePhase.paused);
+        expect(rig.engine.currentEntry!.itemId, 'one',
+            reason: 'the next song must not have started by itself');
+      });
+    });
+
+    test('a rotation counts against the song limit like any other song', () {
+      fakeAsync((async) {
+        final rig = _Rig(
+          track: const Duration(seconds: 6),
+          clip: const Duration(seconds: 1),
+        );
+        rig.engine.loadQueue(
+          [
+            for (var i = 1; i <= 5; i++)
+              _entry('t$i',
+                  mode: AnnounceMode.off,
+                  rotationGap: const Duration(seconds: 2)),
+          ],
+          songLimit: 3,
+        );
+        async.flushMicrotasks();
+        rig.engine.play();
+        async.flushMicrotasks();
+
+        async.elapse(const Duration(minutes: 2));
+        async.flushMicrotasks();
+
+        expect(rig.activeItems, ['t1', 't2', 't3']);
+        expect(rig.engine.phase, EnginePhase.idle);
+      });
+    });
+  });
 }
+
 
 
 

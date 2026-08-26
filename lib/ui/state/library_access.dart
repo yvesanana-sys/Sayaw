@@ -63,7 +63,11 @@ abstract class SetShapeAccess {
 
 /// How many songs, and how much of each.
 class SetShape {
-  const SetShape({this.songLimit, this.songDuration});
+  const SetShape({
+    this.songLimit,
+    this.songDuration,
+    this.rotationGap = Duration.zero,
+  });
 
   /// Stop after this many. Null plays the list as written.
   final int? songLimit;
@@ -71,5 +75,14 @@ class SetShape {
   /// How much of each song to play. Null plays each to its end.
   final Duration? songDuration;
 
-  bool get isPlainList => songLimit == null && songDuration == null;
+  /// Silence held between songs so a floor can change partners. Zero is an
+  /// ordinary set.
+  final Duration rotationGap;
+
+  /// A set with a rotation gap is The Mixer: play, fade out, chime, wait,
+  /// fade in, repeat until the song count runs out.
+  bool get isRotation => rotationGap > Duration.zero;
+
+  bool get isPlainList =>
+      songLimit == null && songDuration == null && !isRotation;
 }

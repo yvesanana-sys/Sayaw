@@ -56,14 +56,14 @@ CREATE TABLE playlists (
 /// release: by the time it is noticed, someone's library is already on disk in
 /// the shape the broken migration left it.
 void main() {
-  test('an install from version 1 ends up with the table version 2 creates',
+  test('an install from version 1 ends up with the table this version creates',
       () async {
     driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
     final upgraded = raw.sqlite3.openInMemory()..execute(_v1SourceAccounts);
     addTearDown(upgraded.close);
 
-    for (final statement in schemaUpgrades[2]!) {
+    for (final statement in _upgradesTouching('source_accounts', from: 1)) {
       upgraded.execute(statement);
     }
 
@@ -96,7 +96,7 @@ void main() {
       "INSERT INTO source_accounts (id, provider, display_name, keychain_ref, "
       "created_at) VALUES ('s', 'plex', 'Home Server', 'plex:s', 0)",
     );
-    for (final statement in schemaUpgrades[2]!) {
+    for (final statement in _upgradesTouching('source_accounts', from: 1)) {
       upgraded.execute(statement);
     }
 
@@ -106,14 +106,14 @@ void main() {
     );
   });
 
-  test('an install from version 2 ends up with the table version 3 creates',
+  test('an install from version 2 ends up with the table this version creates',
       () async {
     driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
 
     final upgraded = raw.sqlite3.openInMemory()..execute(_v2Playlists);
     addTearDown(upgraded.close);
 
-    for (final statement in schemaUpgrades[3]!) {
+    for (final statement in _upgradesTouching('playlists', from: 2)) {
       upgraded.execute(statement);
     }
 
@@ -147,15 +147,17 @@ void main() {
       "INSERT INTO playlists (id, name, created_at, updated_at) "
       "VALUES ('p', 'Saturday Social', 0, 0)",
     );
-    for (final statement in schemaUpgrades[3]!) {
+    for (final statement in _upgradesTouching('playlists', from: 2)) {
       upgraded.execute(statement);
     }
 
     final row = upgraded
-        .select('SELECT song_limit, target_duration_ms FROM playlists')
+        .select('SELECT song_limit, target_duration_ms, rotation_gap_ms '
+            'FROM playlists')
         .single;
     expect(row['song_limit'], isNull);
     expect(row['target_duration_ms'], isNull);
+    expect(row['rotation_gap_ms'], 0, reason: 'no silence between tracks');
   });
 
 
@@ -176,4 +178,18 @@ List<String> _columns(Iterable<Map<String, Object?>> rows) => [
       for (final row in rows)
         '${row['name']} ${row['type']} '
             'null=${row['notnull'] == 0} default=${row['dflt_value']}',
+    ];
+
+/// Every upgrade step after [from] that touches [table].
+///
+/// Filtered by table because each fixture above holds one table, and a
+/// statement about another would fail against it. Walking *all* the remaining
+/// versions rather than one named version is the point: this compares an
+/// upgraded install against a fresh one, and it only says anything true if a
+/// migration added later is applied here too rather than quietly skipped.
+List<String> _upgradesTouching(String table, {required int from}) => [
+      for (final version in schemaUpgrades.keys.toList()..sort())
+        if (version > from)
+          for (final statement in schemaUpgrades[version]!)
+            if (statement.contains(table)) statement,
     ];

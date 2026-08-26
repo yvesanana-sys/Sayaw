@@ -197,6 +197,9 @@ class PlaylistRepository {
         duckFade: playlist.duckFadeMs,
         duckHold: playlist.duckHoldMs,
         duckRestoreFade: playlist.duckRestoreFadeMs,
+        // A property of the night rather than of one song, like the duck
+        // envelope above it, so there is deliberately no per-row override.
+        rotationGap: playlist.rotationGapMs,
         pauseAfter: item.pauseAfter,
       );
 

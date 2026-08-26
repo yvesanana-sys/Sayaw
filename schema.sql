@@ -158,7 +158,14 @@ CREATE TABLE playlists (
   song_limit             INTEGER CHECK (song_limit IS NULL OR song_limit > 0),
   target_duration_ms     INTEGER                   -- per song; items override
                            CHECK (target_duration_ms IS NULL
-                                  OR target_duration_ms > 0)
+                                  OR target_duration_ms > 0),
+
+  -- Silence held between songs so a floor can change partners. Zero is an
+  -- ordinary set; anything above it makes every transition sequential —
+  -- music out, chime, wait, music in — because a rotation needs the room
+  -- actually quiet.
+  rotation_gap_ms        INTEGER NOT NULL DEFAULT 0
+                           CHECK (rotation_gap_ms >= 0)
 );
 
 -- ---------------------------------------------------------------------------

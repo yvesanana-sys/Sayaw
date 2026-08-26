@@ -165,13 +165,19 @@ class SayawAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
     ));
   }
 
-  /// Whether sound is coming out. A fade-out and an announcement both count:
+  /// Whether the set is running. A fade-out and an announcement both count:
   /// a lock screen showing "paused" while the room can still hear the set is
   /// the wrong answer.
+  ///
+  /// So does a rotation gap, even though it is silence. The set is mid-run and
+  /// starts the next song by itself, and a lock screen saying "paused" would
+  /// invite the operator to press play — which is the one thing that would
+  /// actually break it.
   static bool isPlaying(EnginePhase phase) => switch (phase) {
         EnginePhase.playing ||
         EnginePhase.crossfading ||
         EnginePhase.announcing ||
+        EnginePhase.rotating ||
         EnginePhase.fadingOut =>
           true,
         EnginePhase.idle || EnginePhase.paused => false,

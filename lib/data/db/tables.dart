@@ -237,6 +237,15 @@ class Playlists extends Table {
   IntColumn get targetDurationMs =>
       integer().nullable().map(const MillisDurationConverter())();
 
+  /// Silence held between songs so a floor can change partners.
+  ///
+  /// Zero is an ordinary set. Anything above it makes every transition
+  /// sequential — music out, chime, wait, music in — because a rotation needs
+  /// the room actually quiet, not a crossfade with a voice over it.
+  IntColumn get rotationGapMs => integer()
+      .withDefault(const Constant(0))
+      .map(const MillisDurationConverter())();
+
   @override
   Set<Column> get primaryKey => {id};
 
