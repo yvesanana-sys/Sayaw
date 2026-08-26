@@ -246,12 +246,16 @@ class PlaybackController extends Notifier<PlaybackUiState> {
     required int currentIndex,
     required DeckUiState active,
     required DeckUiState standby,
+    double? crossfader,
   }) {
     state = state.copyWith(
       deckA: activeSlot == DeckSlot.a ? active : standby,
       deckB: activeSlot == DeckSlot.a ? standby : active,
       phase: phase,
       currentIndex: currentIndex,
+      // Null means the operator has the fader, and the engine is following
+      // them rather than the other way round.
+      crossfader: crossfader,
     );
   }
 
@@ -324,13 +328,18 @@ class PlaybackController extends Notifier<PlaybackUiState> {
   }
 
   void setCrossfader(double value) {
-    state = state.copyWith(crossfader: value.clamp(0.0, 1.0));
+    final position = value.clamp(0.0, 1.0);
+    state = state.copyWith(crossfader: position);
 
-    // With a session attached the deck levels are the engine's, and the slider
-    // is the operator's stated intent rather than a live control — nothing
-    // downstream reads it yet. Overwriting the meters here would draw a
-    // position the decks are not at.
-    if (_session == null) _applyCrossfaderGains();
+    // With a session attached the decks are the engine's, and it writes the
+    // gains — including starting the deck that is cued up, and completing the
+    // handover when the fader reaches the far end.
+    if (_session case final session?) {
+      session.setCrossfader(position);
+      return;
+    }
+
+    _applyCrossfaderGains();
   }
 
   void setPerformanceMode(bool enabled) =>

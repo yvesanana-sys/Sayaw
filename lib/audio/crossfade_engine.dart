@@ -193,6 +193,16 @@ class CrossfadeEngine {
   Duration _fadeDuration = Duration.zero;
   bool _transitionInFlight = false;
 
+  /// True while the operator has hold of the crossfader.
+  bool _manual = false;
+
+  /// Whether the announcement for the incoming row has been started during
+  /// the current manual fade.
+  bool _manualAnnounced = false;
+
+  /// Whether the crossfader, rather than the timer, is deciding the gains.
+  bool get isManualFade => _manual;
+
   QueueEntry? get currentEntry => _activeEntry;
   int get currentIndex => _index;
 
@@ -255,14 +265,19 @@ class CrossfadeEngine {
     await _standby.pause();
     _setPhase(EnginePhase.paused);
     // Release the latch: any in-flight transition sees the phase change and
-    // abandons itself, so the next play() is free to retrigger it.
+    // abandons itself, so the next play() is free to retrigger it. A manual
+    // fade is abandoned on the same terms as an automatic one.
     _transitionInFlight = false;
+    _manual = false;
+    _manualAnnounced = false;
   }
 
   Future<void> stop() async {
     _ticker?.cancel();
     _ticker = null;
     _transitionInFlight = false;
+    _manual = false;
+    _manualAnnounced = false;
     await _a.stop();
     await _b.stop();
     _activeEntry = null;
@@ -287,6 +302,119 @@ class CrossfadeEngine {
   }
 
   // -------------------------------------------------------------------------
+  // The crossfader
+  // -------------------------------------------------------------------------
+
+  /// Manual crossfade, in the operator's terms: 0 is deck A alone, 1 is deck B.
+  ///
+  /// Grabbing the fader takes the transition away from the timer, which is
+  /// exactly the moment a DJ reaches for it — the automatic fade started while
+  /// the floor still had eight bars left in it. An in-flight fade is abandoned
+  /// rather than fought with, on the same terms as pausing abandons one.
+  ///
+  /// Reaching the far end completes the handover, leaving the same state an
+  /// automatic crossfade would have, so the set carries on from there.
+  /// Dragging back to the near end abandons it and re-cues the deck that was
+  /// coming up.
+  Future<void> setCrossfader(double aToB) async {
+    // Nothing cued up behind the audible deck, or nothing playing to fade
+    // from. The slider still moves on screen — it is the operator's stated
+    // intent — but there is nothing here to act on.
+    if (_standbyEntry == null) return;
+    if (_phase != EnginePhase.playing && _phase != EnginePhase.crossfading) {
+      return;
+    }
+
+    // The fader is drawn A-left, B-right, and which of those is audible flips
+    // at every transition. This is the one place that mapping happens.
+    final toward = (_activeIsA ? aToB : 1.0 - aToB).clamp(0.0, 1.0);
+
+    if (!_manual) {
+      // Sitting at the end it is already at. Nothing to take over.
+      if (toward <= 0.0) return;
+      await _beginManualFade();
+    }
+
+    if (toward <= 0.0) return _abandonManualFade();
+
+    final spec = _standbyEntry!.spec;
+    final gains = crossfadeGains(
+      toward,
+      outCurve: spec.fadeOutCurve,
+      inCurve: spec.fadeInCurve,
+    );
+    _activeFade = gains.outgoing;
+    _standbyFade = gains.incoming;
+    _applyGains();
+
+    // Past centre the incoming track is the louder of the two, which is the
+    // point at which this stops being a nudge and becomes a transition.
+    if (toward >= 0.5) _announceOverManualFade();
+
+    if (toward >= 1.0) await _completeManualFade();
+  }
+
+  Future<void> _beginManualFade() async {
+    _manual = true;
+    _manualAnnounced = false;
+
+    // Any automatic fade in flight sees `_isFading` go false and unwinds
+    // without retiring a deck that is still in the mix.
+    _fadeStartedAt = null;
+
+    _setPhase(EnginePhase.crossfading);
+    await _standby.play();
+  }
+
+  Future<void> _completeManualFade() async {
+    _manual = false;
+    _manualAnnounced = false;
+    await _completeSwap();
+  }
+
+  /// Puts the deck that was coming up back where it started.
+  ///
+  /// Back to its cue point, not to wherever the operator's hesitation left it:
+  /// the next transition has to start this row at the top, not eight seconds
+  /// in. A seek rather than a reload, so aborting costs nothing on the network.
+  Future<void> _abandonManualFade() async {
+    final incoming = _standbyEntry;
+    _manual = false;
+    _manualAnnounced = false;
+
+    await _standby.pause();
+    await _standby.seek(incoming?.media.cueIn ?? Duration.zero);
+
+    _activeFade = 1.0;
+    _standbyFade = 0.0;
+    _applyGains();
+    _setPhase(EnginePhase.playing);
+  }
+
+  /// The incoming row's announcement, over a fade the operator is driving.
+  ///
+  /// [AnnounceMode.beforeMusic] cannot be honoured here: it wants silence, a
+  /// clean voice and then the music, and the operator is already mixing the
+  /// two together. It degrades to ducking over rather than being dropped — at
+  /// a ballroom event the floor not being told the next dance is a functional
+  /// failure, and a quieter announcement beats none at all.
+  void _announceOverManualFade() {
+    if (_manualAnnounced) return;
+    final incoming = _standbyEntry;
+    if (incoming == null) return;
+    if (incoming.spec.announceMode == AnnounceMode.off) return;
+
+    _manualAnnounced = true;
+
+    unawaited(() async {
+      final clip = await announcements.clipFor(incoming);
+      if (clip == null) return;
+      await announcements.announceWithDuck(clip,
+          spec: incoming.spec, bus: bus);
+    }());
+  }
+
+  // -------------------------------------------------------------------------
   // Tick loop
   // -------------------------------------------------------------------------
 
@@ -298,6 +426,11 @@ class CrossfadeEngine {
   void _onTick() {
     final entry = _activeEntry;
     if (entry == null) return;
+
+    // The operator owns the gains while they have the fader; the timer must
+    // not write over them, and must not start a second transition underneath
+    // the one being performed by hand.
+    if (_manual) return;
 
     if (_phase == EnginePhase.crossfading || _phase == EnginePhase.fadingOut) {
       _advanceFade();
@@ -496,8 +629,12 @@ class CrossfadeEngine {
 
   /// Whether a fade is still the engine's current business. Pausing or stopping
   /// clears this, and every exit from [_awaitFadeComplete] is gated on it.
+  /// A manual takeover counts as an abandonment. Every exit from
+  /// [_awaitFadeComplete] is gated on this, so the automatic fade unwinds
+  /// without retiring a deck the operator is still mixing with.
   bool get _isFading =>
-      _phase == EnginePhase.crossfading || _phase == EnginePhase.fadingOut;
+      !_manual &&
+      (_phase == EnginePhase.crossfading || _phase == EnginePhase.fadingOut);
 
   /// Applies the composed gain to both decks.
   ///

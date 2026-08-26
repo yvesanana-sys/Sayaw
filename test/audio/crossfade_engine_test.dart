@@ -936,5 +936,285 @@ void main() {
       });
     });
   });
+
+  group('the crossfader', () {
+    /// Fader position, applied and settled.
+    void drag(_Rig rig, FakeAsync async, double aToB) {
+      rig.engine.setCrossfader(aToB);
+      async.flushMicrotasks();
+    }
+
+    test('dragging off the end starts the deck that is cued up', () {
+      fakeAsync((async) {
+        final rig = _Rig();
+        rig.start([_entry('one'), _entry('two')], async);
+        expect(rig.b.calls, isNot(contains('play')));
+
+        drag(rig, async, 0.3);
+
+        expect(rig.engine.isManualFade, isTrue);
+        expect(rig.b.calls, contains('play'));
+        expect(rig.b.volumeEvents.last.volume, greaterThan(0));
+      });
+    });
+
+    test('the gains follow the fader through the configured curve', () {
+      // Equal power at the centre: both decks at 1/root-2, which is the
+      // property that removes the hole in the middle of a transition.
+      fakeAsync((async) {
+        final rig = _Rig();
+        rig.start([_entry('one'), _entry('two')], async);
+
+        drag(rig, async, 0.5);
+
+        expect(rig.a.volumeEvents.last.volume, closeTo(0.7071, 0.001));
+        expect(rig.b.volumeEvents.last.volume, closeTo(0.7071, 0.001));
+      });
+    });
+
+    test('reaching the far end completes the handover', () {
+      // The same end state an automatic crossfade leaves, so the set carries
+      // on from there rather than needing a nudge.
+      fakeAsync((async) {
+        final rig = _Rig();
+        rig.start([_entry('one'), _entry('two'), _entry('three')], async);
+
+        drag(rig, async, 1.0);
+
+        expect(rig.engine.isManualFade, isFalse);
+        expect(rig.engine.activeIsA, isFalse, reason: 'B is audible now');
+        expect(rig.engine.currentEntry!.itemId, 'two');
+        expect(rig.engine.phase, EnginePhase.playing);
+        // And the next row is cued up behind it.
+        expect(rig.engine.standbyEntry!.itemId, 'three');
+      });
+    });
+
+    test('dragging back re-cues the deck that was coming up', () {
+      // Not left eight seconds in: the next transition has to start that row
+      // at the top.
+      fakeAsync((async) {
+        final rig = _Rig();
+        rig.start([_entry('one'), _entry('two')], async);
+
+        drag(rig, async, 0.4);
+        async.elapse(const Duration(seconds: 3));
+        drag(rig, async, 0.0);
+
+        expect(rig.engine.isManualFade, isFalse);
+        expect(rig.engine.phase, EnginePhase.playing);
+        expect(rig.engine.activeIsA, isTrue, reason: 'no handover happened');
+        expect(rig.b.calls, contains('seek'));
+        expect(rig.b.position, Duration.zero);
+        expect(rig.a.volumeEvents.last.volume, closeTo(1.0, 0.001));
+      });
+    });
+
+    test('grabbing it mid-transition takes over from the timer', () {
+      // The moment a DJ actually reaches for it: the automatic fade started
+      // while the floor still had eight bars left in it.
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(seconds: 10));
+        rig.start([_entry('one'), _entry('two')], async);
+
+        async.elapse(const Duration(seconds: 7));
+        async.flushMicrotasks();
+        expect(rig.engine.phase, EnginePhase.crossfading,
+            reason: 'the automatic transition should have begun');
+
+        drag(rig, async, 0.5);
+        final held = rig.a.volumeEvents.last.volume;
+
+        // The timer would have finished the fade and retired deck A by now.
+        async.elapse(const Duration(seconds: 10));
+        async.flushMicrotasks();
+
+        expect(rig.engine.isManualFade, isTrue);
+        expect(rig.engine.activeIsA, isTrue, reason: 'no handover happened');
+        expect(rig.a.volumeEvents.last.volume, closeTo(held, 0.001));
+      });
+    });
+
+    test('the set does not run on underneath the operator', () {
+      // Holding the fader half way is a decision, not a stall. Nothing may
+      // start a second transition behind it.
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(seconds: 4));
+        rig.start([_entry('one'), _entry('two'), _entry('three')], async);
+
+        drag(rig, async, 0.5);
+        async.elapse(const Duration(minutes: 2));
+        async.flushMicrotasks();
+
+        expect(rig.engine.currentEntry!.itemId, 'one');
+        expect(rig.engine.isManualFade, isTrue);
+      });
+    });
+
+    test('A-left B-right, whichever deck happens to be audible', () {
+      // The two swap roles at every transition. After one handover, dragging
+      // back toward A is dragging toward the deck that is now on standby.
+      fakeAsync((async) {
+        final rig = _Rig();
+        rig.start([_entry('one'), _entry('two'), _entry('three')], async);
+
+        drag(rig, async, 1.0);
+        expect(rig.engine.activeIsA, isFalse);
+
+        // Deck A played the first track and has since been re-loaded as the
+        // standby. Only what happens from here is the subject.
+        rig.a.callEvents.clear();
+        rig.b.callEvents.clear();
+
+        // Toward A is now toward the deck on standby, so this is a fade, not
+        // a return to where the fader already was.
+        drag(rig, async, 0.0);
+
+        expect(rig.a.calls, contains('play'),
+            reason: 'dragging to A should bring deck A up, not deck B');
+        expect(rig.engine.activeIsA, isTrue);
+        expect(rig.engine.currentEntry!.itemId, 'three');
+      });
+    });
+
+    test('with nothing cued up there is nothing to fade to', () {
+      fakeAsync((async) {
+        final rig = _Rig();
+        rig.start([_entry('one')], async);
+
+        drag(rig, async, 1.0);
+
+        expect(rig.engine.isManualFade, isFalse);
+        expect(rig.engine.phase, EnginePhase.playing);
+        expect(rig.engine.currentEntry!.itemId, 'one');
+      });
+    });
+
+    test('a paused set is not started by the fader', () {
+      fakeAsync((async) {
+        final rig = _Rig();
+        rig.start([_entry('one'), _entry('two')], async);
+        rig.engine.pause();
+        async.flushMicrotasks();
+
+        drag(rig, async, 0.6);
+
+        expect(rig.engine.isManualFade, isFalse);
+        expect(rig.engine.phase, EnginePhase.paused);
+      });
+    });
+
+    test('pausing gives the fader back', () {
+      fakeAsync((async) {
+        final rig = _Rig();
+        rig.start([_entry('one'), _entry('two')], async);
+        drag(rig, async, 0.5);
+
+        rig.engine.pause();
+        async.flushMicrotasks();
+
+        expect(rig.engine.isManualFade, isFalse);
+      });
+    });
+
+    group('the announcement', () {
+      test('plays once the fade is past centre', () {
+        // At a ballroom event the floor not being told the next dance is a
+        // functional failure, whichever control the operator used.
+        fakeAsync((async) {
+          final rig = _Rig();
+          rig.start([
+            _entry('one'),
+            _entry('two', mode: AnnounceMode.duckOver, danceTypeName: 'Waltz'),
+          ], async);
+
+          drag(rig, async, 0.6);
+          async.elapse(const Duration(seconds: 4));
+          async.flushMicrotasks();
+
+          // Not `clips.rendered`: the engine pre-renders every standby clip
+          // at preload time whether or not it is ever spoken. The voice deck
+          // is what says the room heard it.
+          expect(rig.voice.calls, contains('play'));
+          expect(rig.duckValues.map((e) => e.value).any((v) => v < 0.5), isTrue,
+              reason: 'the music should have dipped under the voice');
+        });
+      });
+
+      test('a nudge short of centre does not trigger one', () {
+        // Otherwise brushing the fader announces the next dance to the room.
+        fakeAsync((async) {
+          final rig = _Rig();
+          rig.start([
+            _entry('one'),
+            _entry('two', mode: AnnounceMode.duckOver, danceTypeName: 'Waltz'),
+          ], async);
+
+          drag(rig, async, 0.2);
+          async.elapse(const Duration(seconds: 4));
+          async.flushMicrotasks();
+
+          expect(rig.voice.calls, isNot(contains('play')));
+        });
+      });
+
+      test('beforeMusic degrades to ducking rather than being dropped', () {
+        // It wants silence, a clean voice, then music. The operator is already
+        // mixing the two together, so the clean-voice half is not available.
+        fakeAsync((async) {
+          final rig = _Rig();
+          rig.start([
+            _entry('one'),
+            _entry('two',
+                mode: AnnounceMode.beforeMusic, danceTypeName: 'Tango'),
+          ], async);
+
+          drag(rig, async, 0.7);
+          async.elapse(const Duration(seconds: 4));
+          async.flushMicrotasks();
+
+          expect(rig.voice.calls, contains('play'));
+          // The outgoing deck never went silent: this is an overlap, not the
+          // sequential form.
+          expect(rig.a.volumeEvents.last.volume, greaterThan(0.0));
+        });
+      });
+
+      test('a row set to no announcement stays silent', () {
+        fakeAsync((async) {
+          final rig = _Rig();
+          rig.start([
+            _entry('one'),
+            _entry('two', mode: AnnounceMode.off, danceTypeName: 'Waltz'),
+          ], async);
+
+          drag(rig, async, 0.8);
+          async.elapse(const Duration(seconds: 4));
+          async.flushMicrotasks();
+
+          expect(rig.voice.calls, isNot(contains('play')));
+        });
+      });
+
+      test('it is announced once, not on every pixel of the drag', () {
+        fakeAsync((async) {
+          final rig = _Rig();
+          rig.start([
+            _entry('one'),
+            _entry('two', mode: AnnounceMode.duckOver, danceTypeName: 'Waltz'),
+          ], async);
+
+          for (var i = 5; i <= 9; i++) {
+            drag(rig, async, i / 10);
+          }
+          async.elapse(const Duration(seconds: 4));
+          async.flushMicrotasks();
+
+          expect(rig.voice.calls.where((c) => c == 'play').length, 1);
+        });
+      });
+    });
+  });
 }
+
 

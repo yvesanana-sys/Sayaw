@@ -161,6 +161,14 @@ class PlaybackSession implements LibraryAccess, EventModeAccess {
 
   Future<void> stop() => engine.stop();
 
+  /// The crossfader, with an engine behind it: 0 is deck A alone, 1 is deck B.
+  ///
+  /// Straight through. Which physical deck is audible, whether a transition is
+  /// already running and what to do when the fader reaches the end are all the
+  /// engine's business, and duplicating any of that here would give the screen
+  /// a second opinion about the state of the mix.
+  Future<void> setCrossfader(double value) => engine.setCrossfader(value);
+
   DeckSlot get activeSlot => engine.activeIsA ? DeckSlot.a : DeckSlot.b;
 
   // -------------------------------------------------------------------------
@@ -325,6 +333,7 @@ class PlaybackSession implements LibraryAccess, EventModeAccess {
       activeSlot: active,
       phase: engine.phase,
       currentIndex: _queueIndexOf(entry?.itemId),
+      crossfader: _crossfaderPosition(),
       active: DeckUiState(
         title: entry?.title ?? '',
         artist: entry?.artist ?? '',
@@ -343,6 +352,25 @@ class PlaybackSession implements LibraryAccess, EventModeAccess {
         gain: engine.standbyFade,
       ),
     );
+  }
+
+  /// Where the fader would have to be to produce the gains the engine is
+  /// writing, so an automatic transition moves the thumb and leaves it at the
+  /// end it arrived at.
+  ///
+  /// Null while the operator has hold of it. The round trip through the
+  /// equal-power curve is not the identity — a fader at 0.25 produces gains
+  /// that read back as 0.29 — so feeding this into a slider under someone's
+  /// thumb would fight them.
+  double? _crossfaderPosition() {
+    if (engine.isManualFade) return null;
+
+    final a = engine.activeIsA ? engine.activeFade : engine.standbyFade;
+    final b = engine.activeIsA ? engine.standbyFade : engine.activeFade;
+
+    final sum = a + b;
+    if (sum <= 0) return null;
+    return b / sum;
   }
 
   /// The engine counts only the rows it accepted; the operator sees all of

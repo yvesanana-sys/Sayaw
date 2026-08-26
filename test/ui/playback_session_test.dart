@@ -442,6 +442,68 @@ void main() {
       expect(container.read(playbackProvider).queue, isEmpty);
     });
   });
+
+  group('the crossfader', () {
+    setUp(() async {
+      await _addTracks(db, set, music, ['a', 'b', 'c']);
+      await session.openPlaylist(set);
+      await session.play();
+      await _settle();
+    });
+
+    test('the fader on screen moves the decks', () async {
+      // It used to move a number and nothing else: with a session attached
+      // the slider was inert, which on the main screen of a DJ app is the
+      // control most likely to be reached for in a hurry.
+      controller.setCrossfader(1.0);
+      await _settle();
+
+      expect(session.activeSlot, DeckSlot.b);
+      expect(container.read(playbackProvider).deckB.title, 'Track b');
+      expect(deckB.calls, contains('play'));
+    });
+
+    test('half way is half way, not a handover', () async {
+      controller.setCrossfader(0.5);
+      await _settle();
+
+      expect(session.activeSlot, DeckSlot.a, reason: 'nothing handed over yet');
+      expect(deckA.volumeEvents.last.volume, closeTo(0.7071, 0.01));
+      expect(deckB.volumeEvents.last.volume, closeTo(0.7071, 0.01));
+    });
+
+    test('the engine does not fight the thumb while it is held', () async {
+      // Reading the gains back through the equal-power curve does not return
+      // the fader position that produced them, so publishing it under a
+      // moving thumb would make the slider jitter.
+      controller.setCrossfader(0.6);
+      await _settle(const Duration(milliseconds: 300));
+
+      expect(container.read(playbackProvider).crossfader, closeTo(0.6, 1e-9));
+    });
+
+    test('an automatic transition moves the thumb to the end it arrived at',
+        () async {
+      expect(container.read(playbackProvider).crossfader, closeTo(0.0, 0.01));
+
+      controller.crossfadeNow();
+      await _settle(_crossfade * 3);
+
+      expect(session.activeSlot, DeckSlot.b);
+      expect(container.read(playbackProvider).crossfader, closeTo(1.0, 0.01));
+    });
+
+    test('dragging back leaves the set where it was', () async {
+      controller.setCrossfader(0.4);
+      await _settle();
+      controller.setCrossfader(0.0);
+      await _settle();
+
+      expect(session.activeSlot, DeckSlot.a);
+      expect(container.read(playbackProvider).deckA.title, 'Track a');
+      expect(container.read(playbackProvider).currentIndex, 0);
+    });
+  });
 }
 
 // ---------------------------------------------------------------------------
