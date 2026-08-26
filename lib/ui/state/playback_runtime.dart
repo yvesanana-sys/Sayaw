@@ -2,17 +2,20 @@ import '../../audio/announcement_engine.dart';
 import '../../audio/crossfade_engine.dart';
 import '../../audio/deck.dart';
 import '../../audio/gain_bus.dart';
+import 'dart:async';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
 
 import '../../data/cache/file_media_cache.dart';
 import '../../data/cache/media_downloader.dart';
+import '../../data/connectivity.dart';
 import '../../data/db/announcement_dao.dart';
 import '../../data/db/database.dart';
 import '../../data/media_resolver.dart';
 import '../../data/playlist_repository.dart';
 import '../../data/sources/plex/plex_api_client.dart';
+import '../../data/sources/plex/plex_reachability.dart';
 import '../../data/sources/sources_access.dart';
 import '../../data/sources/plex/plex_identity.dart';
 import '../../data/sources/plex/plex_auth.dart';
@@ -37,8 +40,10 @@ class PlaybackRuntime {
     required this.plex,
     required this.sources,
     required this.downloader,
+    required this.connectivity,
     required this.decks,
     required this.bus,
+    required this.networkEvents,
   });
 
   final SayawDatabase db;
@@ -55,6 +60,13 @@ class PlaybackRuntime {
   /// The only thing that writes media bytes to disk.
   final MediaDownloader downloader;
 
+  /// What the resolver reads to decide whether reaching for a server is worth
+  /// the timeout.
+  final ConnectivityService connectivity;
+
+  /// Held only so it can be cancelled, like [decks] and [bus] below.
+  final StreamSubscription<NetworkMode> networkEvents;
+
   /// Held only so they can be disposed: everything that reads them goes
   /// through the engine.
   final List<Deck> decks;
@@ -70,6 +82,7 @@ class PlaybackRuntime {
     TtsVoiceSettings voice = const TtsVoiceSettings(),
     SecretStore secrets = const SecureSecretStore(),
     Dio? http,
+    NetworkRadio? radio,
   }) {
     final deckA = DeckFactory.create('A');
     final deckB = DeckFactory.create('B');
@@ -87,15 +100,20 @@ class PlaybackRuntime {
       accounts: db.sourceAccountDao,
     );
 
+    // The radio alone is not trusted anywhere: every verdict here comes from a
+    // real request against a real server. See `lib/data/connectivity.dart`.
+    final connectivity = ConnectivityService(
+      radio: radio ?? ConnectivityPlusRadio(),
+      probes: [PlexReachability(accounts: db.sourceAccountDao, plex: plex)],
+    );
+
     final resolver = MediaResolver(
       plex: plex,
       tidal: const UnconfiguredTidalClient(),
       cache: FileMediaCache(db),
-      // Connectivity is not watched yet, so this always claims a connection.
-      // The cost of being wrong is bounded: the connection race gives every
-      // address a few hundred milliseconds and then reports the server as
-      // unreachable in words.
-      networkMode: () => NetworkMode.online,
+      // Read on every resolve rather than captured, so a set already loaded
+      // picks up the change without being rebuilt.
+      networkMode: () => connectivity.mode,
     );
 
     final repository = PlaylistRepository(db: db, resolver: resolver);
@@ -123,11 +141,36 @@ class PlaybackRuntime {
       directory: Directory(mediaCacheDirectory),
     );
 
+    final session = PlaybackSession(
+      engine: engine,
+      controller: controller,
+      downloader: downloader,
+      repository: repository,
+    );
+
+    final networkEvents = connectivity.changes.listen((mode) async {
+      // The address that answered on the venue's wifi is not the one that
+      // answers on a phone hotspot. Racing again on every transition costs one
+      // round of probes; keeping a dead address costs the rest of the night.
+      plex.forgetConnection();
+
+      controller.setNetworkMode(mode,
+          offlineServices: connectivity.unreachable);
+      await session.applyNetworkMode(mode);
+    });
+
+    // Not awaited: the first probe is a network round-trip per server, and the
+    // deck screen must draw before it finishes. Until it answers the mode is
+    // `online`, which is what it was before any of this existed.
+    unawaited(connectivity.start());
+
     return PlaybackRuntime._(
       db: db,
       engine: engine,
       plex: plex,
       downloader: downloader,
+      connectivity: connectivity,
+      networkEvents: networkEvents,
       sources: SourcesService(
         db: db,
         plex: plex,
@@ -135,12 +178,7 @@ class PlaybackRuntime {
       ),
       decks: [deckA, deckB, voiceDeck],
       bus: bus,
-      session: PlaybackSession(
-        engine: engine,
-        controller: controller,
-        downloader: downloader,
-        repository: repository,
-      ),
+      session: session,
     );
   }
 
@@ -158,6 +196,8 @@ class PlaybackRuntime {
   }
 
   Future<void> dispose() async {
+    await networkEvents.cancel();
+    await connectivity.dispose();
     await session.dispose();
     await engine.dispose();
     for (final deck in decks) {

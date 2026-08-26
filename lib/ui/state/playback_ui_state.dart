@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../audio/crossfade_engine.dart' show EnginePhase;
 import '../../data/fractional_order.dart';
+import '../../data/media_resolver.dart' show NetworkMode;
 import 'library_access.dart';
 import 'playback_session.dart';
 
@@ -127,6 +128,19 @@ class QueueItemUi {
         duration: duration,
         unavailable: unavailable,
       );
+
+  /// Its own method rather than a `copyWith` argument: [unavailable] is
+  /// nullable, so a named parameter could not tell "leave it alone" from
+  /// "clear it", and clearing it is exactly what a network coming back does.
+  QueueItemUi withUnavailable(UnavailableReason? reason) => QueueItemUi(
+        id: id,
+        title: title,
+        artist: artist,
+        position: position,
+        danceType: danceType,
+        duration: duration,
+        unavailable: reason,
+      );
 }
 
 @immutable
@@ -139,6 +153,8 @@ class PlaybackUiState {
     this.currentIndex = -1,
     this.phase = EnginePhase.idle,
     this.performanceMode = false,
+    this.networkMode = NetworkMode.online,
+    this.offlineServices = const [],
   });
 
   final DeckUiState deckA;
@@ -151,6 +167,14 @@ class PlaybackUiState {
   final int currentIndex;
   final EnginePhase phase;
   final bool performanceMode;
+
+  /// What the app can actually reach. See `lib/data/connectivity.dart` — this
+  /// is the probed answer, not what the OS claims about the radio.
+  final NetworkMode networkMode;
+
+  /// Configured services that are not answering, by the name the operator gave
+  /// them. Empty when the radio itself is down: there is nothing to single out.
+  final List<String> offlineServices;
 
   DeckUiState deck(DeckSlot slot) =>
       slot == DeckSlot.a ? deckA : deckB;
@@ -167,6 +191,8 @@ class PlaybackUiState {
     int? currentIndex,
     EnginePhase? phase,
     bool? performanceMode,
+    NetworkMode? networkMode,
+    List<String>? offlineServices,
   }) {
     return PlaybackUiState(
       deckA: deckA ?? this.deckA,
@@ -176,6 +202,8 @@ class PlaybackUiState {
       currentIndex: currentIndex ?? this.currentIndex,
       phase: phase ?? this.phase,
       performanceMode: performanceMode ?? this.performanceMode,
+      networkMode: networkMode ?? this.networkMode,
+      offlineServices: offlineServices ?? this.offlineServices,
     );
   }
 }
@@ -308,6 +336,18 @@ class PlaybackController extends Notifier<PlaybackUiState> {
   void setPerformanceMode(bool enabled) =>
       state = state.copyWith(performanceMode: enabled);
 
+  /// Pushed in by `ConnectivityService` through the runtime. Drives the banner
+  /// and nothing else — what the resolver does about it is decided in the data
+  /// layer, which is where the consequences are.
+  void setNetworkMode(
+    NetworkMode mode, {
+    List<String> offlineServices = const [],
+  }) =>
+      state = state.copyWith(
+        networkMode: mode,
+        offlineServices: List.unmodifiable(offlineServices),
+      );
+
   // -- queue -----------------------------------------------------------------
 
   void setQueue(List<QueueItemUi> items) =>
@@ -414,4 +454,10 @@ final eventModeProvider = Provider<EventModeAccess?>(
 /// tick — the engine updates position at 50 Hz.
 final anyDeckPlayingProvider = Provider<bool>(
   (ref) => ref.watch(playbackProvider.select((s) => s.anyDeckPlaying)),
+);
+
+/// What the banner draws. Narrow for the same reason as above: it sits at the
+/// top of every layout and must not rebuild sixty times a second.
+final networkModeProvider = Provider<NetworkMode>(
+  (ref) => ref.watch(playbackProvider.select((s) => s.networkMode)),
 );

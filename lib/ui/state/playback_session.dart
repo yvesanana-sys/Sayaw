@@ -6,7 +6,7 @@ import '../../data/cache/media_downloader.dart';
 import '../../data/db/database.dart';
 import '../../data/event_mode.dart';
 import '../../data/library/library_scanner.dart';
-import '../../data/media_resolver.dart' show UnavailableOffline;
+import '../../data/media_resolver.dart' show NetworkMode, UnavailableOffline;
 import '../../data/playlist_repository.dart';
 import 'library_access.dart';
 import 'playback_ui_state.dart';
@@ -96,6 +96,44 @@ class PlaybackSession implements LibraryAccess, EventModeAccess {
     await engine.loadQueue(resolved.entries);
     _publish();
     return resolved;
+  }
+
+  /// The network changed underneath an open set.
+  ///
+  /// With nothing loaded on a deck the set is simply resolved again: accurate
+  /// in both directions, and there is no transition to interrupt.
+  ///
+  /// Mid-set is the interesting case, and there rows are only ever marked
+  /// *down*. Reopening would call `engine.loadQueue`, dropping whatever is
+  /// preloaded and prerolled on the standby deck — and this can fire in the
+  /// middle of a crossfade. Nor can a row be marked back *up*: the engine was
+  /// handed its queue when the set was opened and cannot take a skipped row
+  /// back without that same reload, so drawing it as available would be a
+  /// promise the engine will not keep. It becomes true again when the set is
+  /// next opened, which is the honest moment for it.
+  Future<void> applyNetworkMode(NetworkMode mode) async {
+    final playlistId = _playlistId;
+    if (playlistId == null) return;
+
+    if (engine.phase == EnginePhase.idle) {
+      await openPlaylist(playlistId);
+      return;
+    }
+
+    if (mode != NetworkMode.localOnly) return;
+
+    // The availability view, not a re-resolve: this must not open a socket at
+    // the exact moment the network has been established to be gone.
+    final playable =
+        await repository.db.playlistDao.offlineAvailability(playlistId);
+
+    controller.setQueue([
+      for (final item in controller.queueSnapshot)
+        if (item.isPlayable && playable[item.id] == false)
+          item.withUnavailable(UnavailableReason.offline)
+        else
+          item,
+    ]);
   }
 
   // -------------------------------------------------------------------------

@@ -280,6 +280,93 @@ void main() {
           Uri.parse('https://public.example:32400'));
     });
   });
+
+  group('is the server there right now', () {
+    late String accountId;
+
+    setUp(() async {
+      accountId = await plex.connect(PlexServer.fromJson(_server())!);
+      http.on('GET plex.tv/api/v2/resources', FakeResponse([_server()]));
+    });
+
+    test('a server that answers costs one request to confirm', () async {
+      _allAnswer(http);
+      await plex.bestConnection(accountId);
+      http.requests.clear();
+
+      expect(await plex.isReachable(accountId), isTrue);
+
+      // This runs every thirty seconds for four hours. Re-racing all four
+      // addresses each time would be the wrong shape entirely.
+      expect(http.calls, ['GET 192-168-1-10.plex.direct/identity']);
+    });
+
+    test('a server that has stopped answering is not reachable', () async {
+      _allAnswer(http);
+      await plex.bestConnection(accountId);
+
+      http.on('GET 192-168-1-10.plex.direct/identity', FakeResponse.refused());
+
+      expect(await plex.isReachable(accountId), isFalse);
+    });
+
+    test('and the address it gave up on is forgotten, so a move is survivable',
+        () async {
+      // Unplug the venue wifi, tether to a phone: the LAN address is gone and
+      // the public one is now the only way in. Holding the old one would mean
+      // a dead server for the rest of the night.
+      _allAnswer(http);
+      await plex.bestConnection(accountId);
+
+      http.on('GET 192-168-1-10.plex.direct/identity', FakeResponse.refused());
+      expect(await plex.isReachable(accountId), isFalse);
+
+      http.requests.clear();
+      expect(await plex.bestConnection(accountId),
+          Uri.parse('https://public.example:32400'));
+    });
+
+    test('signed in but never reached is looked up, not assumed down',
+        () async {
+      // Nothing has played yet, so there is no remembered address. Reporting
+      // the server as down here would put the app in offline mode on launch.
+      _allAnswer(http);
+
+      expect(await plex.isReachable(accountId), isTrue);
+      expect(http.calls, contains('GET plex.tv/api/v2/resources'));
+    });
+
+    test('a portal that holds the request open does not stall the poll',
+        () async {
+      // A captive portal does not refuse: it accepts the connection and says
+      // nothing. Without a bound here, every later probe queues behind it.
+      http.on(
+        'GET plex.tv/api/v2/resources',
+        FakeResponse(const <dynamic>[], delay: const Duration(seconds: 5)),
+      );
+
+      final stopwatch = Stopwatch()..start();
+      expect(await plex.isReachable(accountId), isFalse);
+
+      expect(stopwatch.elapsed, lessThan(const Duration(seconds: 1)));
+    });
+
+    test('an account that is no longer connected is not reachable', () async {
+      expect(await plex.isReachable('never-connected'), isFalse);
+    });
+
+    test('forgetting every connection makes the next resolve race again',
+        () async {
+      _allAnswer(http);
+      await plex.bestConnection(accountId);
+
+      plex.forgetConnection();
+      http.requests.clear();
+      await plex.bestConnection(accountId);
+
+      expect(http.requests, isNotEmpty);
+    });
+  });
 }
 
 void _allAnswer(FakeHttpAdapter http) {

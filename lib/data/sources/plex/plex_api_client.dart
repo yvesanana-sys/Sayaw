@@ -212,6 +212,61 @@ class PlexApiClient implements PlexClient {
     return _resolved[accountId] = winner;
   }
 
+  /// Whether this server is answering right now.
+  ///
+  /// Tests the one address that worked last rather than re-racing all of them.
+  /// This runs every thirty seconds for the length of an event, and when the
+  /// answer is yes — which is nearly always — it costs a single request.
+  ///
+  /// A failure forgets that address, so the next [bestConnection] races again
+  /// and finds the server if it has merely moved. The expensive path is the
+  /// one taken when something is already wrong.
+  ///
+  /// Bounded in time on purpose: reaching a server for the first time goes via
+  /// plex.tv, and a captive portal holds that request open rather than
+  /// refusing it, which would otherwise stall every poll behind it.
+  Future<bool> isReachable(String accountId) async {
+    try {
+      return await _reach(accountId).timeout(probeTimeout * 2);
+    } on Object {
+      return false;
+    }
+  }
+
+  Future<bool> _reach(String accountId) async {
+    final account = await accounts.byId(accountId);
+    if (account == null) return false;
+
+    final known = _resolved[accountId] ??
+        (account.baseUri == null ? null : Uri.parse(account.baseUri!));
+
+    if (known == null) {
+      // Signed in but never reached: there is no cheap address to test, so
+      // finding one *is* the probe. It gets remembered either way.
+      await bestConnection(accountId);
+      return true;
+    }
+
+    if (await _probe(known, await token(accountId))) return true;
+
+    forgetConnection(accountId);
+    return false;
+  }
+
+  /// Drops the remembered address so the next [bestConnection] races again.
+  ///
+  /// Called when the network changes underneath a running set. The address
+  /// that answered on the venue's wifi is not the one that answers on a phone
+  /// hotspot, and holding on to it turns a recoverable switch into a server
+  /// that is simply dead for the rest of the night.
+  void forgetConnection([String? accountId]) {
+    if (accountId == null) {
+      _resolved.clear();
+    } else {
+      _resolved.remove(accountId);
+    }
+  }
+
   // -------------------------------------------------------------------------
   // The library on a server
   // -------------------------------------------------------------------------

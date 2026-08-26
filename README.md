@@ -34,9 +34,13 @@ a set that keeps running when the venue wifi dies.
 Early, but it runs. Point it at a folder of music on Windows or macOS and it
 imports it, searches it, and plays a set end to end with crossfades and
 announcements. A Plex server can be signed in to and its music library
-imported, so both sources search from one field. Not yet written: TIDAL,
-library import on Android and iOS, downloading and caching for offline
-playback, and Event Mode's pre-flight check. See
+imported, so both sources search from one field, and what it holds can be
+downloaded for offline playback. Event Mode's pre-flight check works: it walks
+the set before doors open and reports what will and will not play without a
+connection. The app watches the network with a real request rather than the
+OS's answer, so a venue's captive portal reads as offline and the rows that
+need it are labelled rather than failing one at a time. Not yet written: TIDAL,
+and library import on Android and iOS. See
 [`ARCHITECTURE.md`](ARCHITECTURE.md) for the design.
 
 ## Layout
@@ -49,11 +53,14 @@ lib/audio/crossfade_engine.dart      the dual-deck scheduler
 lib/audio/announcement_engine.dart   TTS render-to-cache and duck envelopes
 lib/audio/sayaw_audio_handler.dart   background playback and lock-screen controls
 lib/data/media_resolver.dart         source-polymorphic resolution and cache policy
+lib/data/connectivity.dart           radio + real reachability -> online/degraded/local
 lib/data/db/                         Drift tables and the playlist, track and
                                      announcement accessors
 lib/data/library/                    folder scanning and tag reading
 lib/data/sources/plex/               plex.tv sign-in, connection selection
                                      and library import
+lib/data/cache/                      downloading media and the on-disk cache
+lib/data/event_mode.dart             the "prepare for offline" pre-flight walk
 lib/data/playlist_repository.dart    stored rows -> engine-ready queue entries
 lib/ui/screens/deck_screen.dart      the operator's screen
 lib/ui/state/playback_session.dart   the seam between the engine and the screen

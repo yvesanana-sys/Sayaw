@@ -339,9 +339,129 @@ void main() {
       expect(deckA.calls, isNot(contains('play')));
     });
   });
+
+  group('the network changing under an open set', () {
+    setUp(() async {
+      await db.into(db.sourceAccounts).insert(SourceAccountsCompanion.insert(
+            id: 'plex',
+            provider: SourceProvider.plex,
+            displayName: 'Home Server',
+            // Without this the rows do not resolve at all, which would make
+            // every assertion below pass for the wrong reason.
+            machineIdentifier: const Value('plex'),
+            keychainRef: 'keychain-plex',
+            createdAt: clock.now(),
+          ));
+    });
+
+    test('with nothing playing, the set is simply resolved again', () async {
+      // Idle is the safe moment for the accurate answer: nothing is loaded on
+      // a deck, so there is no transition to interrupt.
+      await _addTracks(db, set, music, ['a', 'gone']);
+      await session.openPlaylist(set);
+      expect(container.read(playbackProvider).queue[1].isPlayable, isTrue);
+
+      File('${music.path}/gone.flac').deleteSync();
+      await session.applyNetworkMode(NetworkMode.localOnly);
+
+      expect(container.read(playbackProvider).queue[1].unavailable,
+          UnavailableReason.fileMissing);
+    });
+
+    test('mid-set, a streamed row that is not downloaded is marked down',
+        () async {
+      await _addTracks(db, set, music, ['a']);
+      await _addRemote(db, set, 'plexed');
+      await session.openPlaylist(set);
+      await session.play();
+      await _settle();
+
+      await session.applyNetworkMode(NetworkMode.localOnly);
+
+      final queue = container.read(playbackProvider).queue;
+      expect(queue[0].isPlayable, isTrue, reason: 'a local file still plays');
+      expect(queue[1].unavailable, UnavailableReason.offline);
+    });
+
+    test('a downloaded copy keeps the row playable', () async {
+      // The whole point of Event Mode: the server going away does not matter
+      // for a track that is already on the disk.
+      await _addTracks(db, set, music, ['a']);
+      await _addRemote(db, set, 'downloaded');
+      await db.into(db.cacheEntries).insert(CacheEntriesCompanion.insert(
+            trackId: 'downloaded',
+            state: const Value(CacheState.complete),
+            createdAt: clock.now(),
+          ));
+      await session.openPlaylist(set);
+      await session.play();
+      await _settle();
+
+      await session.applyNetworkMode(NetworkMode.localOnly);
+
+      expect(container.read(playbackProvider).queue[1].isPlayable, isTrue);
+    });
+
+    test('mid-set, the deck that is cued up is left alone', () async {
+      // Reopening the set would call loadQueue and drop what is already
+      // preloaded and prerolled — with a crossfade possibly seconds away.
+      await _addTracks(db, set, music, ['a', 'b']);
+      await session.openPlaylist(set);
+      await session.play();
+      await _settle();
+
+      final cued = deckB.media;
+      await session.applyNetworkMode(NetworkMode.localOnly);
+      await _settle();
+
+      expect(deckB.media, same(cued));
+      expect(container.read(playbackProvider).currentIndex, 0);
+    });
+
+    test('mid-set, a network coming back promises nothing the engine cannot '
+        'keep', () async {
+      // The engine was handed its queue when the set was opened and cannot
+      // take a skipped row back without a reload. Drawing the row as available
+      // again would be a lie until the set is next opened.
+      await _addTracks(db, set, music, ['a']);
+      await _addRemote(db, set, 'plexed');
+      await session.openPlaylist(set);
+      await session.play();
+      await _settle();
+      await session.applyNetworkMode(NetworkMode.localOnly);
+
+      await session.applyNetworkMode(NetworkMode.online);
+
+      expect(container.read(playbackProvider).queue[1].unavailable,
+          UnavailableReason.offline);
+    });
+
+    test('with no set open there is nothing to say', () async {
+      await session.applyNetworkMode(NetworkMode.localOnly);
+
+      expect(container.read(playbackProvider).queue, isEmpty);
+    });
+  });
 }
 
 // ---------------------------------------------------------------------------
+
+/// A track that lives on a Plex server rather than on disk. Playable while the
+/// server answers, and the interesting case the moment it stops.
+Future<void> _addRemote(
+    SayawDatabase db, String playlistId, String id) async {
+  await db.trackDao.upsert(TracksCompanion.insert(
+    id: id,
+    sourceType: SourceType.plex,
+    accountId: const Value('plex'),
+    sourceId: Value(id),
+    title: 'Track $id',
+    addedAt: clock.now(),
+    updatedAt: clock.now(),
+  ));
+  await db.playlistDao
+      .appendTrack(playlistId: playlistId, trackId: id, id: 'item-$id');
+}
 
 /// Lets real timers run. The engine ticks at 20 ms and the session republishes
 /// on the same order of magnitude, so a few dozen milliseconds is enough for

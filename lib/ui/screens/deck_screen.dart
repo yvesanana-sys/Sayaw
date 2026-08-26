@@ -8,6 +8,7 @@ import '../touch/touch_targets.dart';
 import '../widgets/crossfader.dart';
 import '../widgets/deck_panel.dart';
 import '../widgets/library_pane.dart';
+import '../widgets/network_banner.dart';
 import '../widgets/queue_list.dart';
 import '../widgets/transport_bar.dart';
 import 'event_mode_dialog.dart';
@@ -76,11 +77,21 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                   ],
                 ),
           body: SafeArea(
-            child: switch (breakpoint) {
-              SayawBreakpoint.compact => _buildCompact(),
-              SayawBreakpoint.medium => _buildMedium(),
-              SayawBreakpoint.expanded => _buildExpanded(),
-            },
+            child: Column(
+              children: [
+                // Above the panes rather than inside one: in Performance Mode
+                // there is no app bar to put it in, and it has to be visible
+                // whichever pane a compact layout happens to be showing.
+                const NetworkBanner(),
+                Expanded(
+                  child: switch (breakpoint) {
+                    SayawBreakpoint.compact => _buildCompact(),
+                    SayawBreakpoint.medium => _buildMedium(),
+                    SayawBreakpoint.expanded => _buildExpanded(),
+                  },
+                ),
+              ],
+            ),
           ),
           bottomNavigationBar:
               breakpoint.isCompact ? _buildBottomNav() : null,
