@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:audio_service/audio_service.dart';
@@ -5,45 +6,54 @@ import 'package:audio_session/audio_session.dart';
 
 import 'announcement_engine.dart';
 import 'crossfade_engine.dart';
-import 'deck.dart';
 import 'fade_curves.dart';
 import 'gain_bus.dart';
 
 /// Background playback, lock-screen controls and OS audio-session handling.
 ///
 /// On Android this runs inside a foreground service; on iOS it relies on the
-/// `audio` background mode. On Windows and macOS there is no such constraint,
-/// so the handler exists mainly to drive SMTC / MPNowPlayingInfoCenter.
+/// `audio` background mode. macOS has no such constraint, so there it only
+/// drives `MPNowPlayingInfoCenter` and the media keys.
+///
+/// It mirrors an engine it is given. It does not own one — see [attach].
 class SayawAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   SayawAudioHandler({
     required this.engine,
     required this.bus,
     required this.announcements,
   }) {
-    engine.events.listen(_publish);
+    _events = engine.events.listen(_publish);
   }
 
   final CrossfadeEngine engine;
   final MusicGainBus bus;
   final AnnouncementEngine announcements;
 
-  static Future<SayawAudioHandler> init({
-    required String announcementCacheDir,
+  late final StreamSubscription<EngineEvent> _events;
+
+  /// The platforms `audio_service` ships an implementation for.
+  ///
+  /// Android, iOS and macOS. ARCHITECTURE §1.3 wants `SystemMediaTransportControls`
+  /// on Windows, which is a different plugin entirely and not this one — so a
+  /// Windows rig gets no media session and is otherwise unaffected.
+  static bool get isSupportedHere =>
+      Platform.isAndroid || Platform.isIOS || Platform.isMacOS;
+
+  /// Wraps an already-running engine in an OS media session.
+  ///
+  /// Takes its collaborators rather than building them. Constructing a deck
+  /// here would put a second engine behind the lock screen while the operator
+  /// drove the real one from the deck screen — the pause button would report
+  /// success and nothing would go quiet.
+  ///
+  /// Returns null where there is no media session to attach to. Call once per
+  /// process: `AudioService.init` is a one-shot.
+  static Future<SayawAudioHandler?> attach({
+    required CrossfadeEngine engine,
+    required MusicGainBus bus,
+    required AnnouncementEngine announcements,
   }) async {
-    final bus = MusicGainBus();
-
-    final announcements = AnnouncementEngine(
-      voiceDeck: DeckFactory.create('voice'),
-      cacheDirectory: announcementCacheDir,
-      settings: const TtsVoiceSettings(),
-    );
-
-    final engine = CrossfadeEngine(
-      deckA: DeckFactory.create('A'),
-      deckB: DeckFactory.create('B'),
-      bus: bus,
-      announcements: announcements,
-    );
+    if (!isSupportedHere) return null;
 
     final handler = SayawAudioHandler(
       engine: engine,
@@ -125,29 +135,47 @@ class SayawAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
         title: entry.title,
         artist: entry.artist,
         genre: entry.danceTypeName,
-        duration: entry.targetDuration,
+        // The competition cap when there is one, because the row really will
+        // stop there; otherwise however long the deck says the file is.
+        duration: entry.targetDuration ?? engine.activeDuration,
       ));
     }
 
     playbackState.add(playbackState.value.copyWith(
+      // No previous, and no seek. There is nothing behind either of them —
+      // the engine has no notion of going back, and rewinding the audible deck
+      // in the middle of a dance is not something to hand a lock screen. A
+      // control that does nothing is worse than one that is not offered.
       controls: [
-        MediaControl.skipToPrevious,
-        if (e.phase == EnginePhase.playing) MediaControl.pause else MediaControl.play,
+        if (isPlaying(e.phase)) MediaControl.pause else MediaControl.play,
         MediaControl.skipToNext,
         MediaControl.stop,
       ],
-      systemActions: const {MediaAction.seek},
-      playing: e.phase == EnginePhase.playing ||
-          e.phase == EnginePhase.crossfading ||
-          e.phase == EnginePhase.announcing,
+      playing: isPlaying(e.phase),
       processingState: switch (e.phase) {
         EnginePhase.idle => AudioProcessingState.idle,
         EnginePhase.paused => AudioProcessingState.ready,
         _ => AudioProcessingState.ready,
       },
+      // Only moves on an engine event; audio_service extrapolates between them
+      // from `updateTime` while `playing` is true, which is what keeps the
+      // notification's clock running without a second 50 Hz ticker.
+      updatePosition: engine.activePosition,
       queueIndex: e.currentIndex,
     ));
   }
+
+  /// Whether sound is coming out. A fade-out and an announcement both count:
+  /// a lock screen showing "paused" while the room can still hear the set is
+  /// the wrong answer.
+  static bool isPlaying(EnginePhase phase) => switch (phase) {
+        EnginePhase.playing ||
+        EnginePhase.crossfading ||
+        EnginePhase.announcing ||
+        EnginePhase.fadingOut =>
+          true,
+        EnginePhase.idle || EnginePhase.paused => false,
+      };
 
   @override
   Future<void> play() => engine.play();
@@ -178,4 +206,8 @@ class SayawAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
       );
     }
   }
+
+  /// Stops mirroring the engine. The engine itself belongs to the runtime and
+  /// is disposed there — this only lets go of it.
+  Future<void> dispose() => _events.cancel();
 }

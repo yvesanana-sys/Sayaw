@@ -159,6 +159,12 @@ class _BootstrapState extends ConsumerState<_Bootstrap> {
       );
       _runtime = runtime;
       ref.read(sourcesHolderProvider.notifier).set(runtime.sources);
+
+      // Before the set is opened: on Android this is the foreground service,
+      // and starting it after a four-hour playlist has finished resolving is
+      // four hours of resolving during which the OS may reclaim the app.
+      await runtime.startMediaSession();
+
       await runtime.openMostRecentPlaylist();
     });
   }

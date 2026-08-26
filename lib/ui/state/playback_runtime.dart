@@ -2,6 +2,7 @@ import '../../audio/announcement_engine.dart';
 import '../../audio/crossfade_engine.dart';
 import '../../audio/deck.dart';
 import '../../audio/gain_bus.dart';
+import '../../audio/sayaw_audio_handler.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -66,6 +67,12 @@ class PlaybackRuntime {
 
   /// Held only so it can be cancelled, like [decks] and [bus] below.
   final StreamSubscription<NetworkMode> networkEvents;
+
+  SayawAudioHandler? _mediaSession;
+
+  /// The OS media session, once [startMediaSession] has run. Null on a
+  /// platform that has none.
+  SayawAudioHandler? get mediaSession => _mediaSession;
 
   /// Held only so they can be disposed: everything that reads them goes
   /// through the engine.
@@ -182,6 +189,23 @@ class PlaybackRuntime {
     );
   }
 
+  /// Puts this runtime's engine behind the lock screen and, on Android, the
+  /// foreground service that stops the OS reclaiming playback mid-set.
+  ///
+  /// Separate from [start] because it is asynchronous and touches platform
+  /// channels, while [start] is what every call site needs and stays
+  /// synchronous. Call it once: `AudioService.init` is a one-shot, and a
+  /// second session would be a second thing claiming audio focus.
+  Future<void> startMediaSession() async {
+    _mediaSession ??= await SayawAudioHandler.attach(
+      engine: engine,
+      bus: bus,
+      // The engine's own, not a new one: the announcement duck the lock screen
+      // triggers has to land on the bus the set is actually playing through.
+      announcements: engine.announcements,
+    );
+  }
+
   /// The set the app should open on launch: the most recent one, or a new
   /// empty one so there is somewhere to drop tracks on a fresh install.
   Future<String> openMostRecentPlaylist() async {
@@ -196,6 +220,7 @@ class PlaybackRuntime {
   }
 
   Future<void> dispose() async {
+    await _mediaSession?.dispose();
     await networkEvents.cancel();
     await connectivity.dispose();
     await session.dispose();
