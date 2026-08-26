@@ -21,7 +21,8 @@ import 'playback_ui_state.dart';
 /// It lives in `ui/state` rather than `audio/` on purpose — the audio layer
 /// stays free of any dependency on the UI, which is what keeps its whole test
 /// suite runnable without a widget tree.
-class PlaybackSession implements LibraryAccess, EventModeAccess {
+class PlaybackSession
+    implements LibraryAccess, EventModeAccess, SetShapeAccess {
   PlaybackSession({
     required this.engine,
     required this.repository,
@@ -140,6 +141,59 @@ class PlaybackSession implements LibraryAccess, EventModeAccess {
         else
           item,
     ]);
+  }
+
+  // -------------------------------------------------------------------------
+  // The shape of the night
+  // -------------------------------------------------------------------------
+
+  @override
+  bool get isRunning => engine.phase != EnginePhase.idle;
+
+  @override
+  Future<SetShape> readSetShape() async {
+    final playlistId = _playlistId;
+    if (playlistId == null) return const SetShape();
+
+    final playlist = await repository.db.playlistDao.byId(playlistId);
+    return SetShape(
+      songLimit: playlist?.songLimit,
+      songDuration: playlist?.targetDurationMs,
+    );
+  }
+
+  /// Writes the shape, and applies what can be applied without a reload.
+  ///
+  /// The song limit takes effect immediately whatever is happening: the engine
+  /// only consults it when deciding what to cue up next, so changing it mid-set
+  /// disturbs nothing that is already on a deck.
+  ///
+  /// The per-song length cannot. It is resolved into every queue entry when the
+  /// set is opened, so honouring a change would mean rebuilding the queue —
+  /// which drops what is preloaded and prerolled on the standby deck, possibly
+  /// seconds before a transition. With a set running it is written and takes
+  /// effect the next time the set is opened, and the return value says so
+  /// rather than leaving the operator to notice.
+  @override
+  Future<bool> writeSetShape(SetShape shape) async {
+    final playlistId = _playlistId;
+    if (playlistId == null) return false;
+
+    final before = await readSetShape();
+
+    await repository.db.playlistDao.setShape(
+      playlistId,
+      songLimit: shape.songLimit,
+      targetDuration: shape.songDuration,
+    );
+
+    if (!isRunning) {
+      await openPlaylist(playlistId);
+      return true;
+    }
+
+    engine.setSongLimit(shape.songLimit);
+    return shape.songDuration == before.songDuration;
   }
 
   // -------------------------------------------------------------------------

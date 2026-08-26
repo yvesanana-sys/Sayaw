@@ -459,6 +459,11 @@ final eventModeProvider = Provider<EventModeAccess?>(
   (ref) => ref.watch(playbackSessionProvider),
 );
 
+/// How many songs the night runs to, and how much of each.
+final setShapeProvider = Provider<SetShapeAccess?>(
+  (ref) => ref.watch(playbackSessionProvider),
+);
+
 /// Narrow selector so the wakelock listener does not rebuild on every position
 /// tick — the engine updates position at 50 Hz.
 final anyDeckPlayingProvider = Provider<bool>(

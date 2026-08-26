@@ -12,6 +12,7 @@ import '../widgets/network_banner.dart';
 import '../widgets/queue_list.dart';
 import '../widgets/transport_bar.dart';
 import 'event_mode_dialog.dart';
+import 'set_shape_dialog.dart';
 import 'sources_screen.dart';
 import '../window/window_controller.dart';
 
@@ -71,6 +72,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                   backgroundColor: SayawColors.surfaceContainer,
                   title: Text(breakpoint.isCompact ? 'Sayaw' : 'Sayaw — Set'),
                   actions: const [
+                    SetShapeButton(),
                     EventModeButton(),
                     _SourcesButton(),
                     _PerformanceModeButton(),

@@ -177,6 +177,14 @@ class CrossfadeEngine {
   int? _songLimit;
   int? get songLimit => _songLimit;
 
+  /// Change it without rebuilding the queue.
+  ///
+  /// Safe at any moment, including mid-crossfade: it is only ever read when
+  /// deciding what to cue up next, so nothing already on a deck is touched.
+  /// Lowering it below the count already played simply means whatever is
+  /// audible is the last song.
+  void setSongLimit(int? limit) => _songLimit = limit;
+
   /// Where the set was started from, so a limit counts songs played rather
   /// than rows of the playlist.
   int _startIndex = 0;

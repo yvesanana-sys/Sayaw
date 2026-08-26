@@ -10,6 +10,7 @@ import 'package:sayaw/audio/gain_bus.dart';
 import 'package:sayaw/data/db/database.dart';
 import 'package:sayaw/data/media_resolver.dart';
 import 'package:sayaw/data/playlist_repository.dart';
+import 'package:sayaw/ui/state/library_access.dart';
 import 'package:sayaw/ui/state/playback_session.dart';
 import 'package:sayaw/ui/state/playback_ui_state.dart';
 
@@ -539,6 +540,80 @@ void main() {
         [for (final entry in resolved.entries) entry.targetDuration],
         everyElement(const Duration(seconds: 90)),
       );
+    });
+  });
+
+  group('changing the shape of the set', () {
+    test('with nothing playing, the whole change takes effect', () async {
+      await _addTracks(db, set, music, ['a', 'b', 'c']);
+      await session.openPlaylist(set);
+
+      final full = await session.writeSetShape(const SetShape(
+        songLimit: 2,
+        songDuration: Duration(seconds: 90),
+      ));
+
+      expect(full, isTrue);
+      expect(engine.songLimit, 2);
+      expect(engine.currentEntry!.targetDuration, const Duration(seconds: 90));
+    });
+
+    test('mid-set, the song count takes effect immediately', () async {
+      // The engine only reads it when deciding what to cue up next, so
+      // nothing already on a deck is disturbed.
+      await _addTracks(db, set, music, ['a', 'b', 'c']);
+      await session.openPlaylist(set);
+      await session.play();
+      await _settle();
+
+      final cued = deckB.media;
+      final full = await session
+          .writeSetShape(const SetShape(songLimit: 1, songDuration: null));
+
+      expect(full, isTrue, reason: 'the length did not change');
+      expect(engine.songLimit, 1);
+      expect(deckB.media, same(cued), reason: 'the cued deck is untouched');
+    });
+
+    test('mid-set, a new song length waits for the next set and says so',
+        () async {
+      // It is resolved into every entry when the set is opened, so honouring
+      // it now would mean rebuilding the queue underneath a running set.
+      await _addTracks(db, set, music, ['a', 'b']);
+      await session.openPlaylist(set);
+      await session.play();
+      await _settle();
+
+      final full = await session.writeSetShape(
+          const SetShape(songLimit: null, songDuration: Duration(seconds: 30)));
+
+      expect(full, isFalse);
+      expect(engine.currentEntry!.targetDuration, isNull,
+          reason: 'the row playing keeps the length it started with');
+
+      // But it is on disk, so the next open picks it up.
+      expect((await db.playlistDao.byId(set))!.targetDurationMs,
+          const Duration(seconds: 30));
+    });
+
+    test('what is read back is what was written', () async {
+      await _addTracks(db, set, music, ['a']);
+      await session.openPlaylist(set);
+
+      await session.writeSetShape(const SetShape(
+        songLimit: 7,
+        songDuration: Duration(minutes: 3),
+      ));
+
+      final shape = await session.readSetShape();
+      expect(shape.songLimit, 7);
+      expect(shape.songDuration, const Duration(minutes: 3));
+      expect(shape.isPlainList, isFalse);
+    });
+
+    test('a set nobody has opened has nothing to shape', () async {
+      expect(await session.writeSetShape(const SetShape(songLimit: 3)), isFalse);
+      expect((await session.readSetShape()).isPlainList, isTrue);
     });
   });
 }

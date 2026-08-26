@@ -39,3 +39,37 @@ abstract class EventModeAccess {
     void Function(PreflightProgress)? onProgress,
   });
 }
+
+/// How the night is shaped: how many songs, and how much of each.
+///
+/// Its own interface, like the two above, so the dialog that edits it can be
+/// pumped without an engine behind it.
+abstract class SetShapeAccess {
+  /// Null when no set is open.
+  String? get openPlaylistId;
+
+  /// What the open set is currently set to.
+  Future<SetShape> readSetShape();
+
+  /// Writes it, and applies as much of it as can be applied safely.
+  ///
+  /// Returns whether it took effect in full. See [PlaybackSession.writeSetShape]
+  /// for why a running set only takes half of it.
+  Future<bool> writeSetShape(SetShape shape);
+
+  /// Whether a set is playing, which is what decides the above.
+  bool get isRunning;
+}
+
+/// How many songs, and how much of each.
+class SetShape {
+  const SetShape({this.songLimit, this.songDuration});
+
+  /// Stop after this many. Null plays the list as written.
+  final int? songLimit;
+
+  /// How much of each song to play. Null plays each to its end.
+  final Duration? songDuration;
+
+  bool get isPlainList => songLimit == null && songDuration == null;
+}
