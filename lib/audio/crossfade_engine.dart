@@ -173,6 +173,15 @@ class CrossfadeEngine {
   /// unplayable entries are skipped during preload.
   int _standbyIndex = -1;
 
+  /// The row after standby, re-resolved ahead of time. There are only two
+  /// decks, so this is resolved and not buffered.
+  ///
+  /// Only ever a hint: [_loadOnto] still checks expiry on whatever it is
+  /// handed, so a look-ahead that has itself gone stale in the meantime costs
+  /// nothing beyond the refresh it failed to save.
+  QueueEntry? _lookahead;
+  int _lookaheadIndex = -1;
+
   EnginePhase _phase = EnginePhase.idle;
   EnginePhase get phase => _phase;
 
@@ -258,6 +267,10 @@ class CrossfadeEngine {
     await _b.stop();
     _activeEntry = null;
     _standbyEntry = null;
+    // Whatever was resolved ahead belongs to the set being left behind.
+    // `loadQueue` comes through here, so this covers a reload too.
+    _lookahead = null;
+    _lookaheadIndex = -1;
     _setPhase(EnginePhase.idle);
   }
 
@@ -549,7 +562,7 @@ class CrossfadeEngine {
   /// nothing but a gain ramp when it arrives.
   Future<void> _preloadNext() async {
     for (var i = _index + 1; i < _queue.length; i++) {
-      final next = _queue[i];
+      final next = _takeLookahead(i) ?? _queue[i];
       try {
         final loaded = await _loadOnto(_standby, next);
         await _standby.preroll();
@@ -559,6 +572,9 @@ class CrossfadeEngine {
         // Pre-render the TTS now rather than at the transition. This is the
         // payoff for caching announcements as files instead of speaking live.
         unawaited(announcements.warm(loaded));
+        // And start on the one after it, now that there is a whole track's
+        // worth of time to do it in.
+        unawaited(_lookAheadPast(i));
         return;
       } catch (e) {
         // A dead URL or missing file must not stall the set: keep walking the
@@ -572,6 +588,77 @@ class CrossfadeEngine {
     // Nothing further in the queue is playable.
     _standbyEntry = null;
     _standbyIndex = -1;
+  }
+
+  /// The pre-resolved entry for [index], if that is what was looked ahead to.
+  ///
+  /// Keyed on the index rather than held as "the next one" because
+  /// [_preloadNext] walks past rows that fail to load, and the row it settles
+  /// on is not always the one the look-ahead was aimed at.
+  QueueEntry? _takeLookahead(int index) {
+    if (index != _lookaheadIndex) return null;
+    final entry = _lookahead;
+    _lookahead = null;
+    _lookaheadIndex = -1;
+    return entry;
+  }
+
+  /// Re-resolves the row that will become standby after this one, while there
+  /// is a whole track's worth of time to do it in.
+  ///
+  /// ARCHITECTURE §Prefetch during playback asks for N+2 kept ready. With two
+  /// decks it can be resolved but not buffered, and resolving is the half that
+  /// hurts: the refresh at load time runs with the transition latch held, so
+  /// on a venue's wifi it is seconds during which [skipNext] returns without
+  /// doing anything and the operator's crossfade button appears dead. This
+  /// moves that cost into the middle of a track, where nothing is waiting on
+  /// it.
+  ///
+  /// It does not add refreshes, it moves them: the work only happens for a URL
+  /// that would have expired before its turn came anyway.
+  Future<void> _lookAheadPast(int standbyIndex) async {
+    final refresh = this.refresh;
+    if (refresh == null) return;
+
+    final index = standbyIndex + 1;
+    if (index >= _queue.length) return;
+
+    final entry = _queue[index];
+    final due = _timeUntilStandbyEnds();
+    if (due == null || !entry.media.expiresWithin(due)) return;
+
+    final QueueEntry fresh;
+    try {
+      fresh = await refresh(entry);
+    } catch (_) {
+      // Exactly as at load time: the URL in hand has not expired yet, and the
+      // load-time refresh gets one more attempt at it when the row comes up.
+      return;
+    }
+
+    // The set may have been reloaded while that was in flight, in which case
+    // this index means something else now.
+    if (index >= _queue.length || !identical(_queue[index], entry)) return;
+
+    _lookahead = fresh;
+    _lookaheadIndex = index;
+  }
+
+  /// Roughly when the row after standby will be handed to a deck: what is left
+  /// of the audible track, plus the whole of the one cued up behind it.
+  ///
+  /// Approximate on purpose, and it does not need to be better. It decides
+  /// only whether a URL is worth re-resolving early, so being a few seconds
+  /// out means doing work that was going to be done anyway, or not doing it
+  /// and falling back to the refresh at load time.
+  Duration? _timeUntilStandbyEnds() {
+    final entry = _activeEntry;
+    if (entry == null) return null;
+
+    final remaining = _remainingOnActive(entry);
+    if (remaining == null) return null;
+
+    return remaining + (_standby.duration ?? Duration.zero);
   }
 
   /// Loads [entry] onto [deck], re-resolving it first when its URL is close

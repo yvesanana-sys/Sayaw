@@ -32,9 +32,16 @@ class PlayableMedia {
   final Duration cueIn;
   final Duration? cueOut;
 
-  bool get isExpiringSoon =>
-      expiresAt != null &&
-      expiresAt!.difference(clock.now()) < const Duration(seconds: 60);
+  /// Whether this URL will be dead [window] from now.
+  ///
+  /// Taking a window rather than answering one fixed question because there
+  /// are two moments that ask it: the deck load, which asks about the next
+  /// minute, and the look-ahead, which asks about the whole time between now
+  /// and when the row is actually due.
+  bool expiresWithin(Duration window) =>
+      expiresAt != null && expiresAt!.difference(clock.now()) < window;
+
+  bool get isExpiringSoon => expiresWithin(const Duration(seconds: 60));
 }
 
 class DrmConfig {

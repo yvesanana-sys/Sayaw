@@ -738,4 +738,203 @@ void main() {
       });
     });
   });
+
+  group('look-ahead', () {
+    /// Records what it was asked to refresh and hands back a URL with no
+    /// expiry, so a second refresh of the same row is visible as a second ask.
+    ({List<String> asked, EntryRefresher refresh}) recorder({
+      Set<String> failFirst = const {},
+    }) {
+      final asked = <String>[];
+      final failed = <String>{};
+      return (
+        asked: asked,
+        refresh: (entry) async {
+          asked.add(entry.itemId);
+          if (failFirst.contains(entry.itemId) && failed.add(entry.itemId)) {
+            throw StateError('server unreachable');
+          }
+          return entry.withMedia(PlayableMedia(
+            uri: Uri.parse('fresh://${entry.itemId}'),
+            cueIn: entry.media.cueIn,
+            cueOut: entry.media.cueOut,
+          ));
+        },
+      );
+    }
+
+    /// Long enough to outlive the audible track and the one cued behind it,
+    /// which is the window the look-ahead asks about.
+    DateTime soon() => clock.now().add(const Duration(seconds: 15));
+
+    test('the row after standby is resolved while the current one plays', () {
+      // The refresh at load time runs with the transition latch held, so on a
+      // venue's wifi it is seconds in which skipNext does nothing at all. This
+      // is that work moved into the middle of a track.
+      fakeAsync((async) {
+        final r = recorder();
+        final rig = _Rig(refresh: r.refresh);
+
+        rig.start([
+          _entry('one'),
+          _entry('two'),
+          _entry('three', expiresAt: soon()),
+        ], async);
+
+        expect(r.asked, ['three']);
+
+        // Resolved, not buffered. There are two decks and both are spoken for.
+        expect(rig.a.media!.uri.toString(), 'fake://one');
+        expect(rig.b.media!.uri.toString(), 'fake://two');
+      });
+    });
+
+    test('and it is not resolved again when it reaches a deck', () {
+      // Moving the work, not adding to it.
+      fakeAsync((async) {
+        final r = recorder();
+        final rig = _Rig(refresh: r.refresh);
+
+        rig.start([
+          _entry('one'),
+          _entry('two'),
+          _entry('three', expiresAt: soon()),
+        ], async);
+        async.elapse(const Duration(seconds: 12));
+        async.flushMicrotasks();
+
+        expect(r.asked, ['three']);
+        expect(
+          [rig.a.media!.uri.toString(), rig.b.media!.uri.toString()],
+          contains('fresh://three'),
+        );
+      });
+    });
+
+    test('a URL that will outlast its turn is left alone', () {
+      fakeAsync((async) {
+        final r = recorder();
+        final rig = _Rig(refresh: r.refresh);
+
+        rig.start([
+          _entry('one'),
+          _entry('two'),
+          _entry('three', expiresAt: clock.now().add(const Duration(hours: 3))),
+        ], async);
+
+        expect(r.asked, isEmpty);
+      });
+    });
+
+    test('a set of local files never asks', () {
+      // No expiry on any of them, so there is nothing a look-ahead could do
+      // but put a database read in front of every transition.
+      fakeAsync((async) {
+        final r = recorder();
+        final rig = _Rig(refresh: r.refresh);
+
+        rig.start([_entry('one'), _entry('two'), _entry('three')], async);
+        async.elapse(const Duration(seconds: 30));
+        async.flushMicrotasks();
+
+        expect(r.asked, isEmpty);
+      });
+    });
+
+    test('the end of the set is not looked past', () {
+      fakeAsync((async) {
+        final r = recorder();
+        final rig = _Rig(refresh: r.refresh);
+
+        rig.start([_entry('one'), _entry('two', expiresAt: soon())], async);
+
+        // 'two' is standby, so it was refreshed on load; there is no row after
+        // it to look ahead to.
+        expect(r.asked, ['two']);
+        expect(rig.engine.phase, EnginePhase.playing);
+      });
+    });
+
+    test('a look-ahead that fails leaves the load-time refresh to try again',
+        () {
+      fakeAsync((async) {
+        final r = recorder(failFirst: {'three'});
+        final rig = _Rig(refresh: r.refresh);
+
+        rig.start([
+          _entry('one'),
+          _entry('two'),
+          _entry('three', expiresAt: soon()),
+        ], async);
+        expect(r.asked, ['three'], reason: 'the early attempt, which threw');
+
+        async.elapse(const Duration(seconds: 12));
+        async.flushMicrotasks();
+
+        expect(r.asked, ['three', 'three']);
+        expect(
+          [rig.a.media!.uri.toString(), rig.b.media!.uri.toString()],
+          contains('fresh://three'),
+        );
+      });
+    });
+
+    test('reloading the set discards what was resolved for the old one', () {
+      // The look-ahead is keyed by index, and index 2 means something else
+      // entirely once a different set is open.
+      fakeAsync((async) {
+        final r = recorder();
+        final rig = _Rig(refresh: r.refresh);
+
+        rig.start([
+          _entry('one'),
+          _entry('two'),
+          _entry('three', expiresAt: soon()),
+        ], async);
+        expect(r.asked, ['three']);
+
+        rig.engine.loadQueue([
+          _entry('alpha'),
+          _entry('beta'),
+          _entry('gamma'),
+        ]);
+        async.flushMicrotasks();
+        rig.engine.play();
+        async.elapse(const Duration(seconds: 30));
+        async.flushMicrotasks();
+
+        expect(rig.activeItems, isNot(contains('three')));
+        expect(rig.activeItems.last, 'gamma');
+      });
+    });
+
+    test('a row the preload skipped does not misdirect what was resolved', () {
+      // The look-ahead was aimed at 'three'. 'three' turns out to be dead, so
+      // preload settles on 'four' instead — which must be loaded from the
+      // queue, not from the entry resolved for a different row.
+      fakeAsync((async) {
+        final r = recorder();
+        final rig = _Rig(track: const Duration(seconds: 6), refresh: r.refresh);
+        for (final deck in [rig.a, rig.b]) {
+          deck.failUris.addAll(['fake://three', 'fresh://three']);
+        }
+
+        rig.start([
+          _entry('one'),
+          _entry('two'),
+          _entry('three', expiresAt: soon()),
+          _entry('four'),
+        ], async);
+
+        // Just past the first transition, which is where preload walks past
+        // the dead row and settles on the next one.
+        async.elapse(const Duration(seconds: 7));
+        async.flushMicrotasks();
+
+        expect(rig.engine.standbyEntry!.itemId, 'four');
+        expect(rig.engine.standbyEntry!.media.uri.toString(), 'fake://four');
+      });
+    });
+  });
 }
+
