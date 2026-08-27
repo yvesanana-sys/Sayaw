@@ -16,6 +16,7 @@ import '../widgets/transport_bar.dart';
 import 'event_mode_dialog.dart';
 import 'jack_and_jill_dialog.dart';
 import 'set_shape_dialog.dart';
+import 'soundboard_sheet.dart';
 import 'sources_screen.dart';
 import '../window/window_controller.dart';
 
@@ -76,6 +77,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                   title: Text(breakpoint.isCompact ? 'Sayaw' : 'Sayaw — Set'),
                   actions: const [
                     JackAndJillButton(),
+                    SoundboardButton(),
                     SetShapeButton(),
                     EventModeButton(),
                     _SourcesButton(),

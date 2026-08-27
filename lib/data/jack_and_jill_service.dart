@@ -39,4 +39,21 @@ class JackAndJillService implements JackAndJillAccess {
   @override
   Future<void> addToSet(String trackId) async =>
       library?.addToSet(trackId);
+
+  @override
+  Stream<List<Participant>> watchParticipants() =>
+      db.participantDao.watchAll();
+
+  @override
+  Future<String> addParticipant(String name) => db.participantDao.add(name);
+
+  @override
+  Future<void> setPresent(String id, bool present) =>
+      db.participantDao.setPresent(id, present);
+
+  @override
+  Future<void> removeParticipant(String id) => db.participantDao.remove(id);
+
+  @override
+  Future<void> resetDraws() => db.participantDao.resetDraws();
 }

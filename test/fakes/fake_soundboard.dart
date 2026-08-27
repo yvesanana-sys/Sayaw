@@ -37,5 +37,20 @@ class FakeSoundboard implements SoundboardAccess {
   @override
   void silence() => silenced++;
 
+  /// Cues added, as (label, path, duckLevel).
+  final List<(String, String, double)> addedCues = [];
+  final List<String> removedCues = [];
+
+  @override
+  Future<void> addCue({
+    required String label,
+    required String filePath,
+    double duckLevel = 1.0,
+  }) async =>
+      addedCues.add((label, filePath, duckLevel));
+
+  @override
+  Future<void> removeCue(String id) async => removedCues.add(id);
+
   Future<void> close() => _updates.close();
 }

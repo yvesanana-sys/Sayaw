@@ -17,6 +17,15 @@ abstract class SoundboardAccess {
 
   /// Stops whatever is sounding and brings the music straight back.
   void silence();
+
+  /// Adds a cue for an audio file the operator picked.
+  Future<void> addCue({
+    required String label,
+    required String filePath,
+    double duckLevel,
+  });
+
+  Future<void> removeCue(String id);
 }
 
 /// The soundboard, or null where there is no audio behind the screen.

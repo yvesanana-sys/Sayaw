@@ -5,6 +5,7 @@ import '../../data/db/database.dart';
 import '../../data/jack_and_jill.dart';
 import '../state/jack_and_jill_provider.dart';
 import '../theme/sayaw_theme.dart';
+import 'participants_sheet.dart';
 import '../touch/touch_targets.dart';
 
 /// The Jack and Jill draw: a song and two names, read out to a room.
@@ -94,6 +95,26 @@ class _JackAndJillDialogState extends ConsumerState<JackAndJillDialog> {
         TextButton(
           onPressed: _busy ? null : () => Navigator.of(context).pop(),
           child: Text(_committed ? 'Done' : 'Close'),
+        ),
+        // Right here rather than behind a settings screen: the message above
+        // says to add people, and the place to do it should be the next thing
+        // under the operator's thumb.
+        TextButton(
+          onPressed: _busy
+              ? null
+              : () async {
+                  await showDialog<void>(
+                    context: context,
+                    builder: (_) => ParticipantsSheet(access: widget.access),
+                  );
+                  // The roster decides whether a draw is possible at all.
+                  if (mounted && _danceTypeId != null) {
+                    final problems =
+                        await widget.access.problems(_danceTypeId!);
+                    if (mounted) setState(() => _problems = problems);
+                  }
+                },
+          child: const Text('Participants'),
         ),
         if (_draw?.isComplete ?? false)
           TextButton(

@@ -28,4 +28,16 @@ class SoundboardService implements SoundboardAccess {
 
   @override
   void silence() => unawaited(board.silence());
+
+  @override
+  Future<void> addCue({
+    required String label,
+    required String filePath,
+    double duckLevel = 1.0,
+  }) async =>
+      db.soundCueDao
+          .add(label: label, filePath: filePath, duckLevel: duckLevel);
+
+  @override
+  Future<void> removeCue(String id) => db.soundCueDao.remove(id);
 }

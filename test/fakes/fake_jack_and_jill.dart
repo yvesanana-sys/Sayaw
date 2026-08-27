@@ -71,4 +71,48 @@ class FakeJackAndJill implements JackAndJillAccess {
 
   @override
   Future<void> addToSet(String trackId) async => queued.add(trackId);
+
+  // -- the roster -----------------------------------------------------------
+
+  List<Participant> people = const [];
+  final _roster = StreamController<List<Participant>>.broadcast();
+
+  final List<String> added = [];
+  final Map<String, bool> presence = {};
+  final List<String> removed = [];
+  int drawsReset = 0;
+
+  /// Current list first, then changes — a bare broadcast stream would drop
+  /// whatever a test set up before the provider subscribed.
+  @override
+  Stream<List<Participant>> watchParticipants() async* {
+    yield people;
+    yield* _roster.stream;
+  }
+
+  void emitRoster(List<Participant> next) {
+    people = next;
+    _roster.add(next);
+  }
+
+  @override
+  Future<String> addParticipant(String name) async {
+    if (name.trim().isEmpty) {
+      throw ArgumentError.value(name, 'name', 'a participant needs a name');
+    }
+    added.add(name);
+    return name.toLowerCase();
+  }
+
+  @override
+  Future<void> setPresent(String id, bool present) async =>
+      presence[id] = present;
+
+  @override
+  Future<void> removeParticipant(String id) async => removed.add(id);
+
+  @override
+  Future<void> resetDraws() async => drawsReset++;
+
+  Future<void> close() => _roster.close();
 }

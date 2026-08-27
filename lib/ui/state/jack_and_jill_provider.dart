@@ -18,6 +18,23 @@ abstract class JackAndJillAccess {
   /// Adds the drawn track to the end of the open set, so the song the room
   /// was just promised is the song that plays.
   Future<void> addToSet(String trackId);
+
+  // -- the roster -----------------------------------------------------------
+
+  /// Everyone on the list, present or not.
+  Stream<List<Participant>> watchParticipants();
+
+  /// Adds someone, or returns the id of the person already there.
+  Future<String> addParticipant(String name);
+
+  /// Marks someone here or gone. Not a delete: their name should not have to
+  /// be retyped next week.
+  Future<void> setPresent(String id, bool present);
+
+  Future<void> removeParticipant(String id);
+
+  /// Puts everyone back to nobody-has-danced-yet, for the next event.
+  Future<void> resetDraws();
 }
 
 final jackAndJillProvider =
