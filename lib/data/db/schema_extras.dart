@@ -58,6 +58,22 @@ CREATE TABLE sound_cues (
 )
 ''',
   ],
+
+  // The Jack and Jill roster. Another new table, so an upgrade gains an empty
+  // one and nobody's set changes.
+  7: [
+    '''
+CREATE TABLE participants (
+  id                  TEXT NOT NULL PRIMARY KEY,
+  name                TEXT NOT NULL,
+  is_present          INTEGER NOT NULL DEFAULT 1,
+  draw_count          INTEGER NOT NULL DEFAULT 0,
+  created_at          INTEGER NOT NULL
+)
+''',
+    'CREATE INDEX idx_participants_present '
+        'ON participants (is_present, draw_count)',
+  ],
 };
 
 /// Statements run once, in order, when the database file is first created.
@@ -97,6 +113,10 @@ CREATE INDEX idx_cache_lru ON cache_entries (pinned, last_accessed_at)
 ''',
 
   'CREATE INDEX idx_history_recent ON play_history (track_id, started_at DESC)',
+
+  // A draw reads only the people still here, cheapest first.
+  'CREATE INDEX idx_participants_present '
+      'ON participants (is_present, draw_count)',
 
   // Availability in one query: drives both the offline UI and the engine's
   // skip logic, so they can never disagree about what will play.

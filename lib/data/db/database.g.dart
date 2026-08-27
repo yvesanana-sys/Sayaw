@@ -8037,6 +8037,374 @@ class SoundCuesCompanion extends UpdateCompanion<SoundCueRow> {
   }
 }
 
+class $ParticipantsTable extends Participants
+    with TableInfo<$ParticipantsTable, Participant> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ParticipantsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isPresentMeta = const VerificationMeta(
+    'isPresent',
+  );
+  @override
+  late final GeneratedColumn<bool> isPresent = GeneratedColumn<bool>(
+    'is_present',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_present" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _drawCountMeta = const VerificationMeta(
+    'drawCount',
+  );
+  @override
+  late final GeneratedColumn<int> drawCount = GeneratedColumn<int>(
+    'draw_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<DateTime, int> createdAt =
+      GeneratedColumn<int>(
+        'created_at',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: true,
+      ).withConverter<DateTime>($ParticipantsTable.$convertercreatedAt);
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    isPresent,
+    drawCount,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'participants';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Participant> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('is_present')) {
+      context.handle(
+        _isPresentMeta,
+        isPresent.isAcceptableOrUnknown(data['is_present']!, _isPresentMeta),
+      );
+    }
+    if (data.containsKey('draw_count')) {
+      context.handle(
+        _drawCountMeta,
+        drawCount.isAcceptableOrUnknown(data['draw_count']!, _drawCountMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Participant map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Participant(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      isPresent: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_present'],
+      )!,
+      drawCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}draw_count'],
+      )!,
+      createdAt: $ParticipantsTable.$convertercreatedAt.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}created_at'],
+        )!,
+      ),
+    );
+  }
+
+  @override
+  $ParticipantsTable createAlias(String alias) {
+    return $ParticipantsTable(attachedDatabase, alias);
+  }
+
+  static TypeConverter<DateTime, int> $convertercreatedAt =
+      const MillisConverter();
+}
+
+class Participant extends DataClass implements Insertable<Participant> {
+  final String id;
+  final String name;
+
+  /// Signed in and still here.
+  ///
+  /// Someone who has gone home stays on the list so their name is not retyped
+  /// next week, but must not be drawn tonight.
+  final bool isPresent;
+
+  /// How many times this person has been drawn, so a fair draw can prefer
+  /// whoever has danced least.
+  final int drawCount;
+  final DateTime createdAt;
+  const Participant({
+    required this.id,
+    required this.name,
+    required this.isPresent,
+    required this.drawCount,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    map['is_present'] = Variable<bool>(isPresent);
+    map['draw_count'] = Variable<int>(drawCount);
+    {
+      map['created_at'] = Variable<int>(
+        $ParticipantsTable.$convertercreatedAt.toSql(createdAt),
+      );
+    }
+    return map;
+  }
+
+  ParticipantsCompanion toCompanion(bool nullToAbsent) {
+    return ParticipantsCompanion(
+      id: Value(id),
+      name: Value(name),
+      isPresent: Value(isPresent),
+      drawCount: Value(drawCount),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory Participant.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Participant(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      isPresent: serializer.fromJson<bool>(json['isPresent']),
+      drawCount: serializer.fromJson<int>(json['drawCount']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'isPresent': serializer.toJson<bool>(isPresent),
+      'drawCount': serializer.toJson<int>(drawCount),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  Participant copyWith({
+    String? id,
+    String? name,
+    bool? isPresent,
+    int? drawCount,
+    DateTime? createdAt,
+  }) => Participant(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    isPresent: isPresent ?? this.isPresent,
+    drawCount: drawCount ?? this.drawCount,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  Participant copyWithCompanion(ParticipantsCompanion data) {
+    return Participant(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      isPresent: data.isPresent.present ? data.isPresent.value : this.isPresent,
+      drawCount: data.drawCount.present ? data.drawCount.value : this.drawCount,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Participant(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('isPresent: $isPresent, ')
+          ..write('drawCount: $drawCount, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name, isPresent, drawCount, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Participant &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.isPresent == this.isPresent &&
+          other.drawCount == this.drawCount &&
+          other.createdAt == this.createdAt);
+}
+
+class ParticipantsCompanion extends UpdateCompanion<Participant> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<bool> isPresent;
+  final Value<int> drawCount;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const ParticipantsCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.isPresent = const Value.absent(),
+    this.drawCount = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ParticipantsCompanion.insert({
+    required String id,
+    required String name,
+    this.isPresent = const Value.absent(),
+    this.drawCount = const Value.absent(),
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name),
+       createdAt = Value(createdAt);
+  static Insertable<Participant> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<bool>? isPresent,
+    Expression<int>? drawCount,
+    Expression<int>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (isPresent != null) 'is_present': isPresent,
+      if (drawCount != null) 'draw_count': drawCount,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ParticipantsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<bool>? isPresent,
+    Value<int>? drawCount,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return ParticipantsCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      isPresent: isPresent ?? this.isPresent,
+      drawCount: drawCount ?? this.drawCount,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (isPresent.present) {
+      map['is_present'] = Variable<bool>(isPresent.value);
+    }
+    if (drawCount.present) {
+      map['draw_count'] = Variable<int>(drawCount.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(
+        $ParticipantsTable.$convertercreatedAt.toSql(createdAt.value),
+      );
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ParticipantsCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('isPresent: $isPresent, ')
+          ..write('drawCount: $drawCount, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$SayawDatabase extends GeneratedDatabase {
   _$SayawDatabase(QueryExecutor e) : super(e);
   $SayawDatabaseManager get managers => $SayawDatabaseManager(this);
@@ -8050,6 +8418,7 @@ abstract class _$SayawDatabase extends GeneratedDatabase {
       $AnnouncementCacheTable(this);
   late final $PlayHistoryTable playHistory = $PlayHistoryTable(this);
   late final $SoundCuesTable soundCues = $SoundCuesTable(this);
+  late final $ParticipantsTable participants = $ParticipantsTable(this);
   late final TrackDao trackDao = TrackDao(this as SayawDatabase);
   late final PlaylistDao playlistDao = PlaylistDao(this as SayawDatabase);
   late final AnnouncementDao announcementDao = AnnouncementDao(
@@ -8060,6 +8429,9 @@ abstract class _$SayawDatabase extends GeneratedDatabase {
   );
   late final CacheDao cacheDao = CacheDao(this as SayawDatabase);
   late final SoundCueDao soundCueDao = SoundCueDao(this as SayawDatabase);
+  late final ParticipantDao participantDao = ParticipantDao(
+    this as SayawDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -8074,6 +8446,7 @@ abstract class _$SayawDatabase extends GeneratedDatabase {
     announcementCache,
     playHistory,
     soundCues,
+    participants,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -13591,6 +13964,207 @@ typedef $$SoundCuesTableProcessedTableManager =
       SoundCueRow,
       PrefetchHooks Function()
     >;
+typedef $$ParticipantsTableCreateCompanionBuilder =
+    ParticipantsCompanion Function({
+      required String id,
+      required String name,
+      Value<bool> isPresent,
+      Value<int> drawCount,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$ParticipantsTableUpdateCompanionBuilder =
+    ParticipantsCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<bool> isPresent,
+      Value<int> drawCount,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$ParticipantsTableFilterComposer
+    extends Composer<_$SayawDatabase, $ParticipantsTable> {
+  $$ParticipantsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isPresent => $composableBuilder(
+    column: $table.isPresent,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get drawCount => $composableBuilder(
+    column: $table.drawCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<DateTime, DateTime, int> get createdAt =>
+      $composableBuilder(
+        column: $table.createdAt,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+}
+
+class $$ParticipantsTableOrderingComposer
+    extends Composer<_$SayawDatabase, $ParticipantsTable> {
+  $$ParticipantsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isPresent => $composableBuilder(
+    column: $table.isPresent,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get drawCount => $composableBuilder(
+    column: $table.drawCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ParticipantsTableAnnotationComposer
+    extends Composer<_$SayawDatabase, $ParticipantsTable> {
+  $$ParticipantsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<bool> get isPresent =>
+      $composableBuilder(column: $table.isPresent, builder: (column) => column);
+
+  GeneratedColumn<int> get drawCount =>
+      $composableBuilder(column: $table.drawCount, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<DateTime, int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$ParticipantsTableTableManager
+    extends
+        RootTableManager<
+          _$SayawDatabase,
+          $ParticipantsTable,
+          Participant,
+          $$ParticipantsTableFilterComposer,
+          $$ParticipantsTableOrderingComposer,
+          $$ParticipantsTableAnnotationComposer,
+          $$ParticipantsTableCreateCompanionBuilder,
+          $$ParticipantsTableUpdateCompanionBuilder,
+          (
+            Participant,
+            BaseReferences<_$SayawDatabase, $ParticipantsTable, Participant>,
+          ),
+          Participant,
+          PrefetchHooks Function()
+        > {
+  $$ParticipantsTableTableManager(_$SayawDatabase db, $ParticipantsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ParticipantsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ParticipantsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ParticipantsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<bool> isPresent = const Value.absent(),
+                Value<int> drawCount = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ParticipantsCompanion(
+                id: id,
+                name: name,
+                isPresent: isPresent,
+                drawCount: drawCount,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                Value<bool> isPresent = const Value.absent(),
+                Value<int> drawCount = const Value.absent(),
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ParticipantsCompanion.insert(
+                id: id,
+                name: name,
+                isPresent: isPresent,
+                drawCount: drawCount,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ParticipantsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$SayawDatabase,
+      $ParticipantsTable,
+      Participant,
+      $$ParticipantsTableFilterComposer,
+      $$ParticipantsTableOrderingComposer,
+      $$ParticipantsTableAnnotationComposer,
+      $$ParticipantsTableCreateCompanionBuilder,
+      $$ParticipantsTableUpdateCompanionBuilder,
+      (
+        Participant,
+        BaseReferences<_$SayawDatabase, $ParticipantsTable, Participant>,
+      ),
+      Participant,
+      PrefetchHooks Function()
+    >;
 
 class $SayawDatabaseManager {
   final _$SayawDatabase _db;
@@ -13613,4 +14187,6 @@ class $SayawDatabaseManager {
       $$PlayHistoryTableTableManager(_db, _db.playHistory);
   $$SoundCuesTableTableManager get soundCues =>
       $$SoundCuesTableTableManager(_db, _db.soundCues);
+  $$ParticipantsTableTableManager get participants =>
+      $$ParticipantsTableTableManager(_db, _db.participants);
 }

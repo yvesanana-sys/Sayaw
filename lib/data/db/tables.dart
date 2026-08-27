@@ -465,3 +465,29 @@ class SoundCues extends Table {
   @override
   Set<Column> get primaryKey => {id};
 }
+
+/// The people in the room, for a Jack and Jill draw.
+///
+/// Local to the event and to this machine. The roster is whoever turned up,
+/// and a randomiser that needs a network round-trip to pick two names is the
+/// wrong thing to be holding at 10pm in a basement — the same reasoning that
+/// put the availability view and the connectivity probe where they are.
+class Participants extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+
+  /// Signed in and still here.
+  ///
+  /// Someone who has gone home stays on the list so their name is not retyped
+  /// next week, but must not be drawn tonight.
+  BoolColumn get isPresent => boolean().withDefault(const Constant(true))();
+
+  /// How many times this person has been drawn, so a fair draw can prefer
+  /// whoever has danced least.
+  IntColumn get drawCount => integer().withDefault(const Constant(0))();
+
+  IntColumn get createdAt => integer().map(const MillisConverter())();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}

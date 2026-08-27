@@ -218,6 +218,28 @@ CREATE UNIQUE INDEX idx_items_order ON playlist_items (playlist_id, position);
 CREATE INDEX idx_items_track ON playlist_items (track_id);
 
 -- ---------------------------------------------------------------------------
+-- The people in the room, for a Jack and Jill draw. Local to the event and to
+-- this machine: the roster is whoever turned up, and a randomiser that needs
+-- a network round-trip to pick two names is the wrong thing to have at 10pm
+-- in a basement.
+-- ---------------------------------------------------------------------------
+CREATE TABLE participants (
+  id                  TEXT NOT NULL PRIMARY KEY,
+  name                TEXT NOT NULL,
+
+  -- Signed in and still here. Someone who has gone home stays on the list so
+  -- their name is not retyped next week, but must not be drawn tonight.
+  is_present          INTEGER NOT NULL DEFAULT 1,
+
+  -- How many times this person has been drawn, so a fair draw can prefer
+  -- whoever has danced least.
+  draw_count          INTEGER NOT NULL DEFAULT 0,
+  created_at          INTEGER NOT NULL
+);
+
+CREATE INDEX idx_participants_present ON participants (is_present, draw_count);
+
+-- ---------------------------------------------------------------------------
 -- Cut-in sounds for the soundboard: a whistle, a bell, a horn. Played over a
 -- running set without touching the transport, so these are deliberately not
 -- playlist rows and never enter a queue.

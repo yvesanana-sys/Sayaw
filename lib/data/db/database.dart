@@ -7,6 +7,7 @@ import 'announcement_dao.dart';
 import 'cache_dao.dart';
 import 'converters.dart';
 import 'enums.dart';
+import 'participant_dao.dart';
 import 'playlist_dao.dart';
 import 'schema_extras.dart';
 import 'sound_cue_dao.dart';
@@ -38,6 +39,7 @@ part 'database.g.dart';
     AnnouncementCache,
     PlayHistory,
     SoundCues,
+    Participants,
   ],
   daos: [
     TrackDao,
@@ -46,13 +48,14 @@ part 'database.g.dart';
     SourceAccountDao,
     CacheDao,
     SoundCueDao,
+    ParticipantDao,
   ],
 )
 class SayawDatabase extends _$SayawDatabase {
   SayawDatabase(super.e);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
