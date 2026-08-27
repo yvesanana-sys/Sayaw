@@ -35,6 +35,7 @@ class _SetShapeDialogState extends ConsumerState<SetShapeDialog> {
   bool _limitSongs = false;
   bool _limitLength = false;
   bool _rotate = false;
+  bool _flow = false;
   int _songs = _defaultSongs;
   int _seconds = _defaultSeconds;
   int _gap = _defaultGap;
@@ -63,6 +64,7 @@ class _SetShapeDialogState extends ConsumerState<SetShapeDialog> {
       _seconds = shape.songDuration?.inSeconds ?? _defaultSeconds;
       _rotate = shape.isRotation;
       _gap = shape.isRotation ? shape.rotationGap.inSeconds : _defaultGap;
+      _flow = shape.continuousFlow;
       _loaded = true;
     });
   }
@@ -80,6 +82,7 @@ class _SetShapeDialogState extends ConsumerState<SetShapeDialog> {
       songLimit: _limitSongs ? _songs : null,
       songDuration: _limitLength ? Duration(seconds: _seconds) : null,
       rotationGap: _rotate ? Duration(seconds: _gap) : Duration.zero,
+      continuousFlow: _flow,
     ));
 
     if (!mounted) return;
@@ -166,6 +169,15 @@ class _SetShapeDialogState extends ConsumerState<SetShapeDialog> {
                       onToggled: (on) => setState(() => _rotate = on),
                       onChanged: (v) => setState(() => _gap = v),
                     ),
+                    const SizedBox(height: 8),
+                    _FlowRow(
+                      // A rotation is silence between tracks by definition, so
+                      // the two cannot both be on. The rotation wins because
+                      // it is the more specific thing to have asked for.
+                      enabled: !_rotate,
+                      value: _flow && !_rotate,
+                      onChanged: (on) => setState(() => _flow = on),
+                    ),
                     const Divider(height: 32),
                     _TempoSection(
                       enabled: !_saving,
@@ -200,8 +212,19 @@ class _SetShapeDialogState extends ConsumerState<SetShapeDialog> {
   /// The setting read back as a sentence, because two numbers and two
   /// switches do not say what the night will do.
   String _summary() {
-    if (!_limitSongs && !_limitLength && !_rotate) {
+    if (!_limitSongs && !_limitLength && !_rotate && !_flow) {
       return 'Plays the set as written: every row, each track to its end.';
+    }
+
+    if (_flow && !_rotate) {
+      final of = _limitLength
+          ? '${_describeSeconds(_seconds)} of each track'
+          : 'each track in full';
+      final count = _limitSongs
+          ? ' Stops after $_songs ${_songs == 1 ? 'song' : 'songs'}.'
+          : '';
+      return 'Plays $of straight into the next, with no crossfade and nothing '
+          'spoken in between.$count';
     }
 
     final of = _limitLength
@@ -521,5 +544,64 @@ class _TempoSection extends StatelessWidget {
       parts.add('${report.withoutTempo.length} with no tempo left at the end');
     }
     return 'Ordered ${report.total}: ${parts.join(', ')}.';
+  }
+}
+
+/// Continuous flow — no crossfade, nothing spoken, the next track simply
+/// takes over at the boundary.
+///
+/// Its own widget rather than another [_Row] because it has no number: it is
+/// one decision, not a decision plus an amount.
+class _FlowRow extends StatelessWidget {
+  const _FlowRow({
+    required this.enabled,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final bool enabled;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Semantics(
+          label: 'Continuous flow, no gap between tracks',
+          toggled: value,
+          child: Switch(value: value, onChanged: enabled ? onChanged : null),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Continuous flow',
+                style: TextStyle(
+                  color: enabled
+                      ? SayawColors.onSurface
+                      : SayawColors.onSurfaceVariant,
+                ),
+              ),
+              Text(
+                enabled
+                    // The lossy part, said out loud. Turning it off cannot
+                    // know what crossfade this set had before it was on.
+                    ? 'No crossfade, nothing spoken. Turning it off restores '
+                        'a 4 second crossfade.'
+                    : 'Not with a partner rotation — that is silence between '
+                        'tracks by definition.',
+                style: const TextStyle(
+                  color: SayawColors.onSurfaceVariant,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }

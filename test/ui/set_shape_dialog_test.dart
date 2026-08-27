@@ -64,9 +64,12 @@ void main() {
         ),
       );
 
-      for (final s in tester.widgetList<Switch>(find.byType(Switch))) {
-        expect(s.value, isTrue);
-      }
+      // By position rather than "all of them": continuous flow is deliberately
+      // not available alongside a rotation, so a blanket assertion could never
+      // hold and would have to be weakened rather than read.
+      final switches = tester.widgetList<Switch>(find.byType(Switch)).toList();
+      expect([switches[0].value, switches[1].value, switches[2].value],
+          [true, true, true]);
       expect(find.text('8'), findsOneWidget);
       expect(find.text('90'), findsOneWidget);
       expect(find.text('15'), findsOneWidget);
@@ -249,6 +252,64 @@ void main() {
     });
   });
 
+
+
+  group('continuous flow', () {
+    testWidgets('off, a set crossfades and speaks as usual', (tester) async {
+      await pumpDialog(tester, FakeSetShape());
+
+      expect(tester.widgetList<Switch>(find.byType(Switch)).last.value, isFalse);
+    });
+
+    testWidgets('turning it on writes it', (tester) async {
+      final access = FakeSetShape();
+      await pumpDialog(tester, access);
+
+      await tester.tap(find.byType(Switch).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(access.writes.single.continuousFlow, isTrue);
+    });
+
+    testWidgets('it says what turning it off will do', (tester) async {
+      // The lossy part: nothing here can know what crossfade the set had
+      // before, so it says which one it will put back.
+      await pumpDialog(tester, FakeSetShape());
+
+      expect(find.textContaining('restores a 4 second crossfade'),
+          findsOneWidget);
+    });
+
+    testWidgets('a rotation takes it away, and says why', (tester) async {
+      // Silence between tracks by definition, so the two cannot both be on.
+      final access =
+          FakeSetShape(shape: const SetShape(rotationGap: Duration(seconds: 10)));
+      await pumpDialog(tester, access);
+
+      expect(tester.widgetList<Switch>(find.byType(Switch)).last.onChanged,
+          isNull);
+      expect(find.textContaining('Not with a partner rotation'), findsOneWidget);
+    });
+
+    testWidgets('the sentence describes a continuous set', (tester) async {
+      final access = FakeSetShape(
+        shape: const SetShape(
+          continuousFlow: true,
+          songDuration: Duration(minutes: 2),
+          songLimit: 6,
+        ),
+      );
+      await pumpDialog(tester, access);
+
+      expect(
+        find.text('Plays 2 minutes of each track straight into the next, with '
+            'no crossfade and nothing spoken in between. Stops after 6 songs.'),
+        findsOneWidget,
+      );
+    });
+  });
 
   group('ordering by tempo', () {
     testWidgets('both directions are offered', (tester) async {

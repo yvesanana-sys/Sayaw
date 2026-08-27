@@ -1554,7 +1554,117 @@ void main() {
       });
     });
   });
+
+  group('continuous flow', () {
+    /// A set with no crossfade and nothing spoken between tracks.
+    List<QueueEntry> flowing(List<String> ids) => [
+          for (final id in ids)
+            _entry(id, crossfade: Duration.zero, mode: AnnounceMode.off),
+        ];
+
+    test('the next track is at full level before it starts', () {
+      // The whole of gapless. Bringing the deck up after it has started leaves
+      // it playing silence for a platform round-trip — and the outgoing deck
+      // has already been stopped by then.
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(seconds: 6));
+        rig.start(flowing(['one', 'two']), async);
+
+        async.elapse(const Duration(seconds: 10));
+        async.flushMicrotasks();
+
+        final started = rig.b.callEvents.firstWhere((c) => c.name == 'play');
+        final atLevel =
+            rig.b.volumeEvents.firstWhere((e) => e.volume > 0.001);
+
+        expect(atLevel.seq, lessThan(started.seq),
+            reason: 'the deck came up to level only after it was playing');
+      });
+    });
+
+    test('the outgoing deck is stopped, not left running underneath', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(seconds: 6));
+        rig.start(flowing(['one', 'two']), async);
+
+        async.elapse(const Duration(seconds: 10));
+        async.flushMicrotasks();
+
+        expect(rig.a.volumeEvents.last.volume, 0.0);
+        expect([for (final c in rig.a.callEvents) c.name], contains('stop'));
+      });
+    });
+
+    test('no ramp happens at all', () {
+      // A crossfade of zero must not become a very fast crossfade: there is
+      // no intermediate gain either deck should ever be written at.
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(seconds: 6));
+        rig.start(flowing(['one', 'two']), async);
+
+        async.elapse(const Duration(seconds: 10));
+        async.flushMicrotasks();
+
+        final partial = [
+          ...rig.a.volumeEvents,
+          ...rig.b.volumeEvents,
+        ].where((e) => e.volume > 0.001 && e.volume < 0.999);
+
+        expect(partial, isEmpty, reason: 'intermediate gains: $partial');
+      });
+    });
+
+    test('the set runs straight through several tracks', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(seconds: 4));
+        rig.start(flowing(['one', 'two', 'three', 'four']), async);
+
+        async.elapse(const Duration(seconds: 40));
+        async.flushMicrotasks();
+
+        expect(rig.activeItems, ['one', 'two', 'three', 'four']);
+      });
+    });
+
+    test('the handoff lands at the end of the track, not before it', () {
+      // A gapless set is trimmed by nothing: the transition is due at the
+      // boundary and within one tick of it.
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(seconds: 6));
+        rig.start(flowing(['one', 'two']), async);
+
+        async.elapse(const Duration(seconds: 10));
+        async.flushMicrotasks();
+
+        final handoff = rig.b.callEvents.firstWhere((c) => c.name == 'play').at;
+        expect(handoff.inMilliseconds,
+            closeTo(const Duration(seconds: 6).inMilliseconds, 40));
+      });
+    });
+
+    test('a rotation gap still wins over a zero crossfade', () {
+      // Both are "no crossfade", and the rotation is the one with something to
+      // say about what happens in between.
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(seconds: 6));
+        rig.start([
+          _entry('one', crossfade: Duration.zero, mode: AnnounceMode.off),
+          _entry('two',
+              crossfade: Duration.zero,
+              mode: AnnounceMode.off,
+              rotationGap: const Duration(seconds: 3)),
+        ], async);
+
+        async.elapse(const Duration(seconds: 20));
+        async.flushMicrotasks();
+
+        expect(rig.firstAt(EnginePhase.rotating), isNotNull);
+      });
+    });
+  });
+
 }
+
 
 
 

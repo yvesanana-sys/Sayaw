@@ -9,11 +9,14 @@ import 'package:sayaw/audio/deck.dart';
 /// how every crossfade property in the suite gets checked without listening to
 /// anything.
 class VolumeEvent {
-  const VolumeEvent(this.at, this.volume);
+  const VolumeEvent(this.at, this.volume, this.seq);
 
   /// Virtual time since the deck was constructed.
   final Duration at;
   final double volume;
+
+  /// See [nextSeq].
+  final int seq;
 
   @override
   String toString() => '${at.inMilliseconds}ms -> ${volume.toStringAsFixed(4)}';
@@ -21,12 +24,26 @@ class VolumeEvent {
 
 /// One lifecycle call, stamped with the virtual time it happened at.
 class CallEvent {
-  const CallEvent(this.at, this.name);
+  const CallEvent(this.at, this.name, this.seq);
   final Duration at;
   final String name;
+
+  /// See [nextSeq].
+  final int seq;
+
   @override
   String toString() => '${at.inMilliseconds}ms:$name';
 }
+
+/// A monotonic counter across every deck in a test.
+///
+/// Fake time does not advance across microtasks, so a volume written just
+/// before a `play` and one written just after it carry the same timestamp.
+/// Ordering matters for exactly one question — whether a deck was brought up
+/// to level before it started or after — and a gap there is silence on a
+/// dance floor, so it needs to be assertable.
+int _seq = 0;
+int nextSeq() => ++_seq;
 
 /// A [Deck] with no audio stack behind it.
 ///
@@ -65,7 +82,8 @@ class FakeDeck implements Deck {
   bool calledSince(String name, Duration since) =>
       callEvents.any((c) => c.name == name && c.at >= since);
 
-  void _record(String name) => callEvents.add(CallEvent(_now, name));
+  void _record(String name) =>
+      callEvents.add(CallEvent(_now, name, nextSeq()));
 
   /// Set to make every [load] throw, exercising the failed-preload path.
   Object? loadError;
@@ -160,7 +178,7 @@ class FakeDeck implements Deck {
   @override
   Future<void> setVolume(double volume) async {
     _volume = volume.clamp(0.0, 1.0);
-    volumeEvents.add(VolumeEvent(_now, _volume));
+    volumeEvents.add(VolumeEvent(_now, _volume, nextSeq()));
   }
 
   void _foldElapsed() {

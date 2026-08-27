@@ -630,6 +630,8 @@ class CrossfadeEngine {
   /// Overlapping crossfade: start standby, ramp both decks in opposite
   /// directions over [spec.crossfade], then retire the outgoing deck.
   Future<void> _runCrossfade(TransitionSpec spec) async {
+    if (spec.isGapless) return _runGaplessHandoff();
+
     await _standby.play();
 
     _fadeStartedAt = clock.now();
@@ -638,6 +640,23 @@ class CrossfadeEngine {
     _setPhase(EnginePhase.crossfading);
 
     if (await _awaitFadeComplete()) await _completeSwap();
+  }
+
+  /// No ramp at all: the next track takes over at the boundary.
+  ///
+  /// Both gains are written *before* the incoming deck starts, which is the
+  /// whole of it. Letting the ordinary path handle a zero-length fade starts
+  /// the deck at silence and only brings it up to level after the outgoing
+  /// deck has been stopped — a platform round-trip later, with nothing coming
+  /// out of the speakers in between. That hole is the one thing a continuous
+  /// set cannot have.
+  Future<void> _runGaplessHandoff() async {
+    _activeFade = 0.0;
+    _standbyFade = 1.0;
+    _applyGains();
+
+    await _standby.play();
+    await _completeSwap();
   }
 
   Future<void> _startIncoming(TransitionSpec spec) async {

@@ -74,6 +74,7 @@ class SetShape {
     this.songLimit,
     this.songDuration,
     this.rotationGap = Duration.zero,
+    this.continuousFlow = false,
   });
 
   /// Stop after this many. Null plays the list as written.
@@ -86,10 +87,18 @@ class SetShape {
   /// ordinary set.
   final Duration rotationGap;
 
+  /// No crossfade and nothing spoken between tracks — the next song takes
+  /// over at the boundary. A Line of Dance set, where the floor should not be
+  /// able to hear where one track ended.
+  final bool continuousFlow;
+
   /// A set with a rotation gap is The Mixer: play, fade out, chime, wait,
   /// fade in, repeat until the song count runs out.
   bool get isRotation => rotationGap > Duration.zero;
 
   bool get isPlainList =>
-      songLimit == null && songDuration == null && !isRotation;
+      songLimit == null &&
+      songDuration == null &&
+      !isRotation &&
+      !continuousFlow;
 }

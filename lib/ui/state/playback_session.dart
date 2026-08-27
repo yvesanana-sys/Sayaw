@@ -161,6 +161,9 @@ class PlaybackSession
       songLimit: playlist?.songLimit,
       songDuration: playlist?.targetDurationMs,
       rotationGap: playlist?.rotationGapMs ?? Duration.zero,
+      continuousFlow: playlist != null &&
+          playlist.crossfadeMs <= Duration.zero &&
+          playlist.announceMode == AnnounceMode.off,
     );
   }
 
@@ -188,6 +191,7 @@ class PlaybackSession
       songLimit: shape.songLimit,
       targetDuration: shape.songDuration,
       rotationGap: shape.rotationGap,
+      continuousFlow: shape.continuousFlow,
     );
 
     if (!isRunning) {
@@ -200,7 +204,8 @@ class PlaybackSession
     // Both of these are baked into the queue entries when the set is opened,
     // so neither can change under a running set.
     return shape.songDuration == before.songDuration &&
-        shape.rotationGap == before.rotationGap;
+        shape.rotationGap == before.rotationGap &&
+        shape.continuousFlow == before.continuousFlow;
   }
 
   /// Puts the open set in tempo order.

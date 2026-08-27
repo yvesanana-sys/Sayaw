@@ -1,6 +1,7 @@
 import 'package:clock/clock.dart';
 import 'package:drift/drift.dart';
 
+import '../../audio/crossfade_engine.dart' show AnnounceMode;
 import '../fractional_order.dart';
 import 'database.dart';
 import 'tables.dart';
@@ -75,12 +76,29 @@ class PlaylistDao extends DatabaseAccessor<SayawDatabase> with _$PlaylistDaoMixi
     required int? songLimit,
     required Duration? targetDuration,
     Duration rotationGap = Duration.zero,
+    bool? continuousFlow,
   }) =>
       (update(playlists)..where((p) => p.id.equals(playlistId))).write(
         PlaylistsCompanion(
           songLimit: Value(songLimit),
           targetDurationMs: Value(targetDuration),
           rotationGapMs: Value(rotationGap),
+          // Continuous flow is not a column of its own — it *is* a crossfade
+          // of zero with nothing spoken over it, and storing it twice would
+          // give the two a chance to disagree. Turning it off restores the
+          // defaults a new playlist starts with rather than something the
+          // operator once had, which is the one lossy part of this and is
+          // said out loud in the dialog.
+          crossfadeMs: switch (continuousFlow) {
+            null => const Value.absent(),
+            true => const Value(Duration.zero),
+            false => const Value(Duration(seconds: 4)),
+          },
+          announceMode: switch (continuousFlow) {
+            null => const Value.absent(),
+            true => const Value(AnnounceMode.off),
+            false => const Value(AnnounceMode.beforeMusic),
+          },
           updatedAt: Value(clock.now()),
         ),
       );

@@ -597,6 +597,43 @@ void main() {
           const Duration(seconds: 30));
     });
 
+
+    test('continuous flow is the crossfade and the announcement, not a flag',
+        () async {
+      // Stored as what it means rather than beside it, so the two can never
+      // disagree about whether this set has a crossfade.
+      await _addTracks(db, set, music, ['a', 'b']);
+      await session.openPlaylist(set);
+
+      await session.writeSetShape(const SetShape(continuousFlow: true));
+
+      final playlist = (await db.playlistDao.byId(set))!;
+      expect(playlist.crossfadeMs, Duration.zero);
+      expect(playlist.announceMode, AnnounceMode.off);
+      expect(session.engine.currentEntry!.spec.isGapless, isTrue);
+    });
+
+    test('and it reads back as itself', () async {
+      await _addTracks(db, set, music, ['a']);
+      await session.openPlaylist(set);
+      await session.writeSetShape(const SetShape(continuousFlow: true));
+
+      expect((await session.readSetShape()).continuousFlow, isTrue);
+    });
+
+    test('turning it off puts a crossfade back', () async {
+      await _addTracks(db, set, music, ['a', 'b']);
+      await session.openPlaylist(set);
+      await session.writeSetShape(const SetShape(continuousFlow: true));
+
+      await session.writeSetShape(const SetShape());
+
+      final playlist = (await db.playlistDao.byId(set))!;
+      expect(playlist.crossfadeMs, const Duration(seconds: 4));
+      expect(playlist.announceMode, AnnounceMode.beforeMusic);
+      expect((await session.readSetShape()).continuousFlow, isFalse);
+    });
+
     test('what is read back is what was written', () async {
       await _addTracks(db, set, music, ['a']);
       await session.openPlaylist(set);
