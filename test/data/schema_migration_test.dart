@@ -163,6 +163,38 @@ void main() {
   });
 
 
+
+  test('an install that predates the soundboard gains an empty one', () async {
+    // A new table rather than a column, so the upgrade is a create and the
+    // operator simply has no cues yet.
+    driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+
+    final upgraded = raw.sqlite3.openInMemory();
+    addTearDown(upgraded.close);
+
+    for (final statement in _upgradesTouching('sound_cues', from: 5)) {
+      upgraded.execute(statement);
+    }
+
+    final columns = _columns([
+      for (final row in upgraded.select('PRAGMA table_info(sound_cues)'))
+        Map<String, Object?>.from(row),
+    ]);
+
+    final fresh = SayawDatabase(NativeDatabase.memory());
+    addTearDown(fresh.close);
+
+    expect(
+      columns,
+      _columns([
+        for (final row
+            in await fresh.customSelect('PRAGMA table_info(sound_cues)').get())
+          row.data,
+      ]),
+    );
+    expect(upgraded.select('SELECT * FROM sound_cues'), isEmpty);
+  });
+
   test('every version between one and the current one has a step', () {
     final db = SayawDatabase(NativeDatabase.memory());
     addTearDown(db.close);

@@ -426,3 +426,42 @@ class PlayHistory extends Table {
       .withDefault(const Constant(0))
       .map(const MillisDurationConverter())();
 }
+
+/// Cut-in sounds for the soundboard: a whistle, a bell, a horn.
+///
+/// Deliberately not playlist rows. A cue plays over a running set and never
+/// enters a queue, never moves the set on, and never stops a track.
+///
+/// The row type is named for what it is — a row — so `SoundCue` stays
+/// available for the audio layer's own type, the way `PlaylistRow` sits behind
+/// `QueueEntry`.
+@DataClassName('SoundCueRow')
+class SoundCues extends Table {
+  TextColumn get id => text()();
+
+  /// What the button says. 'Whistle', 'Bell', 'Rotate'.
+  TextColumn get label => text()();
+
+  TextColumn get filePath => text()();
+
+  /// Where the music sits while the cue plays, as a fraction of its level.
+  ///
+  /// One leaves the music alone, which is right for a whistle: it is louder
+  /// than the mix and cuts through on its own, and dipping for it would
+  /// announce the cue before the cue does.
+  RealColumn get duckLevel => real().withDefault(const Constant(1.0))();
+  IntColumn get duckFadeMs => integer()
+      .withDefault(const Constant(120))
+      .map(const MillisDurationConverter())();
+  IntColumn get restoreFadeMs => integer()
+      .withDefault(const Constant(400))
+      .map(const MillisDurationConverter())();
+
+  /// '1' to '9'. Null is a cue with a button and no shortcut.
+  TextColumn get hotkey => text().nullable()();
+
+  IntColumn get sortIndex => integer().withDefault(const Constant(0))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}

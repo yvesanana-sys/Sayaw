@@ -3,6 +3,7 @@ import '../../audio/crossfade_engine.dart';
 import '../../audio/deck.dart';
 import '../../audio/gain_bus.dart';
 import '../../audio/sayaw_audio_handler.dart';
+import '../../audio/soundboard.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -44,6 +45,7 @@ class PlaybackRuntime {
     required this.connectivity,
     required this.decks,
     required this.bus,
+    required this.soundboard,
     required this.networkEvents,
   });
 
@@ -79,6 +81,9 @@ class PlaybackRuntime {
   final List<Deck> decks;
   final MusicGainBus bus;
 
+  /// Cut-in sounds over a running set. Nothing here touches the transport.
+  final Soundboard soundboard;
+
   /// Builds the real thing: platform decks, native TTS, the database.
   static PlaybackRuntime start({
     required SayawDatabase db,
@@ -94,6 +99,9 @@ class PlaybackRuntime {
     final deckA = DeckFactory.create('A');
     final deckB = DeckFactory.create('B');
     final voiceDeck = DeckFactory.create('voice');
+    // A fourth voice, so a cut-in can sound while an announcement is speaking
+    // rather than cutting it off.
+    final cueDeck = DeckFactory.create('cue');
     final bus = MusicGainBus();
 
     final dio = http ?? Dio();
@@ -183,8 +191,9 @@ class PlaybackRuntime {
         plex: plex,
         plexAuth: PlexAuth(dio: dio, identity: plexIdentity),
       ),
-      decks: [deckA, deckB, voiceDeck],
+      decks: [deckA, deckB, voiceDeck, cueDeck],
       bus: bus,
+      soundboard: Soundboard(cueDeck: cueDeck, bus: bus),
       session: session,
     );
   }

@@ -40,6 +40,24 @@ const Map<int, List<String>> schemaUpgrades = {
     'ALTER TABLE playlists '
         'ADD COLUMN snowball_stages INTEGER NOT NULL DEFAULT 0',
   ],
+
+  // The soundboard. A new table rather than a column, so an install that
+  // upgrades simply gains an empty one.
+  6: [
+    '''
+CREATE TABLE sound_cues (
+  id                  TEXT NOT NULL PRIMARY KEY,
+  label               TEXT NOT NULL,
+  file_path           TEXT NOT NULL,
+  duck_level          REAL NOT NULL DEFAULT 1.0
+                        CHECK (duck_level BETWEEN 0.0 AND 1.0),
+  duck_fade_ms        INTEGER NOT NULL DEFAULT 120,
+  restore_fade_ms     INTEGER NOT NULL DEFAULT 400,
+  hotkey              TEXT,
+  sort_index          INTEGER NOT NULL DEFAULT 0
+)
+''',
+  ],
 };
 
 /// Statements run once, in order, when the database file is first created.

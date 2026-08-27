@@ -218,6 +218,29 @@ CREATE UNIQUE INDEX idx_items_order ON playlist_items (playlist_id, position);
 CREATE INDEX idx_items_track ON playlist_items (track_id);
 
 -- ---------------------------------------------------------------------------
+-- Cut-in sounds for the soundboard: a whistle, a bell, a horn. Played over a
+-- running set without touching the transport, so these are deliberately not
+-- playlist rows and never enter a queue.
+-- ---------------------------------------------------------------------------
+CREATE TABLE sound_cues (
+  id                  TEXT NOT NULL PRIMARY KEY,
+  label               TEXT NOT NULL,
+  file_path           TEXT NOT NULL,
+
+  -- Where the music sits while the cue plays. 1.0 leaves it alone, which is
+  -- right for a whistle: it is louder than the mix and cuts through on its
+  -- own, and dipping for it would announce the cue before the cue does.
+  duck_level          REAL NOT NULL DEFAULT 1.0
+                        CHECK (duck_level BETWEEN 0.0 AND 1.0),
+  duck_fade_ms        INTEGER NOT NULL DEFAULT 120,
+  restore_fade_ms     INTEGER NOT NULL DEFAULT 400,
+
+  -- '1'..'9'. Null is a cue with a button and no shortcut.
+  hotkey              TEXT,
+  sort_index          INTEGER NOT NULL DEFAULT 0
+);
+
+-- ---------------------------------------------------------------------------
 -- Downloaded media. `policy_allows_persist` is written by MediaResolver from
 -- the DRM matrix and is the single gate on ever writing bytes to disk.
 -- ---------------------------------------------------------------------------
