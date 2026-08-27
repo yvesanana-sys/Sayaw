@@ -134,4 +134,26 @@ void main() {
 
     expect(find.text('Bell'), findsOneWidget);
   });
+
+  testWidgets('a cue that did not sound is said out loud', (tester) async {
+    // Pressed a button in front of a room and heard nothing. Silence about it
+    // is the worst of both: no sound and no explanation.
+    final soundboard = await pumpBar(tester, const [_whistle]);
+
+    soundboard.failNext('Whistle');
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Whistle did not play'), findsOneWidget);
+  });
+
+  testWidgets('a cue that sounded says nothing', (tester) async {
+    final soundboard = await pumpBar(tester, const [_whistle]);
+
+    await tester.tap(find.text('Whistle'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SnackBar), findsNothing);
+    expect(soundboard.fired, ['whistle']);
+  });
+
 }

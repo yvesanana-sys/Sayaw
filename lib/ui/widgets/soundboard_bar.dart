@@ -16,6 +16,18 @@ class SoundboardBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // A cut-in that made no noise is the one thing here the operator cannot
+    // work out for themselves: they pressed a button in front of a room and
+    // heard nothing, and need to know it was the file rather than their
+    // timing.
+    ref.listen(soundboardFailureProvider, (_, next) {
+      final label = next.value;
+      if (label == null) return;
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(content: Text('$label did not play — is the file still there?')),
+      );
+    });
+
     final cues = ref.watch(soundCuesProvider).value ?? const <SoundCue>[];
     if (cues.isEmpty) return const SizedBox.shrink();
 

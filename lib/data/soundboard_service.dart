@@ -10,10 +10,15 @@ import 'db/database.dart';
 /// knows nothing about a deck; this is the one place that holds both, the same
 /// arrangement `PlaybackSession` has for the engine and the playlist tables.
 class SoundboardService implements SoundboardAccess {
-  const SoundboardService({required this.board, required this.db});
+  SoundboardService({required this.board, required this.db});
 
   final Soundboard board;
   final SayawDatabase db;
+
+  final _failures = StreamController<String>.broadcast();
+
+  @override
+  Stream<String> get failures => _failures.stream;
 
   @override
   Stream<List<SoundCue>> watchCues() => db.soundCueDao.watchAll();
@@ -24,7 +29,11 @@ class SoundboardService implements SoundboardAccess {
   /// for two seconds would be the wrong thing entirely — the operator has
   /// already moved on to the next cue by then.
   @override
-  void fire(SoundCue cue) => unawaited(board.fire(cue));
+  void fire(SoundCue cue) => unawaited(() async {
+        if (!await board.fire(cue) && !_failures.isClosed) {
+          _failures.add(cue.label);
+        }
+      }());
 
   @override
   void silence() => unawaited(board.silence());
@@ -40,4 +49,6 @@ class SoundboardService implements SoundboardAccess {
 
   @override
   Future<void> removeCue(String id) => db.soundCueDao.remove(id);
+
+  Future<void> dispose() => _failures.close();
 }

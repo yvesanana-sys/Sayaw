@@ -11,9 +11,16 @@ abstract class SoundboardAccess {
   /// The cues to draw, in the order the operator arranged them.
   Stream<List<SoundCue>> watchCues();
 
-  /// Fires one. Returns as soon as the cue has started — a button press must
-  /// not sit waiting for a whistle to finish.
+  /// Fires one. Returns at once — a button press must not sit waiting for a
+  /// whistle to finish.
   void fire(SoundCue cue);
+
+  /// Cues that were pressed and did not sound, by label.
+  ///
+  /// A cut-in that makes no noise is not a quiet failure: the operator pressed
+  /// a button in front of a room and heard nothing, and needs to know it was
+  /// the file rather than their timing.
+  Stream<String> get failures;
 
   /// Stops whatever is sounding and brings the music straight back.
   void silence();
@@ -43,6 +50,12 @@ class SoundboardHolder extends Notifier<SoundboardAccess?> {
 
   void set(SoundboardAccess? soundboard) => state = soundboard;
 }
+
+/// Cues that were pressed and did not sound.
+final soundboardFailureProvider = StreamProvider<String>((ref) {
+  final soundboard = ref.watch(soundboardProvider);
+  return soundboard?.failures ?? const Stream.empty();
+});
 
 /// The cue list on its own, so the shortcut bindings and the buttons can both
 /// watch it without either rebuilding on the other's account.

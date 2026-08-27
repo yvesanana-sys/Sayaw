@@ -77,7 +77,13 @@ class Soundboard {
   /// and the engine is not told anything happened. The returned future
   /// completes when the cue has finished and the music is back up, which is
   /// what a test waits on — a caller pressing a button does not.
-  Future<void> fire(SoundCue cue) async {
+  ///
+  /// False when it did not sound — a file the operator has since moved, a deck
+  /// that would not load it. It does not throw for that: this is called from a
+  /// button and left unawaited, and an exception on that path is an unhandled
+  /// async error rather than anything the operator ever finds out about. They
+  /// need telling instead, which is what the answer is for.
+  Future<bool> fire(SoundCue cue) async {
     final generation = ++_generation;
     _sounding = true;
 
@@ -101,6 +107,9 @@ class Soundboard {
       await Future<void>.delayed(length);
 
       if (generation == _generation) await _deck.stop();
+      return true;
+    } on Object {
+      return false;
     } finally {
       // Whatever went wrong — a file that has been moved, a deck that will not
       // load it — the music must not be left sitting in a dip nobody can see

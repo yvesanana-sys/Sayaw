@@ -149,6 +149,7 @@ class _Bootstrap extends ConsumerStatefulWidget {
 
 class _BootstrapState extends ConsumerState<_Bootstrap> {
   PlaybackRuntime? _runtime;
+  SoundboardService? _soundboard;
 
   @override
   void initState() {
@@ -163,9 +164,9 @@ class _BootstrapState extends ConsumerState<_Bootstrap> {
       );
       _runtime = runtime;
       ref.read(sourcesHolderProvider.notifier).set(runtime.sources);
-      ref.read(soundboardHolderProvider.notifier).set(
-            SoundboardService(board: runtime.soundboard, db: runtime.db),
-          );
+      _soundboard =
+          SoundboardService(board: runtime.soundboard, db: runtime.db);
+      ref.read(soundboardHolderProvider.notifier).set(_soundboard);
       ref.read(jackAndJillHolderProvider.notifier).set(
             JackAndJillService(db: runtime.db, library: runtime.session),
           );
@@ -181,6 +182,7 @@ class _BootstrapState extends ConsumerState<_Bootstrap> {
 
   @override
   void dispose() {
+    _soundboard?.dispose();
     _runtime?.dispose();
     super.dispose();
   }

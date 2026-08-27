@@ -122,12 +122,42 @@ void main() {
         final rig = _Rig();
         rig.deck.loadError = StateError('no such file');
 
-        rig.board.fire(_spoken).catchError((_) {});
+        rig.board.fire(_spoken);
         async.elapse(const Duration(seconds: 5));
         async.flushMicrotasks();
 
         expect(rig.bus.manualDuck.value, closeTo(1.0, 0.001));
         expect(rig.board.isSounding, isFalse);
+      });
+    });
+
+    test('and it answers rather than throwing', () {
+      // This is called from a button and left unawaited. An exception there is
+      // an unhandled async error that the operator never finds out about,
+      // which is the worst of both: no sound and no explanation.
+      fakeAsync((async) {
+        final rig = _Rig();
+        rig.deck.loadError = StateError('no such file');
+
+        bool? sounded;
+        rig.board.fire(_whistle).then((value) => sounded = value);
+        async.elapse(const Duration(seconds: 5));
+        async.flushMicrotasks();
+
+        expect(sounded, isFalse);
+      });
+    });
+
+    test('a cue that did sound says so', () {
+      fakeAsync((async) {
+        final rig = _Rig(cue: const Duration(milliseconds: 200));
+
+        bool? sounded;
+        rig.board.fire(_whistle).then((value) => sounded = value);
+        async.elapse(const Duration(seconds: 2));
+        async.flushMicrotasks();
+
+        expect(sounded, isTrue);
       });
     });
   });

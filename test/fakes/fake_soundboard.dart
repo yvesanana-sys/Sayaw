@@ -31,6 +31,14 @@ class FakeSoundboard implements SoundboardAccess {
     _updates.add(next);
   }
 
+  final _failures = StreamController<String>.broadcast();
+
+  @override
+  Stream<String> get failures => _failures.stream;
+
+  /// Makes the next press report that it did not sound.
+  void failNext(String label) => _failures.add(label);
+
   @override
   void fire(SoundCue cue) => fired.add(cue.id);
 
@@ -52,5 +60,8 @@ class FakeSoundboard implements SoundboardAccess {
   @override
   Future<void> removeCue(String id) async => removedCues.add(id);
 
-  Future<void> close() => _updates.close();
+  Future<void> close() async {
+    await _updates.close();
+    await _failures.close();
+  }
 }
