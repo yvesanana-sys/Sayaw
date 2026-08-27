@@ -1,0 +1,102 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../audio/soundboard.dart';
+import '../state/soundboard_provider.dart';
+import '../theme/sayaw_theme.dart';
+import '../touch/touch_targets.dart';
+
+/// The cut-in soundboard: one button per cue, fired over whatever is playing.
+///
+/// A strip rather than a dialog, and it never scrolls out of reach — a tag
+/// call is a thing that happens *now*, and anything that takes two taps to
+/// reach has already missed the moment.
+class SoundboardBar extends ConsumerWidget {
+  const SoundboardBar({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cues = ref.watch(soundCuesProvider).value ?? const <SoundCue>[];
+    if (cues.isEmpty) return const SizedBox.shrink();
+
+    final soundboard = ref.watch(soundboardProvider);
+
+    return Container(
+      height: kMinTouchTarget + 12,
+      color: SayawColors.surface,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: cues.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (context, index) => _CueButton(
+          cue: cues[index],
+          // The shortcut the operator can actually press. Only the first nine
+          // get one — there is no tenth digit, and a two-key chord in the dark
+          // is not a cut-in.
+          shortcut: index < 9 ? '${index + 1}' : null,
+          onPressed: soundboard == null
+              ? null
+              : () => soundboard.fire(cues[index]),
+        ),
+      ),
+    );
+  }
+}
+
+class _CueButton extends StatelessWidget {
+  const _CueButton({required this.cue, this.shortcut, this.onPressed});
+
+  final SoundCue cue;
+  final String? shortcut;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      enabled: onPressed != null,
+      label: shortcut == null
+          ? 'Play ${cue.label}'
+          : 'Play ${cue.label}, shortcut $shortcut',
+      excludeSemantics: true,
+      child: SizedBox(
+        height: kMinTouchTarget,
+        child: FilledButton.tonal(
+          onPressed: onPressed,
+          style: FilledButton.styleFrom(
+            backgroundColor: SayawColors.surfaceContainerHigh,
+            foregroundColor: SayawColors.onSurface,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                // A cue that dips the music is a spoken one; a cue that does
+                // not is a whistle. Worth telling apart at a glance, because
+                // only one of them will talk over the vocals.
+                cue.ducks ? Icons.campaign : Icons.notifications_active,
+                size: 18,
+                color: SayawColors.tertiary,
+              ),
+              const SizedBox(width: 8),
+              Text(cue.label),
+              if (shortcut case final shortcut?) ...[
+                const SizedBox(width: 8),
+                Text(
+                  shortcut,
+                  style: const TextStyle(
+                    color: SayawColors.onSurfaceVariant,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

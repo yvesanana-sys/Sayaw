@@ -11,6 +11,7 @@ import '../widgets/library_pane.dart';
 import '../widgets/network_banner.dart';
 import '../widgets/queue_list.dart';
 import '../widgets/snowball_indicator.dart';
+import '../widgets/soundboard_bar.dart';
 import '../widgets/transport_bar.dart';
 import 'event_mode_dialog.dart';
 import 'set_shape_dialog.dart';
@@ -220,6 +221,9 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
           ),
         ),
         const Divider(height: 1),
+        // Directly above the transport, where a hand already is. A tag call
+        // happens now; anything needing a pane change has missed it.
+        const SoundboardBar(),
         TransportBar(compact: compactTransport),
       ],
     );

@@ -9,11 +9,13 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'data/dance_type_seed.dart';
+import 'data/soundboard_service.dart';
 import 'data/db/connection.dart';
 import 'data/db/database.dart';
 import 'data/sources/plex/plex_identity.dart';
 import 'ui/screens/deck_screen.dart';
 import 'ui/state/playback_runtime.dart';
+import 'ui/state/soundboard_provider.dart';
 import 'ui/state/sources_provider.dart';
 import 'ui/state/playback_ui_state.dart';
 import 'ui/theme/sayaw_theme.dart';
@@ -159,6 +161,9 @@ class _BootstrapState extends ConsumerState<_Bootstrap> {
       );
       _runtime = runtime;
       ref.read(sourcesHolderProvider.notifier).set(runtime.sources);
+      ref.read(soundboardHolderProvider.notifier).set(
+            SoundboardService(board: runtime.soundboard, db: runtime.db),
+          );
 
       // Before the set is opened: on Android this is the foreground service,
       // and starting it after a four-hour playlist has finished resolving is
@@ -177,6 +182,34 @@ class _BootstrapState extends ConsumerState<_Bootstrap> {
 
   @override
   Widget build(BuildContext context) => const DeckScreen();
+}
+
+/// The digits, bound to the first nine soundboard cues.
+///
+/// Here rather than on the deck screen because this is the widget that owns
+/// the autofocus node: `CallbackShortcuts` is consulted by walking *up* from
+/// whatever has focus, so bindings placed below it would simply never fire.
+Map<ShortcutActivator, VoidCallback> _soundboardBindings(WidgetRef ref) {
+  final soundboard = ref.watch(soundboardProvider);
+  final cues = ref.watch(soundCuesProvider).value ?? const [];
+  if (soundboard == null) return const {};
+
+  const digits = [
+    LogicalKeyboardKey.digit1,
+    LogicalKeyboardKey.digit2,
+    LogicalKeyboardKey.digit3,
+    LogicalKeyboardKey.digit4,
+    LogicalKeyboardKey.digit5,
+    LogicalKeyboardKey.digit6,
+    LogicalKeyboardKey.digit7,
+    LogicalKeyboardKey.digit8,
+    LogicalKeyboardKey.digit9,
+  ];
+
+  return {
+    for (var i = 0; i < cues.length && i < digits.length; i++)
+      SingleActivator(digits[i]): () => soundboard.fire(cues[i]),
+  };
 }
 
 /// F11 toggles Performance Mode, Escape leaves it.
@@ -204,6 +237,7 @@ class _PerformanceModeShortcuts extends ConsumerWidget {
         const SingleActivator(LogicalKeyboardKey.escape): () {
           if (ref.read(playbackProvider).performanceMode) setMode(false);
         },
+        ..._soundboardBindings(ref),
       },
       child: Focus(autofocus: true, child: child),
     );
