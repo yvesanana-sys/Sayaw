@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:audio_metadata_reader/audio_metadata_reader.dart' as tags;
 
+import 'mp4_bpm.dart';
+
 /// What a scan managed to learn about a file from its tags.
 ///
 /// Every field is optional on purpose. A DJ library is full of rips with no
@@ -100,7 +102,10 @@ class TagMetadataReader implements MetadataReader {
         tags.VorbisMetadata m => parseBpm(_lookup(m.unknowns, 'BPM')),
         tags.ApeMetadata m => parseBpm(_lookup(m.unknowns, 'BPM')),
 
-        // MP4's `tmpo` atom and RIFF have no route out of this parser.
+        // The parser reads MP4's `tmpo` atom and then drops it, so that one
+        // is read straight off the file. RIFF has no tempo field at all.
+        tags.Mp4Metadata _ => readMp4Bpm(file)?.toDouble(),
+
         _ => null,
       };
     } on Object {
