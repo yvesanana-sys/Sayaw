@@ -10,6 +10,7 @@ import 'package:sayaw/audio/gain_bus.dart';
 import 'package:sayaw/data/db/database.dart';
 import 'package:sayaw/data/media_resolver.dart';
 import 'package:sayaw/data/playlist_repository.dart';
+import 'package:sayaw/data/set_ordering.dart';
 import 'package:sayaw/ui/state/library_access.dart';
 import 'package:sayaw/ui/state/playback_session.dart';
 import 'package:sayaw/ui/state/playback_ui_state.dart';
@@ -614,6 +615,93 @@ void main() {
     test('a set nobody has opened has nothing to shape', () async {
       expect(await session.writeSetShape(const SetShape(songLimit: 3)), isFalse);
       expect((await session.readSetShape()).isPlainList, isTrue);
+    });
+  });
+
+  group('ordering the set by tempo', () {
+    Future<void> addWithBpm(String id, double? bpm) async {
+      File('${music.path}/$id.flac').writeAsStringSync('not really audio');
+      await db.trackDao.upsert(TracksCompanion.insert(
+        id: id,
+        sourceType: SourceType.local,
+        localPath: Value('${music.path}/$id.flac'),
+        title: 'Track $id',
+        bpm: Value(bpm),
+        addedAt: clock.now(),
+        updatedAt: clock.now(),
+      ));
+      await db.playlistDao
+          .appendTrack(playlistId: set, trackId: id, id: 'item-$id');
+    }
+
+    test('the rows are really rewritten, not just redrawn', () async {
+      // A generated order the operator cannot see, edit or undo would break
+      // the rule the whole queue is built on.
+      await addWithBpm('fast', 180);
+      await addWithBpm('slow', 84);
+      await addWithBpm('mid', 120);
+      await session.openPlaylist(set);
+
+      await session.orderSetByTempo(TempoOrder.ascending);
+
+      expect(
+        [for (final row in await db.playlistDao.itemsOf(set)) row.item.id],
+        ['item-slow', 'item-mid', 'item-fast'],
+      );
+    });
+
+    test('the queue on screen follows', () async {
+      await addWithBpm('fast', 180);
+      await addWithBpm('slow', 84);
+      await session.openPlaylist(set);
+
+      await session.orderSetByTempo(TempoOrder.ascending);
+
+      expect(
+        [for (final item in container.read(playbackProvider).queue) item.title],
+        ['Track slow', 'Track fast'],
+      );
+    });
+
+    test('it reports what it had to guess', () async {
+      await addWithBpm('tagged', 120);
+      await addWithBpm('mystery', null);
+      await session.openPlaylist(set);
+
+      final report = await session.orderSetByTempo(TempoOrder.ascending);
+
+      expect(report.total, 2);
+      expect(report.withoutTempo, ['item-mystery']);
+      expect(report.isExact, isFalse);
+    });
+
+    test('mid-set it leaves the cued deck alone', () async {
+      // The engine keeps the queue it was handed. Rebuilding it to honour a
+      // reorder would drop what is preloaded, which is the same rule a drag
+      // already follows.
+      await addWithBpm('a', 180);
+      await addWithBpm('b', 84);
+      await addWithBpm('c', 120);
+      await session.openPlaylist(set);
+      await session.play();
+      await _settle();
+
+      final cued = deckB.media;
+      await session.orderSetByTempo(TempoOrder.ascending);
+      await _settle();
+
+      expect(deckB.media, same(cued));
+      // But the database and the screen agree on the new order.
+      expect(
+        [for (final item in container.read(playbackProvider).queue) item.title],
+        ['Track b', 'Track c', 'Track a'],
+      );
+    });
+
+    test('with no set open there is nothing to order', () async {
+      final report = await session.orderSetByTempo(TempoOrder.ascending);
+
+      expect(report.total, 0);
     });
   });
 }

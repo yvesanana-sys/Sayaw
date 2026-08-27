@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sayaw/ui/screens/set_shape_dialog.dart';
+import 'package:sayaw/data/set_ordering.dart';
 import 'package:sayaw/ui/state/library_access.dart';
 
 import '../fakes/fake_set_shape.dart';
@@ -245,6 +246,90 @@ void main() {
 
       expect(access.writes.single.rotationGap, Duration.zero);
       expect(access.writes.single.isPlainList, isTrue);
+    });
+  });
+
+
+  group('ordering by tempo', () {
+    testWidgets('both directions are offered', (tester) async {
+      // A Line of Dance set climbs gently; a night that winds down runs the
+      // other way. Neither is called a mode, because the difference is what
+      // the operator is doing with it.
+      await pumpDialog(tester, FakeSetShape());
+
+      expect(find.text('Slowest first'), findsOneWidget);
+      expect(find.text('Fastest first'), findsOneWidget);
+    });
+
+    testWidgets('it happens on the button, not on save', (tester) async {
+      // It rewrites playlist rows rather than setting a number, so Cancel has
+      // to keep meaning what it says about everything else in the dialog.
+      final access = FakeSetShape();
+      await pumpDialog(tester, access);
+
+      await tester.tap(find.text('Slowest first'));
+      await tester.pumpAndSettle();
+
+      expect(access.orderings, [TempoOrder.ascending]);
+      expect(access.writes, isEmpty);
+    });
+
+    testWidgets('fastest first asks for the other direction', (tester) async {
+      final access = FakeSetShape();
+      await pumpDialog(tester, access);
+
+      await tester.tap(find.text('Fastest first'));
+      await tester.pumpAndSettle();
+
+      expect(access.orderings, [TempoOrder.descending]);
+    });
+
+    testWidgets('a clean order says so plainly', (tester) async {
+      final access = FakeSetShape()
+        ..ordered = const OrderedSet(
+          itemIds: ['a', 'b', 'c'],
+          guessed: [],
+          withoutTempo: [],
+        );
+      await pumpDialog(tester, access);
+
+      await tester.tap(find.text('Slowest first'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ordered 3 tracks on their own BPM tags.'),
+          findsOneWidget);
+    });
+
+    testWidgets('what had to be guessed is reported, not hidden',
+        (tester) async {
+      // A set ordered on twelve tags and twenty-eight guesses is not the same
+      // set as one ordered on forty tags, and only the operator can fix it.
+      final access = FakeSetShape()
+        ..ordered = const OrderedSet(
+          itemIds: ['a', 'b', 'c', 'd'],
+          guessed: ['b', 'c'],
+          withoutTempo: ['d'],
+        );
+      await pumpDialog(tester, access);
+
+      await tester.tap(find.text('Slowest first'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Ordered 4: 2 placed on their dance type, '
+            '1 with no tempo left at the end.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('an empty set says there was nothing to do', (tester) async {
+      final access = FakeSetShape();
+      await pumpDialog(tester, access);
+
+      await tester.tap(find.text('Slowest first'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nothing in the set to order.'), findsOneWidget);
     });
   });
 

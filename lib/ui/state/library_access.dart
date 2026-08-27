@@ -3,6 +3,7 @@ import 'dart:io';
 import '../../data/db/database.dart';
 import '../../data/event_mode.dart';
 import '../../data/library/library_scanner.dart';
+import '../../data/set_ordering.dart';
 
 /// What the library pane needs, and nothing else.
 ///
@@ -59,6 +60,12 @@ abstract class SetShapeAccess {
 
   /// Whether a set is playing, which is what decides the above.
   bool get isRunning;
+
+  /// Puts the open set in tempo order and writes it back.
+  ///
+  /// Returns what had to be guessed to do it, so the operator can be told
+  /// rather than left wondering why twelve rows did not move.
+  Future<OrderedSet> orderSetByTempo(TempoOrder order);
 }
 
 /// How many songs, and how much of each.

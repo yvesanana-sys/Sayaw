@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/set_ordering.dart';
 import '../state/library_access.dart';
 import '../state/playback_ui_state.dart';
 import '../theme/sayaw_theme.dart';
@@ -40,6 +41,10 @@ class _SetShapeDialogState extends ConsumerState<SetShapeDialog> {
 
   bool _loaded = false;
   bool _saving = false;
+
+  /// What the last ordering had to guess, kept so the operator can read it
+  /// rather than watching rows move for no stated reason.
+  OrderedSet? _lastOrder;
 
   @override
   void initState() {
@@ -89,6 +94,22 @@ class _SetShapeDialogState extends ConsumerState<SetShapeDialog> {
             'is opened — the one playing keeps what it started with.'),
       ));
     }
+  }
+
+  /// Puts the set in tempo order now, rather than on save.
+  ///
+  /// It rewrites playlist rows, which is a different kind of change from the
+  /// numbers above — those are settings, this moves the operator's set. Doing
+  /// it on its own button means Cancel still means what it says about
+  /// everything else in here.
+  Future<void> _order(TempoOrder order) async {
+    setState(() => _saving = true);
+    final report = await widget.access.orderSetByTempo(order);
+    if (!mounted) return;
+    setState(() {
+      _lastOrder = report;
+      _saving = false;
+    });
   }
 
   @override
@@ -144,6 +165,12 @@ class _SetShapeDialogState extends ConsumerState<SetShapeDialog> {
                       semanticsLabel: 'Seconds of silence for partner rotation',
                       onToggled: (on) => setState(() => _rotate = on),
                       onChanged: (v) => setState(() => _gap = v),
+                    ),
+                    const Divider(height: 32),
+                    _TempoSection(
+                      enabled: !_saving,
+                      onOrder: _order,
+                      report: _lastOrder,
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -401,5 +428,98 @@ class SetShapeButton extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+/// Ordering the set by tempo — the shared half of Line of Dance and Snowball.
+///
+/// Both want the same thing from the library: the set arranged so the floor is
+/// not thrown by a tempo jump. Line of Dance keeps a single dance consistent;
+/// a Snowball climbs deliberately from the slowest track to the fastest. The
+/// difference is what the operator is doing with it, so both directions are
+/// offered and neither is called a mode.
+class _TempoSection extends StatelessWidget {
+  const _TempoSection({
+    required this.enabled,
+    required this.onOrder,
+    this.report,
+  });
+
+  final bool enabled;
+  final Future<void> Function(TempoOrder) onOrder;
+  final OrderedSet? report;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Order by tempo',
+            style: TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 4),
+        const Text(
+          'Rewrites the set. Tracks with no BPM keep their place at the end.',
+          style: TextStyle(color: SayawColors.onSurfaceVariant, fontSize: 12),
+        ),
+        const SizedBox(height: 8),
+        // Expanded, not natural width. The dialog is a fixed 420 and two
+        // buttons at their preferred size overflow it — the same trap the
+        // stepper rows above fell into.
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: enabled ? () => onOrder(TempoOrder.ascending) : null,
+                icon: const Icon(Icons.trending_up, size: 18),
+                label: const Text('Slowest first', maxLines: 1),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed:
+                    enabled ? () => onOrder(TempoOrder.descending) : null,
+                icon: const Icon(Icons.trending_down, size: 18),
+                label: const Text('Fastest first', maxLines: 1),
+              ),
+            ),
+          ],
+        ),
+        if (report case final report?) ...[
+          const SizedBox(height: 8),
+          Text(
+            _describe(report),
+            style: TextStyle(
+              color: report.isExact
+                  ? SayawColors.onSurfaceVariant
+                  : SayawColors.tertiary,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// What the ordering actually had to work with.
+  ///
+  /// A set ordered on twelve real tags and twenty-eight guesses is not the
+  /// same set as one ordered on forty tags, and the operator is the only one
+  /// who can do anything about the difference.
+  static String _describe(OrderedSet report) {
+    if (report.total == 0) return 'Nothing in the set to order.';
+    if (report.isExact) {
+      return 'Ordered ${report.total} '
+          '${report.total == 1 ? 'track' : 'tracks'} on their own BPM tags.';
+    }
+
+    final parts = <String>[];
+    if (report.guessed.isNotEmpty) {
+      parts.add('${report.guessed.length} placed on their dance type');
+    }
+    if (report.withoutTempo.isNotEmpty) {
+      parts.add('${report.withoutTempo.length} with no tempo left at the end');
+    }
+    return 'Ordered ${report.total}: ${parts.join(', ')}.';
   }
 }

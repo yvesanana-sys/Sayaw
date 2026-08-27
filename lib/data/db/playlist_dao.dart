@@ -198,6 +198,44 @@ class PlaylistDao extends DatabaseAccessor<SayawDatabase> with _$PlaylistDaoMixi
         return next;
       });
 
+  /// Rewrites the set into exactly [itemIds], in that order.
+  ///
+  /// Every row is written, unlike a drag. That is what a generator does, and
+  /// there is no fractional position that expresses "all of them moved".
+  ///
+  /// Rows the caller did not mention keep their relative order and go after
+  /// the ones that were. A generator that quietly dropped rows out of a set
+  /// would be the worst possible thing to discover at a venue.
+  Future<void> applyOrder(String playlistId, List<String> itemIds) =>
+      transaction(() async {
+        final rows = await _itemsOf(playlistId).get();
+        if (rows.isEmpty) return;
+
+        final known = {for (final row in rows) row.id};
+        final ordered = [
+          for (final id in itemIds)
+            if (known.contains(id)) id,
+        ];
+        final mentioned = ordered.toSet();
+        ordered.addAll([
+          for (final row in rows)
+            if (!mentioned.contains(row.id)) row.id,
+        ]);
+
+        // Everything out of the target range first. `idx_items_order` is
+        // unique on (playlist_id, position), so writing 1..n straight over
+        // rows already sitting on those numbers collides part way through.
+        // Descending, so a row never lands on one that has not moved yet.
+        final shift = ordered.length + 1;
+        for (final row in rows.reversed) {
+          await _setPosition(row.id, row.position + shift);
+        }
+
+        for (var i = 0; i < ordered.length; i++) {
+          await _setPosition(ordered[i], (i + 1).toDouble());
+        }
+      });
+
   /// Rewrites positions as `1.0, 2.0, 3.0…`.
   Future<void> renormalizePositions(String playlistId) =>
       transaction(() async => _renormalize(await _itemsOf(playlistId).get()));

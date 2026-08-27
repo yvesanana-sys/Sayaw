@@ -8,6 +8,7 @@ import '../../data/event_mode.dart';
 import '../../data/library/library_scanner.dart';
 import '../../data/media_resolver.dart' show NetworkMode, UnavailableOffline;
 import '../../data/playlist_repository.dart';
+import '../../data/set_ordering.dart';
 import 'library_access.dart';
 import 'playback_ui_state.dart';
 
@@ -200,6 +201,48 @@ class PlaybackSession
     // so neither can change under a running set.
     return shape.songDuration == before.songDuration &&
         shape.rotationGap == before.rotationGap;
+  }
+
+  /// Puts the open set in tempo order.
+  ///
+  /// Writes real playlist rows rather than ordering behind the operator's
+  /// back. The list they are looking at is the list that will play, and a
+  /// generated order they cannot see, edit or undo would break that — this is
+  /// the same reason unplayable rows stay on screen instead of being dropped.
+  ///
+  /// Reopens the set afterwards where it is safe to: with a set running the
+  /// engine keeps the queue it was handed, because rebuilding it would drop
+  /// what is preloaded on the standby deck. The new order takes effect from
+  /// the next time the set is opened, which is the same rule a drag follows.
+  @override
+  Future<OrderedSet> orderSetByTempo(TempoOrder order) async {
+    final playlistId = _playlistId;
+    if (playlistId == null) {
+      return const OrderedSet(itemIds: [], guessed: [], withoutTempo: []);
+    }
+
+    final ordered = orderByTempo(
+      await repository.db.playlistDao.itemsOf(playlistId),
+      order: order,
+    );
+
+    await repository.db.playlistDao.applyOrder(playlistId, ordered.itemIds);
+
+    if (!isRunning) {
+      await openPlaylist(playlistId);
+    } else {
+      // The queue on screen still has to match the database, even though the
+      // engine is deliberately not being reloaded.
+      final rows = await repository.db.playlistDao.itemsOf(playlistId);
+      final byId = {for (final item in controller.queueSnapshot) item.id: item};
+      controller.setQueue([
+        for (final row in rows)
+          if (byId[row.item.id] case final existing?)
+            existing.copyWith(position: row.item.position),
+      ]);
+    }
+
+    return ordered;
   }
 
   // -------------------------------------------------------------------------
