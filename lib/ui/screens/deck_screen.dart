@@ -14,6 +14,7 @@ import '../widgets/snowball_indicator.dart';
 import '../widgets/soundboard_bar.dart';
 import '../widgets/transport_bar.dart';
 import 'event_mode_dialog.dart';
+import 'jack_and_jill_dialog.dart';
 import 'set_shape_dialog.dart';
 import 'sources_screen.dart';
 import '../window/window_controller.dart';
@@ -74,6 +75,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                   backgroundColor: SayawColors.surfaceContainer,
                   title: Text(breakpoint.isCompact ? 'Sayaw' : 'Sayaw — Set'),
                   actions: const [
+                    JackAndJillButton(),
                     SetShapeButton(),
                     EventModeButton(),
                     _SourcesButton(),

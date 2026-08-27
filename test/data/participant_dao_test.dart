@@ -89,7 +89,7 @@ void main() {
       // trusting a shuffle to be kind.
       final ana = await db.participantDao.add('Ana');
       final yusuf = await db.participantDao.add('Yusuf');
-      await db.participantDao.recordDraw([ana, ana, yusuf].toSet());
+      await db.participantDao.recordDraw({ana, yusuf});
       await db.participantDao.recordDraw([ana]);
 
       expect([for (final p in await db.participantDao.present()) p.name],

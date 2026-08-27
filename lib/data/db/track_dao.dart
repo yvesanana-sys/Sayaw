@@ -60,6 +60,16 @@ class TrackDao extends DatabaseAccessor<SayawDatabase> with _$TrackDaoMixin {
   /// What arrived most recently, for the library pane before anyone has typed
   /// anything. A freshly imported folder is the thing an operator is most
   /// likely to be looking for.
+  /// Every track the library files under one dance.
+  ///
+  /// The app has no notion of genre — `default_dance_type_id` is how music has
+  /// been classified here since the schema was written — so this is what "a
+  /// Bachata track" means.
+  Future<List<Track>> byDanceType(String danceTypeId) => (select(tracks)
+        ..where((t) => t.defaultDanceTypeId.equals(danceTypeId))
+        ..orderBy([(t) => OrderingTerm.asc(t.title)]))
+      .get();
+
   Future<List<Track>> recentlyAdded({int limit = 50}) => (select(tracks)
         ..orderBy([(t) => OrderingTerm.desc(t.addedAt)])
         ..limit(limit))

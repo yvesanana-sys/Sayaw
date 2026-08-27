@@ -9,12 +9,14 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'data/dance_type_seed.dart';
+import 'data/jack_and_jill_service.dart';
 import 'data/soundboard_service.dart';
 import 'data/db/connection.dart';
 import 'data/db/database.dart';
 import 'data/sources/plex/plex_identity.dart';
 import 'ui/screens/deck_screen.dart';
 import 'ui/state/playback_runtime.dart';
+import 'ui/state/jack_and_jill_provider.dart';
 import 'ui/state/soundboard_provider.dart';
 import 'ui/state/sources_provider.dart';
 import 'ui/state/playback_ui_state.dart';
@@ -163,6 +165,9 @@ class _BootstrapState extends ConsumerState<_Bootstrap> {
       ref.read(sourcesHolderProvider.notifier).set(runtime.sources);
       ref.read(soundboardHolderProvider.notifier).set(
             SoundboardService(board: runtime.soundboard, db: runtime.db),
+          );
+      ref.read(jackAndJillHolderProvider.notifier).set(
+            JackAndJillService(db: runtime.db, library: runtime.session),
           );
 
       // Before the set is opened: on Android this is the foreground service,
