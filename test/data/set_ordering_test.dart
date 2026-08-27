@@ -291,4 +291,86 @@ void main() {
       expect(await order(), isEmpty);
     });
   });
+
+  group('snowball stages', () {
+    test('the set divides into the stages asked for', () async {
+      // Ten songs over three stages: 4, 3, 3. The remainder lands in the
+      // earlier stages, so the top of the climb is never the long one.
+      final stages = [
+        for (var song = 1; song <= 10; song++)
+          snowballStage(songsIn: song, total: 10, stages: 3),
+      ];
+
+      expect(stages, [1, 1, 1, 1, 2, 2, 2, 3, 3, 3]);
+    });
+
+    test('it divides evenly when it divides evenly', () async {
+      final stages = [
+        for (var song = 1; song <= 8; song++)
+          snowballStage(songsIn: song, total: 8, stages: 4),
+      ];
+
+      expect(stages, [1, 1, 2, 2, 3, 3, 4, 4]);
+    });
+
+    test('the first song is stage one and the last is the last', () async {
+      expect(snowballStage(songsIn: 1, total: 20, stages: 5), 1);
+      expect(snowballStage(songsIn: 20, total: 20, stages: 5), 5);
+    });
+
+    test('nothing played yet is still stage one', () async {
+      expect(snowballStage(songsIn: 0, total: 10, stages: 4), 1);
+    });
+
+    test('running past the end does not invent a stage', () async {
+      // A set the operator kept playing past its song limit.
+      expect(snowballStage(songsIn: 30, total: 10, stages: 4), 4);
+    });
+
+    test('degenerate counts do not throw or divide by zero', () async {
+      expect(snowballStage(songsIn: 3, total: 0, stages: 4), 1);
+      expect(snowballStage(songsIn: 3, total: 10, stages: 0), 1);
+      expect(snowballStage(songsIn: 3, total: 10, stages: 1), 1);
+    });
+
+    test('more stages than songs still counts up', () async {
+      // Five stages over three songs. Each song is its own stage and the
+      // count does not stall.
+      final stages = [
+        for (var song = 1; song <= 3; song++)
+          snowballStage(songsIn: song, total: 3, stages: 5),
+      ];
+
+      expect(stages, [1, 2, 4]);
+      expect(stages, isNot(contains(0)));
+    });
+
+    test('progress is a fraction of the whole climb', () async {
+      const progress = SnowballProgress(
+        stage: 2,
+        stages: 4,
+        songsIn: 5,
+        total: 20,
+      );
+
+      expect(progress.progress, 0.25);
+      expect(progress.isLastStage, isFalse);
+    });
+
+    test('the last stage says so', () async {
+      const progress =
+          SnowballProgress(stage: 4, stages: 4, songsIn: 20, total: 20);
+
+      expect(progress.isLastStage, isTrue);
+      expect(progress.progress, 1.0);
+    });
+
+    test('an empty set does not divide by zero drawing a bar', () async {
+      const progress =
+          SnowballProgress(stage: 1, stages: 5, songsIn: 0, total: 0);
+
+      expect(progress.progress, 0.0);
+    });
+  });
+
 }

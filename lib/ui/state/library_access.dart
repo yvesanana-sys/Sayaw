@@ -75,6 +75,7 @@ class SetShape {
     this.songDuration,
     this.rotationGap = Duration.zero,
     this.continuousFlow = false,
+    this.snowballStages = 0,
   });
 
   /// Stop after this many. Null plays the list as written.
@@ -92,6 +93,11 @@ class SetShape {
   /// able to hear where one track ended.
   final bool continuousFlow;
 
+  /// How many stages a Snowball climbs through. Zero is not a Snowball.
+  final int snowballStages;
+
+  bool get isSnowball => snowballStages > 1;
+
   /// A set with a rotation gap is The Mixer: play, fade out, chime, wait,
   /// fade in, repeat until the song count runs out.
   bool get isRotation => rotationGap > Duration.zero;
@@ -100,5 +106,6 @@ class SetShape {
       songLimit == null &&
       songDuration == null &&
       !isRotation &&
-      !continuousFlow;
+      !continuousFlow &&
+      !isSnowball;
 }

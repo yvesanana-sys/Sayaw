@@ -10,6 +10,7 @@ import '../widgets/deck_panel.dart';
 import '../widgets/library_pane.dart';
 import '../widgets/network_banner.dart';
 import '../widgets/queue_list.dart';
+import '../widgets/snowball_indicator.dart';
 import '../widgets/transport_bar.dart';
 import 'event_mode_dialog.dart';
 import 'set_shape_dialog.dart';
@@ -85,6 +86,10 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                 // there is no app bar to put it in, and it has to be visible
                 // whichever pane a compact layout happens to be showing.
                 const NetworkBanner(),
+                // Beside the banner and above the panes for the same reasons:
+                // Performance Mode has no app bar to put it in, and a compact
+                // layout must show it whichever pane is selected.
+                const SnowballIndicator(),
                 Expanded(
                   child: switch (breakpoint) {
                     SayawBreakpoint.compact => _buildCompact(),

@@ -56,6 +56,10 @@ class PlaybackSession
   @override
   String? get openPlaylistId => _playlistId;
 
+  /// How many stages the open set climbs through, cached from the playlist so
+  /// the 100 ms publish does not read the database. Zero is not a Snowball.
+  int _snowballStages = 0;
+
   /// Which rows the engine actually accepted, in engine order. The queue the
   /// operator sees can contain rows the engine skipped, so the two index
   /// spaces are not the same and this is what maps between them.
@@ -74,6 +78,8 @@ class PlaybackSession
   Future<ResolvedQueue> openPlaylist(String playlistId) async {
     final resolved = await repository.buildQueue(playlistId);
     final rows = await repository.db.playlistDao.itemsOf(playlistId);
+    final playlist = await repository.db.playlistDao.byId(playlistId);
+    _snowballStages = playlist?.snowballStages ?? 0;
 
     final reasons = {
       for (final item in resolved.unavailable) item.itemId: _reasonFor(item),
@@ -90,6 +96,7 @@ class PlaybackSession
           artist: row.track?.artist ?? '',
           danceType: row.danceType?.name,
           duration: row.track?.durationMs,
+          bpm: effectiveBpm(row),
           position: row.item.position,
           unavailable: reasons[row.item.id],
         ),
@@ -100,7 +107,7 @@ class PlaybackSession
     // rather than asked to work it out.
     await engine.loadQueue(
       resolved.entries,
-      songLimit: (await repository.db.playlistDao.byId(playlistId))?.songLimit,
+      songLimit: playlist?.songLimit,
     );
     _publish();
     return resolved;
@@ -161,6 +168,7 @@ class PlaybackSession
       songLimit: playlist?.songLimit,
       songDuration: playlist?.targetDurationMs,
       rotationGap: playlist?.rotationGapMs ?? Duration.zero,
+      snowballStages: playlist?.snowballStages ?? 0,
       continuousFlow: playlist != null &&
           playlist.crossfadeMs <= Duration.zero &&
           playlist.announceMode == AnnounceMode.off,
@@ -192,6 +200,7 @@ class PlaybackSession
       targetDuration: shape.songDuration,
       rotationGap: shape.rotationGap,
       continuousFlow: shape.continuousFlow,
+      snowballStages: shape.snowballStages,
     );
 
     if (!isRunning) {
@@ -203,6 +212,11 @@ class PlaybackSession
 
     // Both of these are baked into the queue entries when the set is opened,
     // so neither can change under a running set.
+    // The stage count is only a readout, so unlike the rest of these it can
+    // change under a running set without anything being rebuilt.
+    _snowballStages = shape.snowballStages;
+    _publish();
+
     return shape.songDuration == before.songDuration &&
         shape.rotationGap == before.rotationGap &&
         shape.continuousFlow == before.continuousFlow;
@@ -448,6 +462,7 @@ class PlaybackSession
       phase: engine.phase,
       currentIndex: _queueIndexOf(entry?.itemId),
       crossfader: _crossfaderPosition(),
+      snowball: _snowballProgress(),
       active: DeckUiState(
         title: entry?.title ?? '',
         artist: entry?.artist ?? '',
@@ -465,6 +480,33 @@ class PlaybackSession
         isPlaying: engine.phase == EnginePhase.crossfading,
         gain: engine.standbyFade,
       ),
+    );
+  }
+
+  /// Where the Snowball has climbed to, or null when this is not one.
+  ///
+  /// The total is the song limit where there is one, because that is the set
+  /// the operator planned; otherwise the number of rows they can actually see.
+  SnowballProgress? _snowballProgress() {
+    if (_snowballStages <= 1) return null;
+
+    final queue = controller.queueSnapshot;
+    final total = engine.songLimit ?? queue.length;
+    if (total <= 0) return null;
+
+    final songsIn = engine.songsPlayed.clamp(0, total);
+    final index = _queueIndexOf(engine.currentEntry?.itemId);
+
+    return SnowballProgress(
+      stage: snowballStage(
+        songsIn: songsIn,
+        total: total,
+        stages: _snowballStages,
+      ),
+      stages: _snowballStages,
+      songsIn: songsIn,
+      total: total,
+      bpm: index >= 0 && index < queue.length ? queue[index].bpm : null,
     );
   }
 

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../audio/crossfade_engine.dart' show EnginePhase;
 import '../../data/fractional_order.dart';
 import '../../data/media_resolver.dart' show NetworkMode;
+import '../../data/set_ordering.dart' show SnowballProgress;
 import 'library_access.dart';
 import 'playback_session.dart';
 
@@ -103,6 +104,7 @@ class QueueItemUi {
     required this.position,
     this.danceType,
     this.duration,
+    this.bpm,
     this.unavailable,
   });
 
@@ -115,6 +117,11 @@ class QueueItemUi {
 
   final String? danceType;
   final Duration? duration;
+
+  /// The tempo this row is ordered on — its own tag, or its dance type's
+  /// range. Null when nothing is known. See `lib/data/set_ordering.dart`.
+  final double? bpm;
+
   final UnavailableReason? unavailable;
 
   bool get isPlayable => unavailable == null;
@@ -126,6 +133,7 @@ class QueueItemUi {
         position: position ?? this.position,
         danceType: danceType,
         duration: duration,
+        bpm: bpm,
         unavailable: unavailable,
       );
 
@@ -139,6 +147,7 @@ class QueueItemUi {
         position: position,
         danceType: danceType,
         duration: duration,
+        bpm: bpm,
         unavailable: reason,
       );
 }
@@ -155,6 +164,7 @@ class PlaybackUiState {
     this.performanceMode = false,
     this.networkMode = NetworkMode.online,
     this.offlineServices = const [],
+    this.snowball,
   });
 
   final DeckUiState deckA;
@@ -175,6 +185,9 @@ class PlaybackUiState {
   /// Configured services that are not answering, by the name the operator gave
   /// them. Empty when the radio itself is down: there is nothing to single out.
   final List<String> offlineServices;
+
+  /// Where a Snowball has climbed to. Null when the open set is not one.
+  final SnowballProgress? snowball;
 
   DeckUiState deck(DeckSlot slot) =>
       slot == DeckSlot.a ? deckA : deckB;
@@ -204,8 +217,26 @@ class PlaybackUiState {
       performanceMode: performanceMode ?? this.performanceMode,
       networkMode: networkMode ?? this.networkMode,
       offlineServices: offlineServices ?? this.offlineServices,
+      snowball: snowball,
     );
   }
+
+  /// Its own method for the same reason [QueueItemUi.withUnavailable] is:
+  /// null here means "this set is not a Snowball", and a `copyWith` argument
+  /// could not tell that from "leave it alone" — which would leave a stage
+  /// indicator on screen for a set that no longer has one.
+  PlaybackUiState withSnowball(SnowballProgress? snowball) => PlaybackUiState(
+        deckA: deckA,
+        deckB: deckB,
+        crossfader: crossfader,
+        queue: queue,
+        currentIndex: currentIndex,
+        phase: phase,
+        performanceMode: performanceMode,
+        networkMode: networkMode,
+        offlineServices: offlineServices,
+        snowball: snowball,
+      );
 }
 
 /// UI-facing playback state, and the one surface the widgets give commands to.
@@ -247,6 +278,7 @@ class PlaybackController extends Notifier<PlaybackUiState> {
     required DeckUiState active,
     required DeckUiState standby,
     double? crossfader,
+    SnowballProgress? snowball,
   }) {
     state = state.copyWith(
       deckA: activeSlot == DeckSlot.a ? active : standby,
@@ -256,7 +288,7 @@ class PlaybackController extends Notifier<PlaybackUiState> {
       // Null means the operator has the fader, and the engine is following
       // them rather than the other way round.
       crossfader: crossfader,
-    );
+    ).withSnowball(snowball);
   }
 
   // -- transport -------------------------------------------------------------
@@ -474,4 +506,9 @@ final anyDeckPlayingProvider = Provider<bool>(
 /// top of every layout and must not rebuild sixty times a second.
 final networkModeProvider = Provider<NetworkMode>(
   (ref) => ref.watch(playbackProvider.select((s) => s.networkMode)),
+);
+
+/// Where a Snowball has climbed to, or null when the set is not one.
+final snowballProvider = Provider<SnowballProgress?>(
+  (ref) => ref.watch(playbackProvider.select((s) => s.snowball)),
 );

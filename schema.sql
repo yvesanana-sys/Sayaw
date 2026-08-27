@@ -165,7 +165,12 @@ CREATE TABLE playlists (
   -- music out, chime, wait, music in — because a rotation needs the room
   -- actually quiet.
   rotation_gap_ms        INTEGER NOT NULL DEFAULT 0
-                           CHECK (rotation_gap_ms >= 0)
+                           CHECK (rotation_gap_ms >= 0),
+
+  -- How many stages a Snowball climbs through. Zero is not a Snowball; the
+  -- set is otherwise an ordinary one, so this only decides what is drawn.
+  snowball_stages        INTEGER NOT NULL DEFAULT 0
+                           CHECK (snowball_stages >= 0)
 );
 
 -- ---------------------------------------------------------------------------

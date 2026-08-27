@@ -152,12 +152,14 @@ void main() {
     }
 
     final row = upgraded
-        .select('SELECT song_limit, target_duration_ms, rotation_gap_ms '
-            'FROM playlists')
+        .select('SELECT song_limit, target_duration_ms, rotation_gap_ms, '
+            'snowball_stages FROM playlists')
         .single;
     expect(row['song_limit'], isNull);
     expect(row['target_duration_ms'], isNull);
     expect(row['rotation_gap_ms'], 0, reason: 'no silence between tracks');
+    expect(row['snowball_stages'], 0,
+        reason: 'not a climb it was never ordered for');
   });
 
 

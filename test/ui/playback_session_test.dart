@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:clock/clock.dart';
-import 'package:drift/drift.dart' hide isNull;
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart' hide EnginePhase;
 import 'package:sayaw/audio/announcement_engine.dart';
@@ -739,6 +739,104 @@ void main() {
       final report = await session.orderSetByTempo(TempoOrder.ascending);
 
       expect(report.total, 0);
+    });
+  });
+
+  group('the snowball readout', () {
+    Future<void> addWithBpm(String id, double? bpm) async {
+      File('${music.path}/$id.flac').writeAsStringSync('not really audio');
+      await db.trackDao.upsert(TracksCompanion.insert(
+        id: id,
+        sourceType: SourceType.local,
+        localPath: Value('${music.path}/$id.flac'),
+        title: 'Track $id',
+        bpm: Value(bpm),
+        addedAt: clock.now(),
+        updatedAt: clock.now(),
+      ));
+      await db.playlistDao
+          .appendTrack(playlistId: set, trackId: id, id: 'item-$id');
+    }
+
+    test('an ordinary set has none', () async {
+      await _addTracks(db, set, music, ['a', 'b']);
+      await session.openPlaylist(set);
+
+      expect(container.read(playbackProvider).snowball, isNull);
+    });
+
+    test('a snowball set reports the stage it is on', () async {
+      await _addTracks(db, set, music, ['a', 'b', 'c', 'd']);
+      await db.playlistDao.setShape(set,
+          songLimit: null, targetDuration: null, snowballStages: 4);
+      await session.openPlaylist(set);
+
+      final snowball = container.read(playbackProvider).snowball!;
+      expect(snowball.stage, 1);
+      expect(snowball.stages, 4);
+      expect(snowball.total, 4);
+    });
+
+    test('the tempo shown is the track playing, not a stage number', () async {
+      // The honest half. A set that was never ordered shows a stage climbing
+      // and a tempo that is not.
+      await addWithBpm('slow', 84);
+      await addWithBpm('fast', 180);
+      await db.playlistDao.setShape(set,
+          songLimit: null, targetDuration: null, snowballStages: 2);
+      await session.openPlaylist(set);
+
+      expect(container.read(playbackProvider).snowball!.bpm, 84);
+    });
+
+    test('the song limit is the climb, where there is one', () async {
+      // Five stages over the twenty songs the operator planned, not over the
+      // forty rows that happen to be in the playlist.
+      await _addTracks(db, set, music, ['a', 'b', 'c', 'd', 'e', 'f']);
+      await db.playlistDao.setShape(set,
+          songLimit: 4, targetDuration: null, snowballStages: 2);
+      await session.openPlaylist(set);
+
+      expect(container.read(playbackProvider).snowball!.total, 4);
+    });
+
+    test('it climbs as the set does', () async {
+      await _addTracks(db, set, music, ['a', 'b', 'c', 'd']);
+      await db.playlistDao.setShape(set,
+          songLimit: null, targetDuration: null, snowballStages: 4);
+      await session.openPlaylist(set);
+      await session.play();
+      await _settle();
+      expect(container.read(playbackProvider).snowball!.stage, 1);
+
+      controller.crossfadeNow();
+      await _settle(_crossfade * 3);
+
+      expect(container.read(playbackProvider).snowball!.stage, 2);
+    });
+
+    test('turning it off clears the readout rather than leaving it up',
+        () async {
+      // The nullable-field trap: a `copyWith` that treats null as "leave it
+      // alone" would strand a stage indicator on a set that no longer has one.
+      await _addTracks(db, set, music, ['a', 'b']);
+      await db.playlistDao.setShape(set,
+          songLimit: null, targetDuration: null, snowballStages: 3);
+      await session.openPlaylist(set);
+      expect(container.read(playbackProvider).snowball, isNotNull);
+
+      await session.writeSetShape(const SetShape());
+
+      expect(container.read(playbackProvider).snowball, isNull);
+    });
+
+    test('one stage is not a climb', () async {
+      await _addTracks(db, set, music, ['a', 'b']);
+      await db.playlistDao.setShape(set,
+          songLimit: null, targetDuration: null, snowballStages: 1);
+      await session.openPlaylist(set);
+
+      expect(container.read(playbackProvider).snowball, isNull);
     });
   });
 }

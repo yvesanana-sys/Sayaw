@@ -29,6 +29,18 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+
+  /// A switch by what it is, not where it sits.
+  ///
+  /// Positional finders broke every time a row was added above them, which is
+  /// exactly the kind of test failure that says nothing about the code.
+  Finder switchFor(String semanticsLabel) => find.descendant(
+        of: find.bySemanticsLabel(semanticsLabel),
+        matching: find.byType(Switch),
+      );
+
+  const flowLabel = 'Continuous flow, no gap between tracks';
+
   /// The stepper next to one of the two rows.
   Finder stepper(String row, String which) => find.descendant(
         of: find.ancestor(
@@ -258,14 +270,14 @@ void main() {
     testWidgets('off, a set crossfades and speaks as usual', (tester) async {
       await pumpDialog(tester, FakeSetShape());
 
-      expect(tester.widgetList<Switch>(find.byType(Switch)).last.value, isFalse);
+      expect(tester.widget<Switch>(switchFor(flowLabel)).value, isFalse);
     });
 
     testWidgets('turning it on writes it', (tester) async {
       final access = FakeSetShape();
       await pumpDialog(tester, access);
 
-      await tester.tap(find.byType(Switch).last);
+      await tester.tap(switchFor(flowLabel));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
@@ -288,8 +300,7 @@ void main() {
           FakeSetShape(shape: const SetShape(rotationGap: Duration(seconds: 10)));
       await pumpDialog(tester, access);
 
-      expect(tester.widgetList<Switch>(find.byType(Switch)).last.onChanged,
-          isNull);
+      expect(tester.widget<Switch>(switchFor(flowLabel)).onChanged, isNull);
       expect(find.textContaining('Not with a partner rotation'), findsOneWidget);
     });
 
@@ -306,6 +317,71 @@ void main() {
       expect(
         find.text('Plays 2 minutes of each track straight into the next, with '
             'no crossfade and nothing spoken in between. Stops after 6 songs.'),
+        findsOneWidget,
+      );
+    });
+  });
+
+
+  group('snowball', () {
+    const stagesLabel = 'Number of Snowball stages';
+
+    testWidgets('off on an ordinary set', (tester) async {
+      await pumpDialog(tester, FakeSetShape());
+
+      expect(tester.widget<Switch>(switchFor(stagesLabel)).value, isFalse);
+    });
+
+    testWidgets('an existing stage count is read back', (tester) async {
+      await pumpDialog(
+        tester,
+        FakeSetShape(shape: const SetShape(snowballStages: 4)),
+      );
+
+      expect(tester.widget<Switch>(switchFor(stagesLabel)).value, isTrue);
+      expect(find.text('4'), findsOneWidget);
+    });
+
+    testWidgets('turning it on writes a stage count', (tester) async {
+      final access = FakeSetShape();
+      await pumpDialog(tester, access);
+
+      await tester.tap(switchFor(stagesLabel));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(access.writes.single.snowballStages, 5);
+      expect(access.writes.single.isSnowball, isTrue);
+    });
+
+    testWidgets('turning it off clears it', (tester) async {
+      final access =
+          FakeSetShape(shape: const SetShape(snowballStages: 5));
+      await pumpDialog(tester, access);
+
+      await tester.tap(switchFor(stagesLabel));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(access.writes.single.snowballStages, 0);
+      expect(access.writes.single.isSnowball, isFalse);
+    });
+
+    testWidgets('it says that the stage count alone is not a climb',
+        (tester) async {
+      // The number only decides what is drawn. What makes the tempo rise is
+      // the ordering, which is a separate button — so say so rather than let
+      // an operator think switching this on did the work.
+      await pumpDialog(
+        tester,
+        FakeSetShape(shape: const SetShape(snowballStages: 5)),
+      );
+
+      expect(
+        find.text('Shows the climb in 5 stages while it plays. Order the set '
+            'slowest first below to make the tempo actually rise.'),
         findsOneWidget,
       );
     });

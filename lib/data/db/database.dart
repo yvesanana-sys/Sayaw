@@ -49,7 +49,7 @@ class SayawDatabase extends _$SayawDatabase {
   SayawDatabase(super.e);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(

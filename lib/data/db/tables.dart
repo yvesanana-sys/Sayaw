@@ -246,6 +246,14 @@ class Playlists extends Table {
       .withDefault(const Constant(0))
       .map(const MillisDurationConverter())();
 
+  /// How many stages a Snowball climbs through. Zero is not a Snowball.
+  ///
+  /// It changes nothing about how the set plays — the climb is the tempo
+  /// order, which is written into the rows themselves. This only decides what
+  /// the operator is shown while it runs.
+  IntColumn get snowballStages =>
+      integer().withDefault(const Constant(0))();
+
   @override
   Set<Column> get primaryKey => {id};
 

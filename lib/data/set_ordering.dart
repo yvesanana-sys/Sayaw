@@ -116,3 +116,63 @@ OrderedSet orderByTempo(
     withoutTempo: withoutTempo,
   );
 }
+
+// ---------------------------------------------------------------------------
+// Snowball stages
+// ---------------------------------------------------------------------------
+
+/// Where a Snowball has got to.
+///
+/// The stage is the operator's readout, and [bpm] is what makes it honest:
+/// the stage number only claims a position in the set, while the tempo is what
+/// the room is actually hearing. A set that was never put in tempo order shows
+/// a number climbing and a tempo that is not, which is exactly the thing worth
+/// being able to see.
+class SnowballProgress {
+  const SnowballProgress({
+    required this.stage,
+    required this.stages,
+    required this.songsIn,
+    required this.total,
+    this.bpm,
+  });
+
+  /// One-based, so it reads as "stage 2 of 5" without arithmetic.
+  final int stage;
+  final int stages;
+
+  /// How many songs of the set have been reached, and how many there are.
+  final int songsIn;
+  final int total;
+
+  /// The tempo of the track playing, where anything is known about it.
+  final double? bpm;
+
+  /// How far through the whole climb, for a bar to draw.
+  double get progress => total <= 0 ? 0 : (songsIn / total).clamp(0.0, 1.0);
+
+  bool get isLastStage => stage >= stages;
+}
+
+/// Which stage of [stages] the set is in, having reached song [songsIn] of
+/// [total].
+///
+/// Divided by position rather than by tempo. A tempo-banded stage would jump
+/// about whenever a track was mis-tagged, and the operator is running a set,
+/// not a histogram — "four songs a stage" is the thing they can hold in their
+/// head while a floor fills up.
+///
+/// Any remainder lands in the earlier stages, so the last stage is never the
+/// long one: the top of a Snowball is where the floor is fullest and the
+/// place least worth stretching.
+int snowballStage({
+  required int songsIn,
+  required int total,
+  required int stages,
+}) {
+  if (stages <= 1 || total <= 0) return 1;
+  if (songsIn <= 0) return 1;
+
+  final stage = ((songsIn - 1) * stages) ~/ total + 1;
+  return stage.clamp(1, stages);
+}

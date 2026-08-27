@@ -32,13 +32,18 @@ class _SetShapeDialogState extends ConsumerState<SetShapeDialog> {
   /// room does not go flat. Ten is what a caller usually gives.
   static const _defaultGap = 10;
 
+  /// Five is what a caller usually counts a Snowball in.
+  static const _defaultStages = 5;
+
   bool _limitSongs = false;
   bool _limitLength = false;
   bool _rotate = false;
   bool _flow = false;
+  bool _snowball = false;
   int _songs = _defaultSongs;
   int _seconds = _defaultSeconds;
   int _gap = _defaultGap;
+  int _stages = _defaultStages;
 
   bool _loaded = false;
   bool _saving = false;
@@ -65,6 +70,8 @@ class _SetShapeDialogState extends ConsumerState<SetShapeDialog> {
       _rotate = shape.isRotation;
       _gap = shape.isRotation ? shape.rotationGap.inSeconds : _defaultGap;
       _flow = shape.continuousFlow;
+      _snowball = shape.isSnowball;
+      _stages = shape.isSnowball ? shape.snowballStages : _defaultStages;
       _loaded = true;
     });
   }
@@ -83,6 +90,7 @@ class _SetShapeDialogState extends ConsumerState<SetShapeDialog> {
       songDuration: _limitLength ? Duration(seconds: _seconds) : null,
       rotationGap: _rotate ? Duration(seconds: _gap) : Duration.zero,
       continuousFlow: _flow,
+      snowballStages: _snowball ? _stages : 0,
     ));
 
     if (!mounted) return;
@@ -178,6 +186,18 @@ class _SetShapeDialogState extends ConsumerState<SetShapeDialog> {
                       value: _flow && !_rotate,
                       onChanged: (on) => setState(() => _flow = on),
                     ),
+                    const SizedBox(height: 8),
+                    _Row(
+                      label: 'Snowball',
+                      unit: 'stages',
+                      enabled: _snowball,
+                      value: _stages,
+                      min: 2,
+                      max: 12,
+                      semanticsLabel: 'Number of Snowball stages',
+                      onToggled: (on) => setState(() => _snowball = on),
+                      onChanged: (v) => setState(() => _stages = v),
+                    ),
                     const Divider(height: 32),
                     _TempoSection(
                       enabled: !_saving,
@@ -212,8 +232,15 @@ class _SetShapeDialogState extends ConsumerState<SetShapeDialog> {
   /// The setting read back as a sentence, because two numbers and two
   /// switches do not say what the night will do.
   String _summary() {
-    if (!_limitSongs && !_limitLength && !_rotate && !_flow) {
+    if (!_limitSongs && !_limitLength && !_rotate && !_flow && !_snowball) {
       return 'Plays the set as written: every row, each track to its end.';
+    }
+
+    if (_snowball) {
+      // Said plainly because the stage count on its own does not make a
+      // climb: the tempo order does, and it is a separate button below.
+      return 'Shows the climb in $_stages stages while it plays. Order the '
+          'set slowest first below to make the tempo actually rise.';
     }
 
     if (_flow && !_rotate) {

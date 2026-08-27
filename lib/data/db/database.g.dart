@@ -3309,6 +3309,18 @@ class $PlaylistsTable extends Playlists
         requiredDuringInsert: false,
         defaultValue: const Constant(0),
       ).withConverter<Duration>($PlaylistsTable.$converterrotationGapMs);
+  static const VerificationMeta _snowballStagesMeta = const VerificationMeta(
+    'snowballStages',
+  );
+  @override
+  late final GeneratedColumn<int> snowballStages = GeneratedColumn<int>(
+    'snowball_stages',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3333,6 +3345,7 @@ class $PlaylistsTable extends Playlists
     songLimit,
     targetDurationMs,
     rotationGapMs,
+    snowballStages,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3411,6 +3424,15 @@ class $PlaylistsTable extends Playlists
       context.handle(
         _songLimitMeta,
         songLimit.isAcceptableOrUnknown(data['song_limit']!, _songLimitMeta),
+      );
+    }
+    if (data.containsKey('snowball_stages')) {
+      context.handle(
+        _snowballStagesMeta,
+        snowballStages.isAcceptableOrUnknown(
+          data['snowball_stages']!,
+          _snowballStagesMeta,
+        ),
       );
     }
     return context;
@@ -3534,6 +3556,10 @@ class $PlaylistsTable extends Playlists
           data['${effectivePrefix}rotation_gap_ms'],
         )!,
       ),
+      snowballStages: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}snowball_stages'],
+      )!,
     );
   }
 
@@ -3615,6 +3641,13 @@ class Playlist extends DataClass implements Insertable<Playlist> {
   /// sequential — music out, chime, wait, music in — because a rotation needs
   /// the room actually quiet, not a crossfade with a voice over it.
   final Duration rotationGapMs;
+
+  /// How many stages a Snowball climbs through. Zero is not a Snowball.
+  ///
+  /// It changes nothing about how the set plays — the climb is the tempo
+  /// order, which is written into the rows themselves. This only decides what
+  /// the operator is shown while it runs.
+  final int snowballStages;
   const Playlist({
     required this.id,
     required this.name,
@@ -3638,6 +3671,7 @@ class Playlist extends DataClass implements Insertable<Playlist> {
     this.songLimit,
     this.targetDurationMs,
     required this.rotationGapMs,
+    required this.snowballStages,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3720,6 +3754,7 @@ class Playlist extends DataClass implements Insertable<Playlist> {
         $PlaylistsTable.$converterrotationGapMs.toSql(rotationGapMs),
       );
     }
+    map['snowball_stages'] = Variable<int>(snowballStages);
     return map;
   }
 
@@ -3759,6 +3794,7 @@ class Playlist extends DataClass implements Insertable<Playlist> {
           ? const Value.absent()
           : Value(targetDurationMs),
       rotationGapMs: Value(rotationGapMs),
+      snowballStages: Value(snowballStages),
     );
   }
 
@@ -3800,6 +3836,7 @@ class Playlist extends DataClass implements Insertable<Playlist> {
         json['targetDurationMs'],
       ),
       rotationGapMs: serializer.fromJson<Duration>(json['rotationGapMs']),
+      snowballStages: serializer.fromJson<int>(json['snowballStages']),
     );
   }
   @override
@@ -3834,6 +3871,7 @@ class Playlist extends DataClass implements Insertable<Playlist> {
       'songLimit': serializer.toJson<int?>(songLimit),
       'targetDurationMs': serializer.toJson<Duration?>(targetDurationMs),
       'rotationGapMs': serializer.toJson<Duration>(rotationGapMs),
+      'snowballStages': serializer.toJson<int>(snowballStages),
     };
   }
 
@@ -3860,6 +3898,7 @@ class Playlist extends DataClass implements Insertable<Playlist> {
     Value<int?> songLimit = const Value.absent(),
     Value<Duration?> targetDurationMs = const Value.absent(),
     Duration? rotationGapMs,
+    int? snowballStages,
   }) => Playlist(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -3885,6 +3924,7 @@ class Playlist extends DataClass implements Insertable<Playlist> {
         ? targetDurationMs.value
         : this.targetDurationMs,
     rotationGapMs: rotationGapMs ?? this.rotationGapMs,
+    snowballStages: snowballStages ?? this.snowballStages,
   );
   Playlist copyWithCompanion(PlaylistsCompanion data) {
     return Playlist(
@@ -3934,6 +3974,9 @@ class Playlist extends DataClass implements Insertable<Playlist> {
       rotationGapMs: data.rotationGapMs.present
           ? data.rotationGapMs.value
           : this.rotationGapMs,
+      snowballStages: data.snowballStages.present
+          ? data.snowballStages.value
+          : this.snowballStages,
     );
   }
 
@@ -3961,7 +4004,8 @@ class Playlist extends DataClass implements Insertable<Playlist> {
           ..write('updatedAt: $updatedAt, ')
           ..write('songLimit: $songLimit, ')
           ..write('targetDurationMs: $targetDurationMs, ')
-          ..write('rotationGapMs: $rotationGapMs')
+          ..write('rotationGapMs: $rotationGapMs, ')
+          ..write('snowballStages: $snowballStages')
           ..write(')'))
         .toString();
   }
@@ -3990,6 +4034,7 @@ class Playlist extends DataClass implements Insertable<Playlist> {
     songLimit,
     targetDurationMs,
     rotationGapMs,
+    snowballStages,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -4016,7 +4061,8 @@ class Playlist extends DataClass implements Insertable<Playlist> {
           other.updatedAt == this.updatedAt &&
           other.songLimit == this.songLimit &&
           other.targetDurationMs == this.targetDurationMs &&
-          other.rotationGapMs == this.rotationGapMs);
+          other.rotationGapMs == this.rotationGapMs &&
+          other.snowballStages == this.snowballStages);
 }
 
 class PlaylistsCompanion extends UpdateCompanion<Playlist> {
@@ -4042,6 +4088,7 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
   final Value<int?> songLimit;
   final Value<Duration?> targetDurationMs;
   final Value<Duration> rotationGapMs;
+  final Value<int> snowballStages;
   final Value<int> rowid;
   const PlaylistsCompanion({
     this.id = const Value.absent(),
@@ -4066,6 +4113,7 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
     this.songLimit = const Value.absent(),
     this.targetDurationMs = const Value.absent(),
     this.rotationGapMs = const Value.absent(),
+    this.snowballStages = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   PlaylistsCompanion.insert({
@@ -4091,6 +4139,7 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
     this.songLimit = const Value.absent(),
     this.targetDurationMs = const Value.absent(),
     this.rotationGapMs = const Value.absent(),
+    this.snowballStages = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name),
@@ -4119,6 +4168,7 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
     Expression<int>? songLimit,
     Expression<int>? targetDurationMs,
     Expression<int>? rotationGapMs,
+    Expression<int>? snowballStages,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -4144,6 +4194,7 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
       if (songLimit != null) 'song_limit': songLimit,
       if (targetDurationMs != null) 'target_duration_ms': targetDurationMs,
       if (rotationGapMs != null) 'rotation_gap_ms': rotationGapMs,
+      if (snowballStages != null) 'snowball_stages': snowballStages,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -4171,6 +4222,7 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
     Value<int?>? songLimit,
     Value<Duration?>? targetDurationMs,
     Value<Duration>? rotationGapMs,
+    Value<int>? snowballStages,
     Value<int>? rowid,
   }) {
     return PlaylistsCompanion(
@@ -4196,6 +4248,7 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
       songLimit: songLimit ?? this.songLimit,
       targetDurationMs: targetDurationMs ?? this.targetDurationMs,
       rotationGapMs: rotationGapMs ?? this.rotationGapMs,
+      snowballStages: snowballStages ?? this.snowballStages,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -4297,6 +4350,9 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
         $PlaylistsTable.$converterrotationGapMs.toSql(rotationGapMs.value),
       );
     }
+    if (snowballStages.present) {
+      map['snowball_stages'] = Variable<int>(snowballStages.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -4328,6 +4384,7 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
           ..write('songLimit: $songLimit, ')
           ..write('targetDurationMs: $targetDurationMs, ')
           ..write('rotationGapMs: $rotationGapMs, ')
+          ..write('snowballStages: $snowballStages, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -9843,6 +9900,7 @@ typedef $$PlaylistsTableCreateCompanionBuilder = PlaylistsCompanion Function({
   Value<int?> songLimit,
   Value<Duration?> targetDurationMs,
   Value<Duration> rotationGapMs,
+  Value<int> snowballStages,
   Value<int> rowid,
 });
 typedef $$PlaylistsTableUpdateCompanionBuilder = PlaylistsCompanion Function({
@@ -9868,6 +9926,7 @@ typedef $$PlaylistsTableUpdateCompanionBuilder = PlaylistsCompanion Function({
   Value<int?> songLimit,
   Value<Duration?> targetDurationMs,
   Value<Duration> rotationGapMs,
+  Value<int> snowballStages,
   Value<int> rowid,
 });
 
@@ -10043,6 +10102,11 @@ class $$PlaylistsTableFilterComposer
         builder: (column) => ColumnWithTypeConverterFilters(column),
       );
 
+  ColumnFilters<int> get snowballStages => $composableBuilder(
+    column: $table.snowballStages,
+    builder: (column) => ColumnFilters(column),
+  );
+
   Expression<bool> playlistItemsRefs(
     Expression<bool> Function($$PlaylistItemsTableFilterComposer f) f,
   ) {
@@ -10212,6 +10276,11 @@ class $$PlaylistsTableOrderingComposer
     column: $table.rotationGapMs,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get snowballStages => $composableBuilder(
+    column: $table.snowballStages,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$PlaylistsTableAnnotationComposer
@@ -10322,6 +10391,11 @@ class $$PlaylistsTableAnnotationComposer
         builder: (column) => column,
       );
 
+  GeneratedColumn<int> get snowballStages => $composableBuilder(
+    column: $table.snowballStages,
+    builder: (column) => column,
+  );
+
   Expression<T> playlistItemsRefs<T extends Object>(
     Expression<T> Function($$PlaylistItemsTableAnnotationComposer a) f,
   ) {
@@ -10423,6 +10497,7 @@ class $$PlaylistsTableTableManager
                 Value<int?> songLimit = const Value.absent(),
                 Value<Duration?> targetDurationMs = const Value.absent(),
                 Value<Duration> rotationGapMs = const Value.absent(),
+                Value<int> snowballStages = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PlaylistsCompanion(
                 id: id,
@@ -10447,6 +10522,7 @@ class $$PlaylistsTableTableManager
                 songLimit: songLimit,
                 targetDurationMs: targetDurationMs,
                 rotationGapMs: rotationGapMs,
+                snowballStages: snowballStages,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -10473,6 +10549,7 @@ class $$PlaylistsTableTableManager
                 Value<int?> songLimit = const Value.absent(),
                 Value<Duration?> targetDurationMs = const Value.absent(),
                 Value<Duration> rotationGapMs = const Value.absent(),
+                Value<int> snowballStages = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PlaylistsCompanion.insert(
                 id: id,
@@ -10497,6 +10574,7 @@ class $$PlaylistsTableTableManager
                 songLimit: songLimit,
                 targetDurationMs: targetDurationMs,
                 rotationGapMs: rotationGapMs,
+                snowballStages: snowballStages,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

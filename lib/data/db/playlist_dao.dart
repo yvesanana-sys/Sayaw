@@ -77,12 +77,14 @@ class PlaylistDao extends DatabaseAccessor<SayawDatabase> with _$PlaylistDaoMixi
     required Duration? targetDuration,
     Duration rotationGap = Duration.zero,
     bool? continuousFlow,
+    int snowballStages = 0,
   }) =>
       (update(playlists)..where((p) => p.id.equals(playlistId))).write(
         PlaylistsCompanion(
           songLimit: Value(songLimit),
           targetDurationMs: Value(targetDuration),
           rotationGapMs: Value(rotationGap),
+          snowballStages: Value(snowballStages),
           // Continuous flow is not a column of its own — it *is* a crossfade
           // of zero with nothing spoken over it, and storing it twice would
           // give the two a chance to disagree. Turning it off restores the

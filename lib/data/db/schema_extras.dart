@@ -33,6 +33,13 @@ const Map<int, List<String>> schemaUpgrades = {
     'ALTER TABLE playlists '
         'ADD COLUMN rotation_gap_ms INTEGER NOT NULL DEFAULT 0',
   ],
+
+  // Snowball stages. Zero, so no set already on disk starts claiming to be a
+  // climb it was never ordered for.
+  5: [
+    'ALTER TABLE playlists '
+        'ADD COLUMN snowball_stages INTEGER NOT NULL DEFAULT 0',
+  ],
 };
 
 /// Statements run once, in order, when the database file is first created.
