@@ -23,6 +23,18 @@ class _FakeBookmarks implements SecurityBookmarks {
     asked.add(bookmark);
     return path;
   }
+
+  /// One bookmark per path, derived from it so a test can tell them apart.
+  final List<List<String>> createdFor = [];
+
+  @override
+  Future<List<Uint8List?>> create(List<String> paths) async {
+    createdFor.add(paths);
+    return [
+      for (final path in paths)
+        path.isEmpty ? null : Uint8List.fromList(path.codeUnits),
+    ];
+  }
 }
 
 MediaResolver _resolver(SecurityBookmarks bookmarks) => MediaResolver(
@@ -171,4 +183,25 @@ void main() {
       expect(await PlatformSecurityBookmarks(channel).resolve(bookmark), isNull);
     });
   });
+
+  group('making them during a scan', () {
+    test('a platform without bookmarks writes none', () async {
+      // Every platform but two, and every test in this suite.
+      const bookmarks = NoSecurityBookmarks();
+
+      expect(await bookmarks.create(['/a.flac', '/b.flac']), [null, null]);
+    });
+
+    test('one round trip for a whole batch, not one per file', () async {
+      // A library is tens of thousands of files. A channel call each would
+      // dominate the import.
+      final bookmarks = _FakeBookmarks();
+
+      await bookmarks.create(['/a.flac', '/b.flac', '/c.flac']);
+
+      expect(bookmarks.createdFor, hasLength(1));
+      expect(bookmarks.createdFor.single, hasLength(3));
+    });
+  });
+
 }

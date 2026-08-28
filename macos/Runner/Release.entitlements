@@ -4,5 +4,12 @@
 <dict>
 	<key>com.apple.security.app-sandbox</key>
 	<true/>
+	<!-- The sandbox grants access to what the operator picked and nothing
+	     else. Without these two a picked folder is unreadable, and the
+	     bookmark that carries the grant across a relaunch cannot be made. -->
+	<key>com.apple.security.files.user-selected.read-only</key>
+	<true/>
+	<key>com.apple.security.files.bookmarks.app-scope</key>
+	<true/>
 </dict>
 </plist>

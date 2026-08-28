@@ -421,7 +421,12 @@ class PlaybackSession
     Iterable<Directory> folders, {
     void Function(int filesSeen, String path)? onProgress,
   }) =>
-      LibraryScanner(db: repository.db).scan(folders, onProgress: onProgress);
+      LibraryScanner(
+        db: repository.db,
+        // The same one the resolver reads back with. A scan that stored no
+        // bookmark leaves a library that is unreadable after a relaunch.
+        bookmarks: repository.resolver.bookmarks,
+      ).scan(folders, onProgress: onProgress);
 
   Future<void> dispose() async {
     _ticker?.cancel();

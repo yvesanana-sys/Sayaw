@@ -1,11 +1,12 @@
 import 'dart:io';
 
 import 'package:clock/clock.dart';
-import 'package:drift/drift.dart' hide isNull;
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:sayaw/data/db/database.dart';
 import 'package:sayaw/data/library/library_scanner.dart';
+import 'package:sayaw/data/sources/security_bookmarks.dart';
 import 'package:sayaw/data/library/track_metadata.dart';
 
 import '../fakes/fake_metadata_reader.dart';
@@ -342,6 +343,51 @@ void main() {
       );
     });
   });
+
+  group('security-scoped bookmarks', () {
+    test('a platform without them stores none', () async {
+      // Which is every platform this suite runs on, and every platform that
+      // does not need one.
+      _touch(music, 'sway.mp3');
+
+      await scan();
+
+      expect(
+          (await db.select(db.tracks).get()).single.securityBookmark, isNull);
+    });
+
+    test('where the platform makes them, they are stored with the track',
+        () async {
+      // Without this the resolver has nothing to resolve, and a library
+      // imported on Monday is unreadable on Tuesday.
+      _touch(music, 'sway.mp3');
+      _touch(music, 'tango.flac');
+
+      await LibraryScanner(db: db, reader: reader, bookmarks: _StubBookmarks())
+          .scan([music]);
+
+      final rows = await db.select(db.tracks).get();
+      expect(rows, hasLength(2));
+      expect([for (final row in rows) row.securityBookmark],
+          everyElement(isNotNull));
+    });
+
+    test('a file the platform will not bookmark is still imported', () async {
+      // A bookmark is how a file is reached later; not having one is not a
+      // reason to leave the track out of the library now.
+      _touch(music, 'sway.mp3');
+
+      final report = await LibraryScanner(
+        db: db,
+        reader: reader,
+        bookmarks: _StubBookmarks(refuse: true),
+      ).scan([music]);
+
+      expect(report.added, 1);
+      expect(
+          (await db.select(db.tracks).get()).single.securityBookmark, isNull);
+    });
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -354,3 +400,22 @@ void _touch(Directory root, String relativePath) {
 
 Future<List<String>> _titles(SayawDatabase db) async =>
     [for (final track in await db.select(db.tracks).get()) track.title]..sort();
+
+/// A platform that makes bookmarks, for the scan path that stores them.
+class _StubBookmarks implements SecurityBookmarks {
+  _StubBookmarks({this.refuse = false});
+
+  final bool refuse;
+
+  @override
+  bool get isSupported => true;
+
+  @override
+  Future<String?> resolve(Uint8List bookmark) async => null;
+
+  @override
+  Future<List<Uint8List?>> create(List<String> paths) async => [
+        for (final path in paths)
+          refuse ? null : Uint8List.fromList(path.codeUnits),
+      ];
+}

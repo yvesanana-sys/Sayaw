@@ -12,5 +12,9 @@ import UIKit
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+
+    // Not a pub plugin, so it registers itself. See SecurityBookmarks.swift.
+    SecurityBookmarks.register(
+      with: engineBridge.pluginRegistry.registrar(forPlugin: "SecurityBookmarks")!)
   }
 }

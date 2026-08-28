@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 import 'package:path/path.dart' as p;
 
 import '../db/database.dart';
+import '../sources/security_bookmarks.dart';
 import 'track_metadata.dart';
 
 /// What the app will attempt to play from a folder.
@@ -81,11 +82,20 @@ class LibraryScanner {
   LibraryScanner({
     required this.db,
     this.reader = const TagMetadataReader(),
+    this.bookmarks = const NoSecurityBookmarks(),
     this.batchSize = 200,
   });
 
   final SayawDatabase db;
   final MetadataReader reader;
+
+  /// How a path becomes a durable handle on the Apple platforms.
+  ///
+  /// A sandboxed grant does not survive a relaunch, so a library imported on
+  /// Monday is unreadable on Tuesday without one of these. Defaults to the
+  /// platforms that have no such thing, which is every platform a test runs
+  /// on.
+  final SecurityBookmarks bookmarks;
 
   /// Rows written per transaction. Large enough that a 10,000-file import is
   /// not 10,000 transactions, small enough that a scan interrupted halfway
@@ -220,8 +230,30 @@ class LibraryScanner {
 
   Future<void> _write(List<TracksCompanion> pending) async {
     if (pending.isEmpty) return;
-    await db.trackDao.upsertAll(pending);
+    await db.trackDao.upsertAll(await _bookmarked(pending));
     pending.clear();
+  }
+
+  /// The same rows with a security-scoped bookmark attached, where the
+  /// platform makes them.
+  ///
+  /// Done a batch at a time rather than a file at a time: one channel round
+  /// trip per transaction rather than per track, which on a ten-thousand-file
+  /// import is the difference between a pause and an afternoon.
+  Future<List<TracksCompanion>> _bookmarked(
+      List<TracksCompanion> pending) async {
+    if (!bookmarks.isSupported) return pending;
+
+    final paths = [for (final row in pending) row.localPath.value ?? ''];
+    final made = await bookmarks.create(paths);
+
+    return [
+      for (var i = 0; i < pending.length; i++)
+        if (made[i] case final bookmark?)
+          pending[i].copyWith(securityBookmark: Value(bookmark))
+        else
+          pending[i],
+    ];
   }
 
   /// A file that has not changed still gets its "we saw it" stamp moved, which

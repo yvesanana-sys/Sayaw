@@ -22,6 +22,14 @@ abstract class SecurityBookmarks {
   /// that fail in the ordinary way.
   Future<String?> resolve(Uint8List bookmark);
 
+  /// Bookmarks for [paths], in the same order, with a null where one could
+  /// not be made.
+  ///
+  /// A list rather than one path at a time because a library is tens of
+  /// thousands of files and a channel round trip each would dominate the
+  /// import.
+  Future<List<Uint8List?>> create(List<String> paths);
+
   /// Whether this platform has bookmarks at all.
   ///
   /// Read by anything that would otherwise report "file missing" for a file
@@ -36,6 +44,10 @@ class NoSecurityBookmarks implements SecurityBookmarks {
 
   @override
   Future<String?> resolve(Uint8List bookmark) async => null;
+
+  @override
+  Future<List<Uint8List?>> create(List<String> paths) async =>
+      List<Uint8List?>.filled(paths.length, null);
 
   @override
   bool get isSupported => false;
@@ -83,6 +95,26 @@ class PlatformSecurityBookmarks implements SecurityBookmarks {
       // not mounted. The platform does have bookmarks, so the operator is told
       // to give the folder again.
       return null;
+    }
+  }
+
+  @override
+  Future<List<Uint8List?>> create(List<String> paths) async {
+    final none = List<Uint8List?>.filled(paths.length, null);
+    if (!isSupported || paths.isEmpty) return none;
+
+    try {
+      final made =
+          await channel.invokeListMethod<Uint8List?>('create', paths);
+      // A short or missing answer is not worth guessing about: a bookmark
+      // paired with the wrong file is worse than no bookmark at all.
+      if (made == null || made.length != paths.length) return none;
+      return made;
+    } on MissingPluginException {
+      _handlerMissing = true;
+      return none;
+    } on PlatformException {
+      return none;
     }
   }
 }
