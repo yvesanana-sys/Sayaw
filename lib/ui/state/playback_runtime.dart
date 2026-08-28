@@ -22,6 +22,7 @@ import '../../data/sources/sources_access.dart';
 import '../../data/sources/plex/plex_identity.dart';
 import '../../data/sources/plex/plex_auth.dart';
 import '../../data/sources/secret_store.dart';
+import '../../data/sources/security_bookmarks.dart';
 import '../../data/sources/sources_service.dart';
 import '../../data/sources/unconfigured_sources.dart';
 import 'playback_session.dart';
@@ -129,6 +130,10 @@ class PlaybackRuntime {
       // Read on every resolve rather than captured, so a set already loaded
       // picks up the change without being rebuilt.
       networkMode: () => connectivity.mode,
+      // On the Apple platforms a stored path stops working across launches
+      // and the bookmark is the durable handle. Everywhere else this is the
+      // one that says so.
+      bookmarks: defaultSecurityBookmarks(),
     );
 
     final repository = PlaylistRepository(db: db, resolver: resolver);

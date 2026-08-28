@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import '../audio/deck.dart';
+import 'sources/security_bookmarks.dart';
 
 /// Sealed source discriminator. Nothing outside this file needs to know which
 /// service a track came from — the audio engine only ever sees [PlayableMedia].
@@ -75,12 +76,18 @@ class MediaResolver {
     required this.tidal,
     required this.cache,
     required this.networkMode,
+    this.bookmarks = const NoSecurityBookmarks(),
   });
 
   final PlexClient plex;
   final TidalClient tidal;
   final MediaCache cache;
   NetworkMode Function() networkMode;
+
+  /// How a stored security-scoped bookmark becomes a path again. Defaults to
+  /// the platforms that do not have them, which is every platform this runs a
+  /// test on.
+  final SecurityBookmarks bookmarks;
 
   Future<PlayableMedia> resolve(
     TrackSource source, {
@@ -117,7 +124,7 @@ class MediaResolver {
     // macOS and iOS invalidate raw paths across launches; the bookmark is the
     // durable handle. Resolving it also re-acquires sandbox access.
     if (s.bookmark != null) {
-      final resolved = await SecurityScopedBookmarks.resolve(s.bookmark!);
+      final resolved = await bookmarks.resolve(s.bookmark!);
       if (resolved != null) {
         return PlayableMedia(
             uri: Uri.file(resolved), gainDb: gainDb, cueIn: cueIn, cueOut: cueOut);
@@ -131,6 +138,16 @@ class MediaResolver {
       return PlayableMedia(
           uri: Uri.file(s.path!), gainDb: gainDb, cueIn: cueIn, cueOut: cueOut);
     }
+
+    // A file behind a bookmark that would not resolve is not the same thing as
+    // a file that is gone, and an operator told the wrong one goes looking in
+    // the wrong place — for a drive that is plugged in, rather than for the
+    // folder grant they need to give again.
+    if (s.bookmark != null && bookmarks.isSupported) {
+      throw UnavailableOffline(
+          'This folder needs granting again — the permission has expired');
+    }
+
     throw UnavailableOffline('Local file is missing or the volume is unmounted');
   }
 
@@ -264,6 +281,3 @@ abstract class MediaCache {
   Future<String?> completeFileFor(TrackSource source);
 }
 
-abstract class SecurityScopedBookmarks {
-  static Future<String?> resolve(Uint8List bookmark) async => null; // platform channel
-}
