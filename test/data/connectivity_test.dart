@@ -204,4 +204,61 @@ void main() {
       expect(probe.probes, after);
     });
   });
+
+  group('when the machine will not answer', () {
+    test('a radio that throws does not take the service down with it', () {
+      // Found by running the app: with no NetworkManager on the bus this threw
+      // out of `start`, which the runtime deliberately does not await — so it
+      // was an unhandled async error *and* the service stopped polling for the
+      // rest of the night.
+      radio.throws = true;
+      final probe = FakeProbe({'Home Server': true});
+      final service = serviceWith([probe]);
+
+      expect(service.refresh(), completes);
+    });
+
+    test('and the mode is left where it was rather than guessed at', () async {
+      final probe = FakeProbe({'Home Server': true});
+      final service = serviceWith([probe]);
+      await service.refresh();
+
+      radio.throws = true;
+
+      expect(await service.refresh(), NetworkMode.online);
+    });
+
+    test('a probe that throws is survived too', () async {
+      // Same shape: nothing on this path has a caller to catch it.
+      final service = serviceWith([_ThrowingProbe()]);
+
+      expect(await service.refresh(), NetworkMode.online);
+    });
+
+    test('it keeps polling afterwards', () async {
+      // The failure that matters is not the one round that went wrong, it is
+      // every round after it never happening.
+      radio.throws = true;
+      final probe = FakeProbe({'Home Server': true});
+      final service = serviceWith(
+        [probe],
+        interval: const Duration(milliseconds: 20),
+      );
+      await service.start();
+
+      radio.throws = false;
+      radio.up = false;
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+
+      expect(service.mode, NetworkMode.localOnly);
+    });
+  });
+
+}
+
+/// A probe that cannot answer at all.
+class _ThrowingProbe implements ServiceProbe {
+  @override
+  Future<List<ServiceReachability>> probe() async =>
+      throw StateError('the server hung up');
 }

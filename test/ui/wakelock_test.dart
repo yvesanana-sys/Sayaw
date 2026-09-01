@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sayaw/ui/state/playback_ui_state.dart';
@@ -123,4 +124,36 @@ void main() {
 
     expect(wakelock.isEnabled, isFalse);
   });
+
+  testWidgets('a wakelock that cannot be taken does not take the app down',
+      (tester) async {
+    // Found by running it: on Linux `wakelock_plus` goes over DBus, and a
+    // machine with no session bus threw the moment playback started. `listen`
+    // gives that nowhere to return an error to, so it was unhandled.
+    final container = await pumpSayaw(
+      tester,
+      const PlaybackWakelock(child: SizedBox.shrink()),
+      queue: testQueue(),
+      wakelock: _ThrowingWakelock(),
+    );
+
+    final controller = container.read(playbackProvider.notifier);
+    controller.loadToDeck(DeckSlot.a, testQueue().first);
+    controller.togglePlay(DeckSlot.a);
+    await tester.pumpAndSettle();
+
+    // Nothing thrown, and the app is still standing.
+    expect(tester.takeException(), isNull);
+    expect(find.byType(PlaybackWakelock), findsOneWidget);
+  });
+
+}
+
+/// A platform that cannot take a wakelock at all.
+class _ThrowingWakelock implements WakelockBackend {
+  @override
+  Future<void> enable() async => throw const SocketException('no session bus');
+
+  @override
+  Future<void> disable() async => throw const SocketException('no session bus');
 }

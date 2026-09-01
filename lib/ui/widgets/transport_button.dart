@@ -50,9 +50,13 @@ class TransportButton extends StatelessWidget {
         ? scheme.onSurfaceVariant.withValues(alpha: 0.38)
         : color ?? scheme.onSurface;
 
+    // The accent tints this button; it never fills it. Passing it as a solid
+    // fill and as the icon colour — which is what every caller does — drew an
+    // accent glyph on an accent square, and the icon simply disappeared the
+    // moment the button became enabled. Found by running it and looking.
     final fill = isActive
         ? (background ?? scheme.primary).withValues(alpha: 0.24)
-        : background ?? scheme.surfaceContainerHigh;
+        : scheme.surfaceContainerHigh;
 
     return Semantics(
       button: true,

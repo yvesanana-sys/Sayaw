@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:sayaw/data/connectivity.dart';
 
@@ -7,6 +8,10 @@ class FakeRadio implements NetworkRadio {
   FakeRadio({this.up = true});
 
   bool up;
+
+  /// Makes [hasNetwork] throw, as a machine with no NetworkManager on the bus
+  /// does.
+  bool throws = false;
 
   /// How many times the service asked. The point of several assertions is that
   /// this stays small.
@@ -17,6 +22,7 @@ class FakeRadio implements NetworkRadio {
   @override
   Future<bool> hasNetwork() async {
     checks++;
+    if (throws) throw const SocketException('no bus');
     return up;
   }
 

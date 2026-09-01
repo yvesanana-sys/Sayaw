@@ -309,9 +309,20 @@ class CrossfadeEngine {
   Future<void> appendToQueue(QueueEntry entry) async {
     _queue = List.unmodifiable([..._queue, entry]);
 
-    if (_standbyEntry == null && _phase != EnginePhase.idle) {
-      await _preloadNext();
+    // Nothing on a deck at all: this is the first track of a set being built
+    // by hand, and it has to reach one. Without this the operator adds tracks
+    // to an empty playlist, sees them in the queue, presses play and gets
+    // silence — `play()` returns immediately when nothing is loaded. It is the
+    // first thing anyone does with the app, and it did not work.
+    if (_activeEntry == null) {
+      await _advanceToNext(immediate: true);
+      return;
     }
+
+    // And cue it up if there is nothing behind the audible one. The phase does
+    // not come into it: a set built before pressing play is idle the whole
+    // time, and a standby deck loaded at zero volume disturbs nothing.
+    if (_standbyEntry == null) await _preloadNext();
   }
 
   Future<void> play() async {

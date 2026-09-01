@@ -101,4 +101,43 @@ void main() {
       expect(theme.brightness, Brightness.dark);
     });
   });
+
+  group('a transport button is readable in every state it draws', () {
+    // The pair that was missed: the bar passes one accent as both the fill and
+    // the icon colour, and an accent glyph on an accent square is invisible.
+    // Disabled it looked fine, because the fill was a translucent wash — so it
+    // only appeared once a track was loaded.
+    const accents = {
+      'primary': SayawColors.primary,
+      'secondary': SayawColors.secondary,
+      'tertiary': SayawColors.tertiary,
+    };
+
+    /// What the button actually paints behind its icon: the accent wash sits
+    /// on the surface below it, so the icon is read against the blend.
+    Color washOn(Color accent, Color under) =>
+        Color.alphaBlend(accent.withValues(alpha: 0.24), under);
+
+    for (final accent in accents.entries) {
+      test('${accent.key} icon on the active wash', () {
+        final ratio = contrastRatio(
+          accent.value,
+          washOn(accent.value, SayawColors.surface),
+        );
+        expect(ratio, greaterThanOrEqualTo(kWcagAaLargeText),
+            reason: '${accent.key} on its own wash is '
+                '${ratio.toStringAsFixed(2)}:1');
+      });
+
+      test('${accent.key} icon on an idle button', () {
+        // The state that was broken: a solid accent fill made this 1.0:1.
+        final ratio =
+            contrastRatio(accent.value, SayawColors.surfaceContainerHigh);
+        expect(ratio, greaterThanOrEqualTo(kWcagAaLargeText),
+            reason: '${accent.key} on surfaceContainerHigh is '
+                '${ratio.toStringAsFixed(2)}:1');
+      });
+    }
+  });
+
 }

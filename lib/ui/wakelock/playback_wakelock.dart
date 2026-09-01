@@ -81,7 +81,15 @@ class _PlaybackWakelockState extends ConsumerState<PlaybackWakelock> {
     // Releasing on dispose rather than leaving it to the OS: a hot restart in
     // development otherwise leaves the lock held with nothing to release it.
     // `_held` can only be true once `_apply` has cached the backend.
-    if (_held) _backend?.disable();
+    if (_held) {
+      // Same reasoning, and the same platform: this runs during teardown,
+      // where an exception is even less use to anybody.
+      try {
+        _backend?.disable();
+      } on Object {
+        // Nothing left to do about it.
+      }
+    }
     super.dispose();
   }
 
@@ -90,10 +98,22 @@ class _PlaybackWakelockState extends ConsumerState<PlaybackWakelock> {
     _held = shouldHold;
 
     final backend = _backend ??= ref.read(wakelockBackendProvider);
-    if (shouldHold) {
-      await backend!.enable();
-    } else {
-      await backend!.disable();
+
+    try {
+      if (shouldHold) {
+        await backend!.enable();
+      } else {
+        await backend!.disable();
+      }
+    } on Object {
+      // A wakelock that cannot be taken is a screen that may sleep, which is
+      // a worse night and not a broken one. Nothing here is worth taking the
+      // app down for, and `listen` gives this nowhere to return an error to —
+      // it would be an unhandled async error the operator never sees.
+      //
+      // Found by running it: on Linux `wakelock_plus` goes over DBus, and a
+      // machine with no session bus threw the moment playback started.
+      _held = false;
     }
   }
 

@@ -1663,6 +1663,107 @@ void main() {
     });
   });
 
+
+  group('building a set by hand', () {
+    // Found by running the app: adding tracks to an empty playlist left every
+    // deck empty, so the transport did nothing at all. It is the first thing
+    // anyone does.
+    test('the first track added reaches a deck', () {
+      fakeAsync((async) {
+        final rig = _Rig();
+        rig.engine.loadQueue([]);
+        async.flushMicrotasks();
+
+        rig.engine.appendToQueue(_entry('one'));
+        async.flushMicrotasks();
+
+        expect(rig.engine.currentEntry!.itemId, 'one');
+        expect(rig.a.media!.uri.toString(), 'fake://one');
+      });
+    });
+
+    test('and it can then actually be played', () {
+      fakeAsync((async) {
+        final rig = _Rig();
+        rig.engine.loadQueue([]);
+        async.flushMicrotasks();
+        rig.engine.appendToQueue(_entry('one'));
+        async.flushMicrotasks();
+
+        rig.engine.play();
+        async.flushMicrotasks();
+
+        expect(rig.engine.phase, EnginePhase.playing);
+        expect(rig.a.calls, contains('play'));
+      });
+    });
+
+    test('the second is cued up behind it before anything starts', () {
+      // Otherwise the set runs out after one track: the transition finds no
+      // standby and fades to silence.
+      fakeAsync((async) {
+        final rig = _Rig();
+        rig.engine.loadQueue([]);
+        async.flushMicrotasks();
+
+        rig.engine.appendToQueue(_entry('one'));
+        async.flushMicrotasks();
+        rig.engine.appendToQueue(_entry('two'));
+        async.flushMicrotasks();
+
+        expect(rig.engine.standbyEntry!.itemId, 'two');
+      });
+    });
+
+    test('a set built cold plays all the way through', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(seconds: 6));
+        rig.engine.loadQueue([]);
+        async.flushMicrotasks();
+
+        for (final id in ['one', 'two', 'three']) {
+          rig.engine.appendToQueue(_entry(id));
+          async.flushMicrotasks();
+        }
+
+        rig.engine.play();
+        async.elapse(const Duration(seconds: 40));
+        async.flushMicrotasks();
+
+        expect(rig.activeItems, ['one', 'two', 'three']);
+      });
+    });
+
+    test('appending to a running set still does not disturb the cued deck', () {
+      // The behaviour that was already right and has to stay that way.
+      fakeAsync((async) {
+        final rig = _Rig();
+        rig.start([_entry('one'), _entry('two')], async);
+
+        final cued = rig.b.media;
+        rig.engine.appendToQueue(_entry('three'));
+        async.flushMicrotasks();
+
+        expect(rig.b.media, same(cued));
+      });
+    });
+
+    test('a set that ran out picks up something appended after it', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(seconds: 4));
+        rig.start([_entry('one')], async);
+        async.elapse(const Duration(seconds: 20));
+        async.flushMicrotasks();
+        expect(rig.engine.phase, EnginePhase.idle);
+
+        rig.engine.appendToQueue(_entry('two'));
+        async.flushMicrotasks();
+
+        expect(rig.engine.currentEntry!.itemId, 'two');
+      });
+    });
+  });
+
 }
 
 

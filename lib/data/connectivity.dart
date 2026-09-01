@@ -25,11 +25,29 @@ class ConnectivityPlusRadio implements NetworkRadio {
   final Connectivity _connectivity;
 
   @override
-  Future<bool> hasNetwork() async => _isUp(await _connectivity.checkConnectivity());
+  Future<bool> hasNetwork() async {
+    try {
+      return _isUp(await _connectivity.checkConnectivity());
+    } on Object {
+      // The OS would not answer. On Linux that is a machine with no
+      // NetworkManager on the bus, and on any platform it can be a plugin
+      // that is not there — neither is a reason to declare the night offline.
+      //
+      // True rather than false, because the probes are the real test and can
+      // answer this without help. Saying false here would skip them and take
+      // a rig with a working network into local-only for the whole event.
+      return true;
+    }
+  }
 
   @override
-  Stream<bool> get onChanged =>
-      _connectivity.onConnectivityChanged.map(_isUp).distinct();
+  Stream<bool> get onChanged => _connectivity.onConnectivityChanged
+      .map(_isUp)
+      // An error here would cancel the subscription and stop the app ever
+      // noticing a network change again. The poll is still running; this just
+      // has nothing to add.
+      .handleError((Object _) {})
+      .distinct();
 
   /// The plugin documents `none` as the only value that ever appears alone, so
   /// anything else in the list is a link of some kind. Which kind it is does
@@ -116,9 +134,48 @@ class ConnectivityService {
   Future<NetworkMode>? _inFlight;
 
   Future<NetworkMode> start() async {
-    _radioEvents = radio.onChanged.listen((_) => refresh());
+    // Subscribing is itself something the radio can die inside of, so it goes
+    // through the same containment as everything else it does.
+    await _contained(() async {
+      _radioEvents = radio.onChanged.listen(
+        (_) => refresh(),
+        onError: (Object _) {},
+      );
+    });
+
     _poll = Timer.periodic(interval, (_) => refresh());
     return refresh();
+  }
+
+  /// Runs [body] with anything the radio raises kept inside.
+  ///
+  /// `connectivity_plus` on Linux reaches NetworkManager over DBus, and where
+  /// that is not listening it raises the socket failure *into the zone* rather
+  /// than returning it — so a `try`/`catch` around the await never sees it and
+  /// the app dies at startup with an unhandled exception. Found by running the
+  /// thing rather than by reading it.
+  ///
+  /// The radio is an optimisation and never an authority: all it does is save
+  /// a round of probes when there is obviously no link. Losing it costs those
+  /// probes and nothing else, which is why swallowing this is the right trade
+  /// rather than a shrug.
+  Future<void> _contained(Future<void> Function() body) {
+    final done = Completer<void>();
+
+    runZonedGuarded(
+      () async {
+        try {
+          await body();
+        } finally {
+          if (!done.isCompleted) done.complete();
+        }
+      },
+      (_, _) {
+        if (!done.isCompleted) done.complete();
+      },
+    );
+
+    return done.future;
   }
 
   /// Probes now rather than waiting for the next tick.
@@ -128,7 +185,21 @@ class ConnectivityService {
   /// two rounds of requests against the same server would only make the answer
   /// arrive later.
   Future<NetworkMode> refresh() =>
-      _inFlight ??= _refresh().whenComplete(() => _inFlight = null);
+      _inFlight ??= _guarded().whenComplete(() => _inFlight = null);
+
+  /// One probe, with nothing allowed out of it.
+  ///
+  /// [start] is deliberately not awaited by its caller and the poll timer has
+  /// nowhere to return an error to, so anything thrown here is an unhandled
+  /// async error — and the service stops polling for the rest of the night.
+  /// A round that cannot be completed simply leaves the mode where it was.
+  Future<NetworkMode> _guarded() async {
+    try {
+      return await _refresh();
+    } on Object {
+      return _mode;
+    }
+  }
 
   Future<void> dispose() async {
     _poll?.cancel();
@@ -141,7 +212,7 @@ class ConnectivityService {
   // ---------------------------------------------------------------------
 
   Future<NetworkMode> _refresh() async {
-    if (!await radio.hasNetwork()) {
+    if (!await _radioSaysUp()) {
       // No link at all. Probing would be one timeout per server and the same
       // answer at the end of it, and those timeouts are seconds the operator
       // spends looking at a spinner.
@@ -172,6 +243,17 @@ class ConnectivityService {
     }
 
     return _settle(NetworkMode.degraded, down);
+  }
+
+  /// What the radio thinks, or "there is a link" when it cannot be asked.
+  ///
+  /// True rather than false on failure, because the probes are the real test
+  /// and can answer without it. False would skip them and take a rig with a
+  /// working network into local-only for the whole event.
+  Future<bool> _radioSaysUp() async {
+    var up = true;
+    await _contained(() async => up = await radio.hasNetwork());
+    return up;
   }
 
   NetworkMode _settle(NetworkMode mode, List<String> down) {
