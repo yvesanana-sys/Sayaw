@@ -66,3 +66,6 @@ macos/.symlinks/
 
 # Golden diff output, written on failure. Look at it, never commit it.
 test/**/failures/
+
+# Installers built by the release workflow.
+windows/packaging/Output/

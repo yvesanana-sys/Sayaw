@@ -43,6 +43,26 @@ need it are labelled rather than failing one at a time. Not yet written: TIDAL,
 and library import on Android and iOS. See
 [`ARCHITECTURE.md`](ARCHITECTURE.md) for the design.
 
+## Installing
+
+**Windows** — download the installer from
+[Releases](https://github.com/yvesanana-sys/Sayaw/releases) and run it. It is
+not code-signed yet, so SmartScreen will warn the first time: choose **More
+info**, then **Run anyway**. Everything it needs is in the installer, including
+the audio and database libraries. 64-bit Windows 10 or later.
+
+macOS and Linux builds are not published yet. Both run from source today with
+`flutter run -d macos` or `-d linux`.
+
+Releases are cut by pushing a tag:
+
+```
+git tag v0.1.0 && git push origin v0.1.0
+```
+
+which builds, tests and publishes a draft release for you to check before it
+goes out.
+
 ## Layout
 
 ```
