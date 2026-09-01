@@ -41,8 +41,11 @@ shortcut in the Start menu folder.
 Your library and playlists are **not** removed with the app. They live in:
 
 ```
-%APPDATA%\com.yourorg.sayaw\
+%APPDATA%\Sayaw\Sayaw\
 ```
+
+(Windows takes that name from the publisher and product recorded in the
+executable, which is why it appears twice.)
 
 Delete that folder to start completely fresh. Your music files are never
 touched — Sayaw only ever reads them.
@@ -107,7 +110,7 @@ wherever you like.
 Your library and playlists live in:
 
 ```
-~/.local/share/com.yourorg.sayaw/
+~/.local/share/io.github.yvesanana.sayaw/
 ```
 
 ---
@@ -123,7 +126,7 @@ flutter pub get
 flutter run -d macos
 ```
 
-Data lives in `~/Library/Application Support/com.yourorg.sayaw/`.
+Data lives in `~/Library/Application Support/io.github.yvesanana.sayaw/`.
 
 ---
 
