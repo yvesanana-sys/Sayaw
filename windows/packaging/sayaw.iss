@@ -34,8 +34,11 @@ WizardStyle=modern
 ; own laptop. `{autopf}` follows this to the right Program Files.
 PrivilegesRequiredOverridesAllowed=dialog
 PrivilegesRequired=lowest
-ArchitecturesAllowed=x64compatible
-ArchitecturesInstallIn64BitMode=x64compatible
+; The long-standing spelling. `x64compatible` needs Inno Setup 6.3, and the
+; runner image ships whatever it ships — a release is a bad place to discover
+; a directive the compiler does not know.
+ArchitecturesAllowed=x64
+ArchitecturesInstallIn64BitMode=x64
 ; Refuse to install over a running copy rather than leaving half-replaced DLLs
 ; behind, which for a media app means a deck that loads and will not play.
 CloseApplications=yes

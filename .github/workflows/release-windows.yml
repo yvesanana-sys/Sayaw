@@ -21,6 +21,10 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
+          # Pinned, not `stable`. A floating channel means the toolchain can
+          # change under a release that is being cut, and the first anyone
+          # knows is a failed build with a version number already attached.
+          flutter-version: 3.47.0
           channel: stable
           cache: true
 
@@ -32,8 +36,12 @@ jobs:
       - name: Analyze
         run: flutter analyze
 
+      # `-x golden` per dart_test.yaml: the deck-screen goldens were rendered
+      # on Linux and pin layout rather than glyphs, so a difference here would
+      # be the runner's font stack rather than a regression. They still run on
+      # the machine that generates them.
       - name: Test
-        run: flutter test
+        run: flutter test -x golden
 
       - name: Build
         run: flutter build windows --release
@@ -63,7 +71,7 @@ jobs:
           if (-not (Test-Path $iscc)) {
             throw "Inno Setup is not where it was expected: $iscc"
           }
-          echo "ISCC=$iscc" >> $env:GITHUB_ENV
+          "ISCC=$iscc" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Build the installer
         shell: pwsh
