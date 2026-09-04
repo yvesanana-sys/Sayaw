@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:clock/clock.dart';
 import 'package:drift/drift.dart' hide isNull;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:sayaw/data/cache/file_media_cache.dart';
 import 'package:sayaw/data/cache/media_downloader.dart';
 import 'package:sayaw/data/db/database.dart';
@@ -304,7 +305,10 @@ void main() {
       ));
 
       expect(media.uri.scheme, 'file');
-      expect(media.uri.toFilePath(), '${cacheDir.path}/${track.id}');
+      // Joined rather than interpolated with a slash: the cache builds this
+      // path with the platform's separator, and on Windows that is a
+      // backslash. The test was the thing that assumed POSIX, not the code.
+      expect(media.uri.toFilePath(), p.join(cacheDir.path, track.id));
     });
 
     test('playing a cached track moves it down the eviction queue', () async {

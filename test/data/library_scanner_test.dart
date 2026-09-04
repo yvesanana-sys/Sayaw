@@ -304,7 +304,14 @@ void main() {
     });
 
     test('a folder that cannot be read is reported and the scan carries on',
-        () async {
+        // `chmod` is how a folder is made unreadable here, and Windows has
+        // neither the command nor those semantics — the directory stays
+        // readable, the scan finds the file inside it, and the test fails
+        // having proved nothing. The behaviour it guards is real; only this
+        // way of provoking it is POSIX-only.
+        skip: Platform.isWindows
+            ? 'needs POSIX directory permissions'
+            : null, () async {
       _touch(music, 'a.mp3');
       reader.tags['a.mp3'] = const TrackMetadata(title: 'A');
       final locked = Directory('${music.path}/locked')..createSync();
