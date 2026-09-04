@@ -91,7 +91,13 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: windows/packaging/Output/*.exe
+          # Draft, so a build is looked at before anyone can download it.
+          # Publishing is a deliberate act, not a side effect of a green run.
           draft: true
+          # A tag carrying a suffix — v0.1.0-rc2, v0.2.0-beta — is a release
+          # candidate and is labelled as one. Without this GitHub would show
+          # an rc beside finished versions with nothing to tell them apart.
+          prerelease: ${{ contains(steps.version.outputs.value, '-') }}
           body: |
             **This installer is not code-signed.** Windows SmartScreen will
             warn on first run: choose **More info** then **Run anyway**.

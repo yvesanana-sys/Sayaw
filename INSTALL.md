@@ -19,9 +19,15 @@ few minutes.
 Requires 64-bit Windows 10 or later. Nothing else needs installing: the audio
 engine and the database library are inside the installer.
 
-> **If there are no releases listed**, none has been cut yet. Anyone with push
-> access can make one — see [Cutting a release](#cutting-a-release) — or build
-> from source below.
+> **If the page looks empty**, the newest build is still a draft. Every build
+> is published as a draft first, and drafts are visible only to people with
+> write access to the repository — so the page shows nothing to everyone else
+> until someone publishes it. If you have access, the draft is there and can be
+> downloaded as-is.
+>
+> Versions with a suffix — `v0.1.0-rc2` — are release candidates, marked
+> **Pre-release**. They are built and tested exactly like a final version; the
+> label means nobody has confirmed one on real hardware yet.
 
 ### The SmartScreen warning
 
@@ -182,6 +188,16 @@ git push origin v0.1.0
 
 That runs the tests, builds, and attaches the Windows installer to a **draft**
 release for you to check before publishing.
+
+Drafts are deliberate: a green build is not the same as a version anyone should
+download, and publishing should be something a person decides rather than
+something a passing test suite does. To publish one:
+
+```bash
+gh release edit v0.1.0 --draft=false
+```
+
+A tag with a suffix — `v0.1.0-rc1` — is marked as a pre-release automatically.
 
 To exercise the build without creating a release, run the *Windows release*
 workflow manually from the Actions tab, or:
