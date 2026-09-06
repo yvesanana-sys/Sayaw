@@ -173,6 +173,7 @@ void main() {
         async.flushMicrotasks();
 
         rig.deck.emitAsyncError(StateError('backend gave up'));
+        async.elapse(const Duration(seconds: 2));
         async.flushMicrotasks();
 
         expect(sounded, isFalse);
