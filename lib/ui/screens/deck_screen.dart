@@ -9,10 +9,12 @@ import '../widgets/crossfader.dart';
 import '../widgets/deck_panel.dart';
 import '../widgets/library_pane.dart';
 import '../widgets/network_banner.dart';
+import '../widgets/pane_header.dart';
 import '../widgets/queue_list.dart';
 import '../widgets/snowball_indicator.dart';
 import '../widgets/soundboard_bar.dart';
 import '../widgets/transport_bar.dart';
+import '../widgets/up_next_card.dart';
 import 'event_mode_dialog.dart';
 import 'jack_and_jill_dialog.dart';
 import 'set_shape_dialog.dart';
@@ -210,9 +212,10 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
   Widget _decksColumn({required bool compactTransport}) {
     return Column(
       children: [
+        const PaneHeader(icon: Icons.album, title: 'Decks'),
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
             child: Column(
               children: [
                 DeckPanel(slot: DeckSlot.a),
@@ -220,6 +223,11 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                 const Crossfader(),
                 const SizedBox(height: 8),
                 DeckPanel(slot: DeckSlot.b),
+                const SizedBox(height: 8),
+                // Fills the space that otherwise sat empty below the decks
+                // once both were loaded, and doubles as the "what do I do
+                // now" hint on a fresh set with nothing queued yet.
+                const UpNextCard(),
               ],
             ),
           ),

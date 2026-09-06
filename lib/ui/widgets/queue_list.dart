@@ -7,6 +7,7 @@ import '../state/playback_ui_state.dart';
 import '../state/soundboard_provider.dart';
 import '../theme/sayaw_theme.dart';
 import '../touch/touch_targets.dart';
+import 'pane_header.dart';
 
 /// The set list, reorderable by drag.
 ///
@@ -29,50 +30,79 @@ class QueueList extends ConsumerWidget {
     final controller = ref.read(playbackProvider.notifier);
     final breakpoint = SayawLayout.of(context);
 
+    final header = PaneHeader(
+      icon: Icons.queue_music,
+      title: 'Queue',
+      trailing: queue.isEmpty
+          ? null
+          : Text(
+              '${queue.length}',
+              style: const TextStyle(
+                color: SayawColors.onSurfaceVariant,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+    );
+
     if (queue.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'Queue is empty.\nAdd tracks from the library.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: SayawColors.onSurfaceVariant),
+      return Column(
+        children: [
+          header,
+          const Expanded(
+            child: Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Text(
+                  'Queue is empty.\nAdd tracks from the library.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: SayawColors.onSurfaceVariant),
+                ),
+              ),
+            ),
           ),
-        ),
+        ],
       );
     }
 
-    return ReorderableListView.builder(
-      // A stable storage key, not just a retained ScrollController. Crossing a
-      // breakpoint rebuilds this list at a different position in the tree,
-      // which creates a fresh ScrollPosition; without a fixed key the offset
-      // is derived from the tree path and is silently lost. The controller
-      // alone is not enough.
-      key: const PageStorageKey<String>('sayaw.queue'),
-      scrollController: scrollController,
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: queue.length,
-      // Default handles are placed by the framework and sized for a mouse.
-      // We supply our own so the target is 48dp and the gesture is right for
-      // the input the current layout implies.
-      buildDefaultDragHandles: false,
-      onReorderItem: controller.reorderQueue,
-      proxyDecorator: (child, index, animation) => Material(
-        color: Colors.transparent,
-        elevation: 8,
-        shadowColor: Colors.black,
-        child: child,
-      ),
-      itemBuilder: (context, index) {
-        final item = queue[index];
-        return _QueueRow(
-          key: ValueKey(item.id),
-          item: item,
-          index: index,
-          isCurrent: index == currentIndex,
-          breakpoint: breakpoint,
-        );
-      },
+    return Column(
+      children: [
+        header,
+        Expanded(
+          child: ReorderableListView.builder(
+            // A stable storage key, not just a retained ScrollController.
+            // Crossing a breakpoint rebuilds this list at a different
+            // position in the tree, which creates a fresh ScrollPosition;
+            // without a fixed key the offset is derived from the tree path
+            // and is silently lost. The controller alone is not enough.
+            key: const PageStorageKey<String>('sayaw.queue'),
+            scrollController: scrollController,
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemCount: queue.length,
+            // Default handles are placed by the framework and sized for a
+            // mouse. We supply our own so the target is 48dp and the gesture
+            // is right for the input the current layout implies.
+            buildDefaultDragHandles: false,
+            onReorderItem: controller.reorderQueue,
+            proxyDecorator: (child, index, animation) => Material(
+              color: Colors.transparent,
+              elevation: 8,
+              shadowColor: Colors.black,
+              child: child,
+            ),
+            itemBuilder: (context, index) {
+              final item = queue[index];
+              return _QueueRow(
+                key: ValueKey(item.id),
+                item: item,
+                index: index,
+                isCurrent: index == currentIndex,
+                breakpoint: breakpoint,
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
