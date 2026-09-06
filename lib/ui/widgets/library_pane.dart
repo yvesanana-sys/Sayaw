@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/db/database.dart';
+import '../format/track_title.dart';
 import '../state/playback_ui_state.dart';
 import '../theme/sayaw_theme.dart';
 import '../touch/touch_targets.dart';
@@ -239,11 +240,12 @@ class _LibraryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final title = displayTitle(track.title);
     final artist = track.artist ?? '';
     final album = track.album;
 
     return ListTile(
-      title: Text(track.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+      title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(
         [artist, ?album].where((s) => s.isNotEmpty).join(' · '),
         maxLines: 1,
@@ -253,7 +255,7 @@ class _LibraryRow extends StatelessWidget {
       // is no hover on a tablet, and "long-press for options" is not
       // discoverable at 1am.
       trailing: _AddButton(
-        label: 'Add ${track.title} to the set',
+        label: 'Add $title to the set',
         onPressed: onAdd,
       ),
     );

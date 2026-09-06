@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../audio/soundboard.dart';
+import '../format/track_title.dart';
 import '../state/library_access.dart';
 import '../state/playback_ui_state.dart';
 import '../state/soundboard_provider.dart';
@@ -57,7 +58,7 @@ class CueTagDialog extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              item.title,
+              displayTitle(item.title),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
