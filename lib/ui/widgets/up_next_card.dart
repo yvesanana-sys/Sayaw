@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../format/track_title.dart';
 import '../state/playback_ui_state.dart';
 import '../theme/sayaw_theme.dart';
 
@@ -50,7 +51,7 @@ class UpNextCard extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  next.title,
+                  displayTitle(next.title),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
