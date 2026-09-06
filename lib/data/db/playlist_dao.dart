@@ -12,17 +12,27 @@ part 'playlist_dao.g.dart';
 /// resolved. Everything the deck screen draws, and everything the repository
 /// needs to build a `QueueEntry`, comes from this.
 class PlaylistRow {
-  const PlaylistRow({required this.item, this.track, this.danceType});
+  const PlaylistRow({
+    required this.item,
+    this.track,
+    this.danceType,
+    this.soundCue,
+  });
 
   final PlaylistItem item;
 
   /// Null for an announcement, silence or marker row, which have no track.
   final Track? track;
   final DanceType? danceType;
+
+  /// The soundboard cue the operator tagged to this row, if any. Joined rather
+  /// than looked up later so the row carries everything a transition needs.
+  final SoundCueRow? soundCue;
 }
 
 /// Playlists and their ordered rows.
-@DriftAccessor(tables: [Playlists, PlaylistItems, Tracks, DanceTypes])
+@DriftAccessor(
+    tables: [Playlists, PlaylistItems, Tracks, DanceTypes, SoundCues])
 class PlaylistDao extends DatabaseAccessor<SayawDatabase> with _$PlaylistDaoMixin {
   PlaylistDao(super.db);
 
@@ -141,6 +151,8 @@ class PlaylistDao extends DatabaseAccessor<SayawDatabase> with _$PlaylistDaoMixi
     final q = select(playlistItems).join([
       leftOuterJoin(tracks, tracks.id.equalsExp(playlistItems.trackId)),
       leftOuterJoin(danceTypes, danceTypes.id.equalsExp(playlistItems.danceTypeId)),
+      leftOuterJoin(
+          soundCues, soundCues.id.equalsExp(playlistItems.soundCueId)),
     ])..where(where);
 
     if (ordered) q.orderBy([OrderingTerm.asc(playlistItems.position)]);
@@ -149,6 +161,7 @@ class PlaylistDao extends DatabaseAccessor<SayawDatabase> with _$PlaylistDaoMixi
           item: row.readTable(playlistItems),
           track: row.readTableOrNull(tracks),
           danceType: row.readTableOrNull(danceTypes),
+          soundCue: row.readTableOrNull(soundCues),
         ));
   }
 
@@ -178,6 +191,22 @@ class PlaylistDao extends DatabaseAccessor<SayawDatabase> with _$PlaylistDaoMixi
 
     return rowId;
   }
+
+  /// Tags a row with one of the operator's soundboard cues, or clears it.
+  ///
+  /// The cue itself is untouched: it stays on the bar, still fires by hand,
+  /// and can be tagged to as many rows as the night needs. This writes only
+  /// which one this row points at.
+  Future<int> tagSoundCue({
+    required String itemId,
+    required String? cueId,
+  }) =>
+      (update(playlistItems)..where((i) => i.id.equals(itemId))).write(
+        PlaylistItemsCompanion(
+          soundCueId: Value(cueId),
+          updatedAt: Value(clock.now()),
+        ),
+      );
 
   Future<int> removeItem(String itemId) =>
       (delete(playlistItems)..where((i) => i.id.equals(itemId))).go();

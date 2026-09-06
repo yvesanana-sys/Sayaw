@@ -35,6 +35,7 @@ void main() {
   late FakeDeck deckA;
   late FakeDeck deckB;
   late CrossfadeEngine engine;
+  late FakeClipFactory clips;
   late PlaybackSession session;
   late Directory music;
   late String set;
@@ -48,6 +49,7 @@ void main() {
     addTearDown(container.dispose);
     controller = container.read(playbackProvider.notifier);
 
+    clips = FakeClipFactory();
     deckA = FakeDeck('A', trackDuration: _trackLength);
     deckB = FakeDeck('B', trackDuration: _trackLength);
     engine = CrossfadeEngine(
@@ -58,7 +60,7 @@ void main() {
         voiceDeck: FakeDeck('voice'),
         cacheDirectory: '/nonexistent',
         settings: const TtsVoiceSettings(),
-        clipFactory: FakeClipFactory(),
+        clipFactory: clips,
       ),
     );
 
@@ -253,6 +255,82 @@ void main() {
       // The engine is not reloaded: tearing down a prerolled deck to honour a
       // drag would put a hole in a transition that is seconds away.
       expect(container.read(playbackProvider).deckA.title, 'Track a');
+      expect(engine.standbyEntry!.title, 'Track b');
+    });
+  });
+
+  group('announcing a row with the operator\'s own sound', () {
+    setUp(() async {
+      await _addTracks(db, set, music, ['a', 'b']);
+      await session.openPlaylist(set);
+    });
+
+    Future<String> addCue(String label, String path) =>
+        db.soundCueDao.add(label: label, filePath: path);
+
+    test('the row on screen says which sound announces it', () async {
+      final cue = await addCue('Take your partners', '/clips/partners.wav');
+
+      await session.tagSoundCue(itemId: 'item-b', cueId: cue);
+
+      final item = container.read(playbackProvider).queue[1];
+      expect(item.soundCueId, cue);
+      expect(item.soundCueLabel, 'Take your partners');
+      expect(item.hasSoundCue, isTrue);
+    });
+
+    test('it is written to the set, not just to the screen', () async {
+      final cue = await addCue('Take your partners', '/clips/partners.wav');
+
+      await session.tagSoundCue(itemId: 'item-b', cueId: cue);
+
+      final row = (await db.playlistDao.itemsOf(set))[1];
+      expect(row.item.soundCueId, cue);
+    });
+
+    test('a sound tagged mid-set reaches the transition it was tagged for',
+        () async {
+      // Track b is already loaded and prerolled on the standby deck, with the
+      // announcement it had at the time already rendered. Tagging has to reach
+      // that copy, or the clip would not be heard until the set was reopened.
+      final cue = await addCue('Waltz next', '/clips/waltz-next.wav');
+
+      await session.tagSoundCue(itemId: 'item-b', cueId: cue);
+      await _settle();
+
+      expect(engine.standbyEntry!.announcementClipPath,
+          '/clips/waltz-next.wav');
+      // And over the crossfade rather than in place of it.
+      expect(engine.standbyEntry!.spec.announceMode, AnnounceMode.duckOver);
+      // Rendered now rather than at the transition, which is the whole point
+      // of the engine holding a preloaded copy.
+      expect(clips.probed, contains('/clips/waltz-next.wav'));
+    });
+
+    test('clearing it takes the sound off the row and off the deck', () async {
+      final cue = await addCue('Waltz next', '/clips/waltz-next.wav');
+      await session.tagSoundCue(itemId: 'item-b', cueId: cue);
+      await _settle();
+
+      await session.tagSoundCue(itemId: 'item-b', cueId: null);
+      await _settle();
+
+      expect(container.read(playbackProvider).queue[1].hasSoundCue, isFalse);
+      expect(engine.standbyEntry!.announcementClipPath, isNull);
+    });
+
+    test('the row keeps playing through a tag', () async {
+      await session.play();
+      await _settle();
+      final cue = await addCue('Waltz next', '/clips/waltz-next.wav');
+
+      await session.tagSoundCue(itemId: 'item-b', cueId: cue);
+      await _settle();
+
+      // Nothing is reloaded: the deck that is audible and the one cued up
+      // behind it both keep what they have.
+      expect(container.read(playbackProvider).deckA.title, 'Track a');
+      expect(container.read(playbackProvider).deckA.isPlaying, isTrue);
       expect(engine.standbyEntry!.title, 'Track b');
     });
   });

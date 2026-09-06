@@ -23,7 +23,7 @@ import 'playback_ui_state.dart';
 /// stays free of any dependency on the UI, which is what keeps its whole test
 /// suite runnable without a widget tree.
 class PlaybackSession
-    implements LibraryAccess, EventModeAccess, SetShapeAccess {
+    implements LibraryAccess, EventModeAccess, SetShapeAccess, CueTagAccess {
   PlaybackSession({
     required this.engine,
     required this.repository,
@@ -99,6 +99,8 @@ class PlaybackSession
           bpm: effectiveBpm(row),
           position: row.item.position,
           unavailable: reasons[row.item.id],
+          soundCueId: row.soundCue?.id,
+          soundCueLabel: row.soundCue?.label,
         ),
     ]);
 
@@ -367,6 +369,8 @@ class PlaybackSession
         danceType: row.danceType?.name,
         duration: row.track?.durationMs,
         position: row.item.position,
+        soundCueId: row.soundCue?.id,
+        soundCueLabel: row.soundCue?.label,
       ),
     ]);
 
@@ -378,6 +382,61 @@ class PlaybackSession
       // It is in the set and on screen; the engine will simply never reach it.
       // Reopening the set is what turns that into a labelled row, and that is
       // not something to do underneath a running transition.
+    }
+
+    _publish();
+  }
+
+  /// Points one row of the open set at one of the operator's soundboard cues,
+  /// or clears the tag.
+  ///
+  /// Written to the database, then pushed into the queue on screen and into
+  /// the engine's own copy of the row. That last step is the point: the
+  /// entries the engine holds were resolved when the set was opened, and an
+  /// operator tagging a row between two dances means it to be heard on the
+  /// next transition rather than the next time the set is opened.
+  ///
+  /// A row the engine skipped is written and drawn all the same. It is in the
+  /// set, and it will announce itself the day the file it needs comes back.
+  @override
+  Future<void> tagSoundCue({
+    required String itemId,
+    required String? cueId,
+  }) async {
+    final playlistId = _playlistId;
+    if (playlistId == null) return;
+
+    await repository.db.playlistDao
+        .tagSoundCue(itemId: itemId, cueId: cueId);
+
+    // Read back rather than trusting the id that was written: the join is what
+    // says whether the cue still exists and what it is called, and the label
+    // is what the row draws.
+    final row = await repository.db.playlistDao.rowById(itemId);
+    if (row == null) return;
+
+    controller.setQueue([
+      for (final item in controller.queueSnapshot)
+        if (item.id == itemId)
+          item.withSoundCue(
+            cueId: row.soundCue?.id,
+            label: row.soundCue?.label,
+          )
+        else
+          item,
+    ]);
+
+    final playlist = await repository.db.playlistDao.byId(playlistId);
+    if (playlist != null) {
+      engine.retag(
+        itemId,
+        announcementClipPath: PlaylistRepository.announcementClipFor(row),
+        spec: PlaylistRepository.specFor(
+          playlist,
+          row.item,
+          taggedCue: row.soundCue != null,
+        ),
+      );
     }
 
     _publish();

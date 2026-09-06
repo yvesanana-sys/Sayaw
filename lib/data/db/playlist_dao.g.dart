@@ -8,6 +8,7 @@ mixin _$PlaylistDaoMixin on DatabaseAccessor<SayawDatabase> {
   $SourceAccountsTable get sourceAccounts => attachedDatabase.sourceAccounts;
   $DanceTypesTable get danceTypes => attachedDatabase.danceTypes;
   $TracksTable get tracks => attachedDatabase.tracks;
+  $SoundCuesTable get soundCues => attachedDatabase.soundCues;
   $PlaylistItemsTable get playlistItems => attachedDatabase.playlistItems;
   PlaylistDaoManager get managers => PlaylistDaoManager(this);
 }
@@ -26,6 +27,8 @@ class PlaylistDaoManager {
       $$DanceTypesTableTableManager(_db.attachedDatabase, _db.danceTypes);
   $$TracksTableTableManager get tracks =>
       $$TracksTableTableManager(_db.attachedDatabase, _db.tracks);
+  $$SoundCuesTableTableManager get soundCues =>
+      $$SoundCuesTableTableManager(_db.attachedDatabase, _db.soundCues);
   $$PlaylistItemsTableTableManager get playlistItems =>
       $$PlaylistItemsTableTableManager(_db.attachedDatabase, _db.playlistItems);
 }

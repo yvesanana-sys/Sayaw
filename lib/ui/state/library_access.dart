@@ -41,6 +41,19 @@ abstract class EventModeAccess {
   });
 }
 
+/// Tagging a row in the open set with one of the operator's own clips.
+///
+/// Narrow for the same reason the two above are: the queue list needs to
+/// point a row at a cue and nothing else, and a widget that could reach the
+/// transport from a picker is a widget that can stop a set by accident.
+abstract class CueTagAccess {
+  /// Tags [itemId] with [cueId], or clears the tag when [cueId] is null.
+  ///
+  /// Takes effect on the transition it was made for, not on the next time the
+  /// set is opened — see [PlaybackSession.tagSoundCue].
+  Future<void> tagSoundCue({required String itemId, required String? cueId});
+}
+
 /// How the night is shaped: how many songs, and how much of each.
 ///
 /// Its own interface, like the two above, so the dialog that edits it can be

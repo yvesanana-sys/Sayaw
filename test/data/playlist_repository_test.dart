@@ -162,6 +162,94 @@ void main() {
       queue = await repo.buildQueue(set);
       expect(queue.entries.single.announcementClipPath, '/clips/mc-intro.m4a');
     });
+
+    test('a tagged soundboard cue beats both of those', () async {
+      await (db.update(db.danceTypes)..where((d) => d.id.equals('tango')))
+          .write(const DanceTypesCompanion(
+              customClipPath: Value('/clips/tango.m4a')));
+      await _appendLocal(db, set, music, 'a', danceTypeId: 'tango');
+      await _override(
+        db,
+        'item-a',
+        const PlaylistItemsCompanion(
+            announcementClipPath: Value('/clips/mc-intro.m4a')),
+      );
+
+      final cue = await db.soundCueDao
+          .add(label: 'Tango next', filePath: '/clips/tango-next.wav');
+      await db.playlistDao.tagSoundCue(itemId: 'item-a', cueId: cue);
+
+      final queue = await repo.buildQueue(set);
+      expect(
+          queue.entries.single.announcementClipPath, '/clips/tango-next.wav');
+    });
+
+    test('tagging a cue moves the row onto the crossfade', () async {
+      await _appendLocal(db, set, music, 'a', danceTypeId: 'tango');
+
+      // What a new playlist does: music out, voice, music in.
+      var queue = await repo.buildQueue(set);
+      expect(queue.entries.single.spec.announceMode, AnnounceMode.beforeMusic);
+      expect(queue.entries.single.spec.isSequential, isTrue);
+
+      final cue = await db.soundCueDao
+          .add(label: 'Tango next', filePath: '/clips/tango-next.wav');
+      await db.playlistDao.tagSoundCue(itemId: 'item-a', cueId: cue);
+
+      // Tagging a clip to a row says when as well as what.
+      queue = await repo.buildQueue(set);
+      expect(queue.entries.single.spec.announceMode, AnnounceMode.duckOver);
+      expect(queue.entries.single.spec.isSequential, isFalse);
+    });
+
+    test('a rotation still plays a tagged cue in the gap', () async {
+      await (db.update(db.playlists)..where((p) => p.id.equals(set)))
+          .write(const PlaylistsCompanion(
+              rotationGapMs: Value(Duration(seconds: 10))));
+      await _appendLocal(db, set, music, 'a', danceTypeId: 'tango');
+
+      final cue = await db.soundCueDao
+          .add(label: 'Rotate', filePath: '/clips/rotate.wav');
+      await db.playlistDao.tagSoundCue(itemId: 'item-a', cueId: cue);
+
+      // The mode says over-the-fade, but a rotation has no fade to be over.
+      final spec = (await repo.buildQueue(set)).entries.single.spec;
+      expect(spec.announceMode, AnnounceMode.duckOver);
+      expect(spec.isSequential, isTrue);
+    });
+
+    test('a row that names its own mode wins over the tag', () async {
+      await _appendLocal(db, set, music, 'a', danceTypeId: 'tango');
+      await _override(
+        db,
+        'item-a',
+        const PlaylistItemsCompanion(
+            announceMode: Value(AnnounceMode.beforeMusic)),
+      );
+
+      final cue = await db.soundCueDao
+          .add(label: 'Tango next', filePath: '/clips/tango-next.wav');
+      await db.playlistDao.tagSoundCue(itemId: 'item-a', cueId: cue);
+
+      final spec = (await repo.buildQueue(set)).entries.single.spec;
+      expect(spec.announceMode, AnnounceMode.beforeMusic);
+      expect(
+          (await repo.buildQueue(set)).entries.single.announcementClipPath,
+          '/clips/tango-next.wav');
+    });
+
+    test('clearing the tag puts the row back where it was', () async {
+      await _appendLocal(db, set, music, 'a', danceTypeId: 'tango');
+      final cue = await db.soundCueDao
+          .add(label: 'Tango next', filePath: '/clips/tango-next.wav');
+
+      await db.playlistDao.tagSoundCue(itemId: 'item-a', cueId: cue);
+      await db.playlistDao.tagSoundCue(itemId: 'item-a', cueId: null);
+
+      final entry = (await repo.buildQueue(set)).entries.single;
+      expect(entry.announcementClipPath, isNull);
+      expect(entry.spec.announceMode, AnnounceMode.beforeMusic);
+    });
   });
 
   group('rebuilding the source from its columns', () {
