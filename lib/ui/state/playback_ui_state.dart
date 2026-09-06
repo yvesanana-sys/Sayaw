@@ -106,6 +106,8 @@ class QueueItemUi {
     this.duration,
     this.bpm,
     this.unavailable,
+    this.soundCueId,
+    this.soundCueLabel,
   });
 
   final String id;
@@ -124,7 +126,18 @@ class QueueItemUi {
 
   final UnavailableReason? unavailable;
 
+  /// The soundboard cue tagged to this row, which announces it. Null when the
+  /// row says whatever the dance type says, or nothing at all.
+  final String? soundCueId;
+
+  /// What that cue is called on the bar — 'Whistle', 'Next: Waltz'. Carried
+  /// beside the id so a row can name its clip without the list holding a
+  /// second copy of the soundboard.
+  final String? soundCueLabel;
+
   bool get isPlayable => unavailable == null;
+
+  bool get hasSoundCue => soundCueId != null;
 
   QueueItemUi copyWith({double? position}) => QueueItemUi(
         id: id,
@@ -135,6 +148,8 @@ class QueueItemUi {
         duration: duration,
         bpm: bpm,
         unavailable: unavailable,
+        soundCueId: soundCueId,
+        soundCueLabel: soundCueLabel,
       );
 
   /// Its own method rather than a `copyWith` argument: [unavailable] is
@@ -149,6 +164,26 @@ class QueueItemUi {
         duration: duration,
         bpm: bpm,
         unavailable: reason,
+        soundCueId: soundCueId,
+        soundCueLabel: soundCueLabel,
+      );
+
+  /// The same row tagged to a different cue, or to none.
+  ///
+  /// Its own method for the reason [withUnavailable] is: null means "nothing
+  /// is tagged here any more", which a `copyWith` argument could not tell from
+  /// "leave it alone" — and clearing a tag is half of what the picker does.
+  QueueItemUi withSoundCue({String? cueId, String? label}) => QueueItemUi(
+        id: id,
+        title: title,
+        artist: artist,
+        position: position,
+        danceType: danceType,
+        duration: duration,
+        bpm: bpm,
+        unavailable: unavailable,
+        soundCueId: cueId,
+        soundCueLabel: label,
       );
 }
 
@@ -493,6 +528,11 @@ final eventModeProvider = Provider<EventModeAccess?>(
 
 /// How many songs the night runs to, and how much of each.
 final setShapeProvider = Provider<SetShapeAccess?>(
+  (ref) => ref.watch(playbackSessionProvider),
+);
+
+/// Tagging a row in the open set with one of the operator's own clips.
+final cueTagProvider = Provider<CueTagAccess?>(
   (ref) => ref.watch(playbackSessionProvider),
 );
 

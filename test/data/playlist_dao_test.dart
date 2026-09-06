@@ -220,6 +220,65 @@ void main() {
     });
   });
 
+  group('tagging a row with a sound', () {
+    test('the row comes back carrying the cue', () async {
+      await _appendTracks(db, set, ['a']);
+      final cue = await db.soundCueDao
+          .add(label: 'Take your partners', filePath: '/clips/partners.wav');
+
+      await db.playlistDao.tagSoundCue(itemId: 'item-a', cueId: cue);
+
+      final row = (await db.playlistDao.itemsOf(set)).single;
+      expect(row.item.soundCueId, cue);
+      expect(row.soundCue!.label, 'Take your partners');
+      expect(row.soundCue!.filePath, '/clips/partners.wav');
+    });
+
+    test('one recording can announce as many rows as the night needs',
+        () async {
+      await _appendTracks(db, set, ['a', 'b']);
+      final cue =
+          await db.soundCueDao.add(label: 'Rotate', filePath: '/clips/r.wav');
+
+      await db.playlistDao.tagSoundCue(itemId: 'item-a', cueId: cue);
+      await db.playlistDao.tagSoundCue(itemId: 'item-b', cueId: cue);
+
+      final rows = await db.playlistDao.itemsOf(set);
+      expect([for (final row in rows) row.soundCue?.label],
+          ['Rotate', 'Rotate']);
+    });
+
+    test('clearing the tag leaves the row in the set', () async {
+      await _appendTracks(db, set, ['a']);
+      final cue =
+          await db.soundCueDao.add(label: 'Rotate', filePath: '/clips/r.wav');
+      await db.playlistDao.tagSoundCue(itemId: 'item-a', cueId: cue);
+
+      await db.playlistDao.tagSoundCue(itemId: 'item-a', cueId: null);
+
+      final row = (await db.playlistDao.itemsOf(set)).single;
+      expect(row.item.soundCueId, isNull);
+      expect(row.soundCue, isNull);
+      expect(row.track!.title, 'Track a');
+    });
+
+    test('deleting the sound quiets the row rather than dropping it',
+        () async {
+      await _appendTracks(db, set, ['a']);
+      final cue =
+          await db.soundCueDao.add(label: 'Rotate', filePath: '/clips/r.wav');
+      await db.playlistDao.tagSoundCue(itemId: 'item-a', cueId: cue);
+
+      await db.soundCueDao.remove(cue);
+
+      // ON DELETE SET NULL, not CASCADE: removing a whistle from the bar must
+      // never take a song out of the set with it.
+      final row = (await db.playlistDao.itemsOf(set)).single;
+      expect(row.item.soundCueId, isNull);
+      expect(row.track!.title, 'Track a');
+    });
+  });
+
   group('what will still play with the network gone', () {
     setUp(() async {
       await db.into(db.sourceAccounts).insert(SourceAccountsCompanion.insert(

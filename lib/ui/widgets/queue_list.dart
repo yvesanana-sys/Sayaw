@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../layout/breakpoints.dart';
+import '../screens/cue_tag_dialog.dart';
 import '../state/playback_ui_state.dart';
+import '../state/soundboard_provider.dart';
 import '../theme/sayaw_theme.dart';
 import '../touch/touch_targets.dart';
 
@@ -75,7 +77,7 @@ class QueueList extends ConsumerWidget {
   }
 }
 
-class _QueueRow extends StatelessWidget {
+class _QueueRow extends ConsumerWidget {
   const _QueueRow({
     super.key,
     required this.item,
@@ -90,8 +92,13 @@ class _QueueRow extends StatelessWidget {
   final SayawBreakpoint breakpoint;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final unavailable = !item.isPlayable;
+
+    // Nothing to tag to until the operator has loaded a sound, so the control
+    // is not drawn at all — the same rule the soundboard bar follows, and it
+    // keeps a row that has never met the feature exactly as it was.
+    final hasCues = ref.watch(soundCuesProvider).value?.isNotEmpty ?? false;
 
     final title = Text(
       item.title,
@@ -126,6 +133,7 @@ class _QueueRow extends StatelessWidget {
               '${item.unavailable!.message}'
           : '${item.title} by ${item.artist}'
               '${item.danceType == null ? '' : ', ${item.danceType}'}'
+              '${item.hasSoundCue ? ', announced by ${item.soundCueLabel}' : ''}'
               '${isCurrent ? ', now playing' : ''}',
       child: Container(
         constraints: const BoxConstraints(minHeight: kMinTouchTarget + 8),
@@ -166,10 +174,18 @@ class _QueueRow extends StatelessWidget {
                 ),
               ),
             ),
+            // Drawn at every width, unlike the dance chip. A tag is something
+            // the operator set on this row by hand, and a control whose state
+            // is invisible on a tablet is a control that gets set twice.
+            if (item.hasSoundCue && item.soundCueLabel != null) ...[
+              _CueChip(item.soundCueLabel!),
+              const SizedBox(width: 4),
+            ],
             if (item.danceType != null && !breakpoint.isCompact) ...[
               _DanceChip(item.danceType!),
               const SizedBox(width: 8),
             ],
+            if (hasCues) QueueCueButton(item: item),
             QueueDragHandle(index: index, breakpoint: breakpoint, item: item),
           ],
         ),
@@ -216,6 +232,84 @@ class QueueDragHandle extends StatelessWidget {
     return breakpoint.isCompact
         ? ReorderableDelayedDragStartListener(index: index, child: handle)
         : ReorderableDragStartListener(index: index, child: handle);
+  }
+}
+
+/// The cue tagged to this row, and the way to change it.
+///
+/// An explicit button rather than a long-press: in compact layouts a
+/// long-press on a queue row already starts a drag, and a gesture that means
+/// two things is a gesture that does the wrong one in the dark.
+@visibleForTesting
+class QueueCueButton extends ConsumerWidget {
+  const QueueCueButton({super.key, required this.item});
+
+  final QueueItemUi item;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final access = ref.watch(cueTagProvider);
+    final tagged = item.hasSoundCue;
+
+    return Semantics(
+      button: true,
+      // The label carries the state, because the icon cannot: there is no
+      // hover on a tablet and a tooltip would be unreadable by the finger this
+      // is drawn for.
+      label: tagged
+          ? 'Announced by ${item.soundCueLabel}. '
+              'Change the announcement for ${item.title}'
+          : 'Announce ${item.title} with a sound',
+      excludeSemantics: true,
+      child: SizedBox(
+        width: kMinTouchTarget,
+        height: kMinTouchTarget,
+        child: InkWell(
+          // Null with no session behind the screen — every widget test, and
+          // the moment before the runtime has finished starting.
+          onTap: access == null
+              ? null
+              : () => showCueTagDialog(context, item: item, access: access),
+          child: Icon(
+            tagged ? Icons.campaign : Icons.campaign_outlined,
+            size: 20,
+            // Tertiary is already the transition colour in this app — it is
+            // what the crossfade button wears — and a tagged row is a row that
+            // says something at the transition.
+            color: tagged ? SayawColors.tertiary : SayawColors.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The name of the cue tagged to a row.
+class _CueChip extends StatelessWidget {
+  const _CueChip(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 120),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: SayawColors.tertiary.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: SayawColors.tertiary,
+        ),
+      ),
+    );
   }
 }
 

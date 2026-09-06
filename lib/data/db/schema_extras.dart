@@ -74,6 +74,15 @@ CREATE TABLE participants (
     'CREATE INDEX idx_participants_present '
         'ON participants (is_present, draw_count)',
   ],
+
+  // A soundboard cue tagged to a row, so a set can announce itself in the
+  // operator's own voice. Nullable with no default, so every row already on
+  // disk keeps announcing exactly the way it did — and `ADD COLUMN` accepts a
+  // foreign key only because that default is NULL.
+  8: [
+    'ALTER TABLE playlist_items ADD COLUMN sound_cue_id TEXT '
+        'REFERENCES sound_cues(id) ON DELETE SET NULL',
+  ],
 };
 
 /// Statements run once, in order, when the database file is first created.

@@ -113,6 +113,27 @@ class QueueEntry {
         title: title,
         artist: artist,
       );
+
+  /// The same row with a different announcement.
+  ///
+  /// [spec] travels with the clip because the two are one decision: tagging a
+  /// clip to a row says when it should be heard as well as what it is, and
+  /// leaving the old spec behind would play the new clip on the old timing.
+  QueueEntry withAnnouncement({
+    required String? clipPath,
+    required TransitionSpec spec,
+  }) =>
+      QueueEntry(
+        itemId: itemId,
+        media: media,
+        spec: spec,
+        danceTypeName: danceTypeName,
+        announcementText: announcementText,
+        announcementClipPath: clipPath,
+        targetDuration: targetDuration,
+        title: title,
+        artist: artist,
+      );
 }
 
 /// Re-resolves an entry whose signed URL is close to expiry, returning one
@@ -323,6 +344,55 @@ class CrossfadeEngine {
     // not come into it: a set built before pressing play is idle the whole
     // time, and a standby deck loaded at zero volume disturbs nothing.
     if (_standbyEntry == null) await _preloadNext();
+  }
+
+  /// Changes what one row announces, without disturbing what is loaded.
+  ///
+  /// The entries the engine holds were resolved when the set was opened, so
+  /// without this a clip tagged between two dances would not be heard until
+  /// the set was next opened — and the operator tagged that row for the
+  /// transition that is about to happen, not for tomorrow. Nothing is
+  /// reloaded: a row already on a deck keeps playing, and only what it says on
+  /// the way out changes.
+  void retag(
+    String itemId, {
+    required String? announcementClipPath,
+    required TransitionSpec spec,
+  }) {
+    QueueEntry retagged(QueueEntry entry) => entry.withAnnouncement(
+          clipPath: announcementClipPath,
+          spec: spec,
+        );
+
+    var found = false;
+    final next = <QueueEntry>[];
+    for (final entry in _queue) {
+      if (entry.itemId != itemId) {
+        next.add(entry);
+        continue;
+      }
+      found = true;
+      next.add(retagged(entry));
+    }
+    if (!found) return;
+    _queue = List.unmodifiable(next);
+
+    // The decks and the look-ahead hold their own copies, taken before this
+    // was written. Replacing the queue alone would leave the transition that
+    // is seconds away still playing what the row used to say.
+    if (_activeEntry?.itemId == itemId) {
+      _activeEntry = retagged(_activeEntry!);
+    }
+    if (_lookahead?.itemId == itemId) {
+      _lookahead = retagged(_lookahead!);
+    }
+    if (_standbyEntry?.itemId == itemId) {
+      final entry = retagged(_standbyEntry!);
+      _standbyEntry = entry;
+      // Its old clip was rendered when it was preloaded. Render the new one
+      // now, for the same reason: a transition must not wait on synthesis.
+      unawaited(announcements.warm(entry));
+    }
   }
 
   Future<void> play() async {

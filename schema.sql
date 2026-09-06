@@ -193,6 +193,10 @@ CREATE TABLE playlist_items (
   announcement_text      TEXT,                     -- overrides the dance type template
   announcement_clip_path TEXT,                     -- overrides TTS entirely
 
+  -- A soundboard cue tagged to this row by the operator. The most specific of
+  -- the three announcement sources, so it wins over both of the above.
+  sound_cue_id           TEXT REFERENCES sound_cues(id) ON DELETE SET NULL,
+
   -- per-item transition overrides (NULL = inherit from playlist)
   crossfade_ms           INTEGER,
   fade_in_curve          TEXT,

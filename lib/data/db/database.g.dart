@@ -4391,6 +4391,526 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
   }
 }
 
+class $SoundCuesTable extends SoundCues
+    with TableInfo<$SoundCuesTable, SoundCueRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SoundCuesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _labelMeta = const VerificationMeta('label');
+  @override
+  late final GeneratedColumn<String> label = GeneratedColumn<String>(
+    'label',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _filePathMeta = const VerificationMeta(
+    'filePath',
+  );
+  @override
+  late final GeneratedColumn<String> filePath = GeneratedColumn<String>(
+    'file_path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _duckLevelMeta = const VerificationMeta(
+    'duckLevel',
+  );
+  @override
+  late final GeneratedColumn<double> duckLevel = GeneratedColumn<double>(
+    'duck_level',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1.0),
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<Duration, int> duckFadeMs =
+      GeneratedColumn<int>(
+        'duck_fade_ms',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(120),
+      ).withConverter<Duration>($SoundCuesTable.$converterduckFadeMs);
+  @override
+  late final GeneratedColumnWithTypeConverter<Duration, int> restoreFadeMs =
+      GeneratedColumn<int>(
+        'restore_fade_ms',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(400),
+      ).withConverter<Duration>($SoundCuesTable.$converterrestoreFadeMs);
+  static const VerificationMeta _hotkeyMeta = const VerificationMeta('hotkey');
+  @override
+  late final GeneratedColumn<String> hotkey = GeneratedColumn<String>(
+    'hotkey',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _sortIndexMeta = const VerificationMeta(
+    'sortIndex',
+  );
+  @override
+  late final GeneratedColumn<int> sortIndex = GeneratedColumn<int>(
+    'sort_index',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    label,
+    filePath,
+    duckLevel,
+    duckFadeMs,
+    restoreFadeMs,
+    hotkey,
+    sortIndex,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sound_cues';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SoundCueRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('label')) {
+      context.handle(
+        _labelMeta,
+        label.isAcceptableOrUnknown(data['label']!, _labelMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_labelMeta);
+    }
+    if (data.containsKey('file_path')) {
+      context.handle(
+        _filePathMeta,
+        filePath.isAcceptableOrUnknown(data['file_path']!, _filePathMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_filePathMeta);
+    }
+    if (data.containsKey('duck_level')) {
+      context.handle(
+        _duckLevelMeta,
+        duckLevel.isAcceptableOrUnknown(data['duck_level']!, _duckLevelMeta),
+      );
+    }
+    if (data.containsKey('hotkey')) {
+      context.handle(
+        _hotkeyMeta,
+        hotkey.isAcceptableOrUnknown(data['hotkey']!, _hotkeyMeta),
+      );
+    }
+    if (data.containsKey('sort_index')) {
+      context.handle(
+        _sortIndexMeta,
+        sortIndex.isAcceptableOrUnknown(data['sort_index']!, _sortIndexMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SoundCueRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SoundCueRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      label: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}label'],
+      )!,
+      filePath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}file_path'],
+      )!,
+      duckLevel: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}duck_level'],
+      )!,
+      duckFadeMs: $SoundCuesTable.$converterduckFadeMs.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}duck_fade_ms'],
+        )!,
+      ),
+      restoreFadeMs: $SoundCuesTable.$converterrestoreFadeMs.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}restore_fade_ms'],
+        )!,
+      ),
+      hotkey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}hotkey'],
+      ),
+      sortIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_index'],
+      )!,
+    );
+  }
+
+  @override
+  $SoundCuesTable createAlias(String alias) {
+    return $SoundCuesTable(attachedDatabase, alias);
+  }
+
+  static TypeConverter<Duration, int> $converterduckFadeMs =
+      const MillisDurationConverter();
+  static TypeConverter<Duration, int> $converterrestoreFadeMs =
+      const MillisDurationConverter();
+}
+
+class SoundCueRow extends DataClass implements Insertable<SoundCueRow> {
+  final String id;
+
+  /// What the button says. 'Whistle', 'Bell', 'Rotate'.
+  final String label;
+  final String filePath;
+
+  /// Where the music sits while the cue plays, as a fraction of its level.
+  ///
+  /// One leaves the music alone, which is right for a whistle: it is louder
+  /// than the mix and cuts through on its own, and dipping for it would
+  /// announce the cue before the cue does.
+  final double duckLevel;
+  final Duration duckFadeMs;
+  final Duration restoreFadeMs;
+
+  /// '1' to '9'. Null is a cue with a button and no shortcut.
+  final String? hotkey;
+  final int sortIndex;
+  const SoundCueRow({
+    required this.id,
+    required this.label,
+    required this.filePath,
+    required this.duckLevel,
+    required this.duckFadeMs,
+    required this.restoreFadeMs,
+    this.hotkey,
+    required this.sortIndex,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['label'] = Variable<String>(label);
+    map['file_path'] = Variable<String>(filePath);
+    map['duck_level'] = Variable<double>(duckLevel);
+    {
+      map['duck_fade_ms'] = Variable<int>(
+        $SoundCuesTable.$converterduckFadeMs.toSql(duckFadeMs),
+      );
+    }
+    {
+      map['restore_fade_ms'] = Variable<int>(
+        $SoundCuesTable.$converterrestoreFadeMs.toSql(restoreFadeMs),
+      );
+    }
+    if (!nullToAbsent || hotkey != null) {
+      map['hotkey'] = Variable<String>(hotkey);
+    }
+    map['sort_index'] = Variable<int>(sortIndex);
+    return map;
+  }
+
+  SoundCuesCompanion toCompanion(bool nullToAbsent) {
+    return SoundCuesCompanion(
+      id: Value(id),
+      label: Value(label),
+      filePath: Value(filePath),
+      duckLevel: Value(duckLevel),
+      duckFadeMs: Value(duckFadeMs),
+      restoreFadeMs: Value(restoreFadeMs),
+      hotkey: hotkey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(hotkey),
+      sortIndex: Value(sortIndex),
+    );
+  }
+
+  factory SoundCueRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SoundCueRow(
+      id: serializer.fromJson<String>(json['id']),
+      label: serializer.fromJson<String>(json['label']),
+      filePath: serializer.fromJson<String>(json['filePath']),
+      duckLevel: serializer.fromJson<double>(json['duckLevel']),
+      duckFadeMs: serializer.fromJson<Duration>(json['duckFadeMs']),
+      restoreFadeMs: serializer.fromJson<Duration>(json['restoreFadeMs']),
+      hotkey: serializer.fromJson<String?>(json['hotkey']),
+      sortIndex: serializer.fromJson<int>(json['sortIndex']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'label': serializer.toJson<String>(label),
+      'filePath': serializer.toJson<String>(filePath),
+      'duckLevel': serializer.toJson<double>(duckLevel),
+      'duckFadeMs': serializer.toJson<Duration>(duckFadeMs),
+      'restoreFadeMs': serializer.toJson<Duration>(restoreFadeMs),
+      'hotkey': serializer.toJson<String?>(hotkey),
+      'sortIndex': serializer.toJson<int>(sortIndex),
+    };
+  }
+
+  SoundCueRow copyWith({
+    String? id,
+    String? label,
+    String? filePath,
+    double? duckLevel,
+    Duration? duckFadeMs,
+    Duration? restoreFadeMs,
+    Value<String?> hotkey = const Value.absent(),
+    int? sortIndex,
+  }) => SoundCueRow(
+    id: id ?? this.id,
+    label: label ?? this.label,
+    filePath: filePath ?? this.filePath,
+    duckLevel: duckLevel ?? this.duckLevel,
+    duckFadeMs: duckFadeMs ?? this.duckFadeMs,
+    restoreFadeMs: restoreFadeMs ?? this.restoreFadeMs,
+    hotkey: hotkey.present ? hotkey.value : this.hotkey,
+    sortIndex: sortIndex ?? this.sortIndex,
+  );
+  SoundCueRow copyWithCompanion(SoundCuesCompanion data) {
+    return SoundCueRow(
+      id: data.id.present ? data.id.value : this.id,
+      label: data.label.present ? data.label.value : this.label,
+      filePath: data.filePath.present ? data.filePath.value : this.filePath,
+      duckLevel: data.duckLevel.present ? data.duckLevel.value : this.duckLevel,
+      duckFadeMs: data.duckFadeMs.present
+          ? data.duckFadeMs.value
+          : this.duckFadeMs,
+      restoreFadeMs: data.restoreFadeMs.present
+          ? data.restoreFadeMs.value
+          : this.restoreFadeMs,
+      hotkey: data.hotkey.present ? data.hotkey.value : this.hotkey,
+      sortIndex: data.sortIndex.present ? data.sortIndex.value : this.sortIndex,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SoundCueRow(')
+          ..write('id: $id, ')
+          ..write('label: $label, ')
+          ..write('filePath: $filePath, ')
+          ..write('duckLevel: $duckLevel, ')
+          ..write('duckFadeMs: $duckFadeMs, ')
+          ..write('restoreFadeMs: $restoreFadeMs, ')
+          ..write('hotkey: $hotkey, ')
+          ..write('sortIndex: $sortIndex')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    label,
+    filePath,
+    duckLevel,
+    duckFadeMs,
+    restoreFadeMs,
+    hotkey,
+    sortIndex,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SoundCueRow &&
+          other.id == this.id &&
+          other.label == this.label &&
+          other.filePath == this.filePath &&
+          other.duckLevel == this.duckLevel &&
+          other.duckFadeMs == this.duckFadeMs &&
+          other.restoreFadeMs == this.restoreFadeMs &&
+          other.hotkey == this.hotkey &&
+          other.sortIndex == this.sortIndex);
+}
+
+class SoundCuesCompanion extends UpdateCompanion<SoundCueRow> {
+  final Value<String> id;
+  final Value<String> label;
+  final Value<String> filePath;
+  final Value<double> duckLevel;
+  final Value<Duration> duckFadeMs;
+  final Value<Duration> restoreFadeMs;
+  final Value<String?> hotkey;
+  final Value<int> sortIndex;
+  final Value<int> rowid;
+  const SoundCuesCompanion({
+    this.id = const Value.absent(),
+    this.label = const Value.absent(),
+    this.filePath = const Value.absent(),
+    this.duckLevel = const Value.absent(),
+    this.duckFadeMs = const Value.absent(),
+    this.restoreFadeMs = const Value.absent(),
+    this.hotkey = const Value.absent(),
+    this.sortIndex = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SoundCuesCompanion.insert({
+    required String id,
+    required String label,
+    required String filePath,
+    this.duckLevel = const Value.absent(),
+    this.duckFadeMs = const Value.absent(),
+    this.restoreFadeMs = const Value.absent(),
+    this.hotkey = const Value.absent(),
+    this.sortIndex = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       label = Value(label),
+       filePath = Value(filePath);
+  static Insertable<SoundCueRow> custom({
+    Expression<String>? id,
+    Expression<String>? label,
+    Expression<String>? filePath,
+    Expression<double>? duckLevel,
+    Expression<int>? duckFadeMs,
+    Expression<int>? restoreFadeMs,
+    Expression<String>? hotkey,
+    Expression<int>? sortIndex,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (label != null) 'label': label,
+      if (filePath != null) 'file_path': filePath,
+      if (duckLevel != null) 'duck_level': duckLevel,
+      if (duckFadeMs != null) 'duck_fade_ms': duckFadeMs,
+      if (restoreFadeMs != null) 'restore_fade_ms': restoreFadeMs,
+      if (hotkey != null) 'hotkey': hotkey,
+      if (sortIndex != null) 'sort_index': sortIndex,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SoundCuesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? label,
+    Value<String>? filePath,
+    Value<double>? duckLevel,
+    Value<Duration>? duckFadeMs,
+    Value<Duration>? restoreFadeMs,
+    Value<String?>? hotkey,
+    Value<int>? sortIndex,
+    Value<int>? rowid,
+  }) {
+    return SoundCuesCompanion(
+      id: id ?? this.id,
+      label: label ?? this.label,
+      filePath: filePath ?? this.filePath,
+      duckLevel: duckLevel ?? this.duckLevel,
+      duckFadeMs: duckFadeMs ?? this.duckFadeMs,
+      restoreFadeMs: restoreFadeMs ?? this.restoreFadeMs,
+      hotkey: hotkey ?? this.hotkey,
+      sortIndex: sortIndex ?? this.sortIndex,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (label.present) {
+      map['label'] = Variable<String>(label.value);
+    }
+    if (filePath.present) {
+      map['file_path'] = Variable<String>(filePath.value);
+    }
+    if (duckLevel.present) {
+      map['duck_level'] = Variable<double>(duckLevel.value);
+    }
+    if (duckFadeMs.present) {
+      map['duck_fade_ms'] = Variable<int>(
+        $SoundCuesTable.$converterduckFadeMs.toSql(duckFadeMs.value),
+      );
+    }
+    if (restoreFadeMs.present) {
+      map['restore_fade_ms'] = Variable<int>(
+        $SoundCuesTable.$converterrestoreFadeMs.toSql(restoreFadeMs.value),
+      );
+    }
+    if (hotkey.present) {
+      map['hotkey'] = Variable<String>(hotkey.value);
+    }
+    if (sortIndex.present) {
+      map['sort_index'] = Variable<int>(sortIndex.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SoundCuesCompanion(')
+          ..write('id: $id, ')
+          ..write('label: $label, ')
+          ..write('filePath: $filePath, ')
+          ..write('duckLevel: $duckLevel, ')
+          ..write('duckFadeMs: $duckFadeMs, ')
+          ..write('restoreFadeMs: $restoreFadeMs, ')
+          ..write('hotkey: $hotkey, ')
+          ..write('sortIndex: $sortIndex, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $PlaylistItemsTable extends PlaylistItems
     with TableInfo<$PlaylistItemsTable, PlaylistItem> {
   @override
@@ -4500,6 +5020,20 @@ class $PlaylistItemsTable extends PlaylistItems
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _soundCueIdMeta = const VerificationMeta(
+    'soundCueId',
+  );
+  @override
+  late final GeneratedColumn<String> soundCueId = GeneratedColumn<String>(
+    'sound_cue_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES sound_cues (id) ON DELETE SET NULL',
+    ),
+  );
   @override
   late final GeneratedColumnWithTypeConverter<Duration?, int> crossfadeMs =
       GeneratedColumn<int>(
@@ -4631,6 +5165,7 @@ class $PlaylistItemsTable extends PlaylistItems
     announceMode,
     announcementText,
     announcementClipPath,
+    soundCueId,
     crossfadeMs,
     fadeInCurve,
     fadeOutCurve,
@@ -4710,6 +5245,15 @@ class $PlaylistItemsTable extends PlaylistItems
         ),
       );
     }
+    if (data.containsKey('sound_cue_id')) {
+      context.handle(
+        _soundCueIdMeta,
+        soundCueId.isAcceptableOrUnknown(
+          data['sound_cue_id']!,
+          _soundCueIdMeta,
+        ),
+      );
+    }
     if (data.containsKey('gain_offset_db')) {
       context.handle(
         _gainOffsetDbMeta,
@@ -4779,6 +5323,10 @@ class $PlaylistItemsTable extends PlaylistItems
       announcementClipPath: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}announcement_clip_path'],
+      ),
+      soundCueId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sound_cue_id'],
       ),
       crossfadeMs: $PlaylistItemsTable.$convertercrossfadeMsn.fromSql(
         attachedDatabase.typeMapping.read(
@@ -4914,6 +5462,15 @@ class PlaylistItem extends DataClass implements Insertable<PlaylistItem> {
 
   /// Overrides TTS entirely.
   final String? announcementClipPath;
+
+  /// A soundboard cue tagged to this row, played as its announcement.
+  ///
+  /// The operator's own recording, picked from the cues they already loaded,
+  /// so a clip reaches a transition without being typed as a path anywhere.
+  /// The most specific of the three announcement sources — it wins over both
+  /// of the above — and `SET NULL` because deleting a whistle should quiet a
+  /// row, not delete it out of the set.
+  final String? soundCueId;
   final Duration? crossfadeMs;
   final FadeCurve? fadeInCurve;
   final FadeCurve? fadeOutCurve;
@@ -4944,6 +5501,7 @@ class PlaylistItem extends DataClass implements Insertable<PlaylistItem> {
     this.announceMode,
     this.announcementText,
     this.announcementClipPath,
+    this.soundCueId,
     this.crossfadeMs,
     this.fadeInCurve,
     this.fadeOutCurve,
@@ -4984,6 +5542,9 @@ class PlaylistItem extends DataClass implements Insertable<PlaylistItem> {
     }
     if (!nullToAbsent || announcementClipPath != null) {
       map['announcement_clip_path'] = Variable<String>(announcementClipPath);
+    }
+    if (!nullToAbsent || soundCueId != null) {
+      map['sound_cue_id'] = Variable<String>(soundCueId);
     }
     if (!nullToAbsent || crossfadeMs != null) {
       map['crossfade_ms'] = Variable<int>(
@@ -5059,6 +5620,9 @@ class PlaylistItem extends DataClass implements Insertable<PlaylistItem> {
       announcementClipPath: announcementClipPath == null && nullToAbsent
           ? const Value.absent()
           : Value(announcementClipPath),
+      soundCueId: soundCueId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(soundCueId),
       crossfadeMs: crossfadeMs == null && nullToAbsent
           ? const Value.absent()
           : Value(crossfadeMs),
@@ -5109,6 +5673,7 @@ class PlaylistItem extends DataClass implements Insertable<PlaylistItem> {
       announcementClipPath: serializer.fromJson<String?>(
         json['announcementClipPath'],
       ),
+      soundCueId: serializer.fromJson<String?>(json['soundCueId']),
       crossfadeMs: serializer.fromJson<Duration?>(json['crossfadeMs']),
       fadeInCurve: $PlaylistItemsTable.$converterfadeInCurven.fromJson(
         serializer.fromJson<String?>(json['fadeInCurve']),
@@ -5146,6 +5711,7 @@ class PlaylistItem extends DataClass implements Insertable<PlaylistItem> {
       ),
       'announcementText': serializer.toJson<String?>(announcementText),
       'announcementClipPath': serializer.toJson<String?>(announcementClipPath),
+      'soundCueId': serializer.toJson<String?>(soundCueId),
       'crossfadeMs': serializer.toJson<Duration?>(crossfadeMs),
       'fadeInCurve': serializer.toJson<String?>(
         $PlaylistItemsTable.$converterfadeInCurven.toJson(fadeInCurve),
@@ -5175,6 +5741,7 @@ class PlaylistItem extends DataClass implements Insertable<PlaylistItem> {
     Value<AnnounceMode?> announceMode = const Value.absent(),
     Value<String?> announcementText = const Value.absent(),
     Value<String?> announcementClipPath = const Value.absent(),
+    Value<String?> soundCueId = const Value.absent(),
     Value<Duration?> crossfadeMs = const Value.absent(),
     Value<FadeCurve?> fadeInCurve = const Value.absent(),
     Value<FadeCurve?> fadeOutCurve = const Value.absent(),
@@ -5201,6 +5768,7 @@ class PlaylistItem extends DataClass implements Insertable<PlaylistItem> {
     announcementClipPath: announcementClipPath.present
         ? announcementClipPath.value
         : this.announcementClipPath,
+    soundCueId: soundCueId.present ? soundCueId.value : this.soundCueId,
     crossfadeMs: crossfadeMs.present ? crossfadeMs.value : this.crossfadeMs,
     fadeInCurve: fadeInCurve.present ? fadeInCurve.value : this.fadeInCurve,
     fadeOutCurve: fadeOutCurve.present ? fadeOutCurve.value : this.fadeOutCurve,
@@ -5237,6 +5805,9 @@ class PlaylistItem extends DataClass implements Insertable<PlaylistItem> {
       announcementClipPath: data.announcementClipPath.present
           ? data.announcementClipPath.value
           : this.announcementClipPath,
+      soundCueId: data.soundCueId.present
+          ? data.soundCueId.value
+          : this.soundCueId,
       crossfadeMs: data.crossfadeMs.present
           ? data.crossfadeMs.value
           : this.crossfadeMs,
@@ -5280,6 +5851,7 @@ class PlaylistItem extends DataClass implements Insertable<PlaylistItem> {
           ..write('announceMode: $announceMode, ')
           ..write('announcementText: $announcementText, ')
           ..write('announcementClipPath: $announcementClipPath, ')
+          ..write('soundCueId: $soundCueId, ')
           ..write('crossfadeMs: $crossfadeMs, ')
           ..write('fadeInCurve: $fadeInCurve, ')
           ..write('fadeOutCurve: $fadeOutCurve, ')
@@ -5307,6 +5879,7 @@ class PlaylistItem extends DataClass implements Insertable<PlaylistItem> {
     announceMode,
     announcementText,
     announcementClipPath,
+    soundCueId,
     crossfadeMs,
     fadeInCurve,
     fadeOutCurve,
@@ -5333,6 +5906,7 @@ class PlaylistItem extends DataClass implements Insertable<PlaylistItem> {
           other.announceMode == this.announceMode &&
           other.announcementText == this.announcementText &&
           other.announcementClipPath == this.announcementClipPath &&
+          other.soundCueId == this.soundCueId &&
           other.crossfadeMs == this.crossfadeMs &&
           other.fadeInCurve == this.fadeInCurve &&
           other.fadeOutCurve == this.fadeOutCurve &&
@@ -5357,6 +5931,7 @@ class PlaylistItemsCompanion extends UpdateCompanion<PlaylistItem> {
   final Value<AnnounceMode?> announceMode;
   final Value<String?> announcementText;
   final Value<String?> announcementClipPath;
+  final Value<String?> soundCueId;
   final Value<Duration?> crossfadeMs;
   final Value<FadeCurve?> fadeInCurve;
   final Value<FadeCurve?> fadeOutCurve;
@@ -5380,6 +5955,7 @@ class PlaylistItemsCompanion extends UpdateCompanion<PlaylistItem> {
     this.announceMode = const Value.absent(),
     this.announcementText = const Value.absent(),
     this.announcementClipPath = const Value.absent(),
+    this.soundCueId = const Value.absent(),
     this.crossfadeMs = const Value.absent(),
     this.fadeInCurve = const Value.absent(),
     this.fadeOutCurve = const Value.absent(),
@@ -5404,6 +5980,7 @@ class PlaylistItemsCompanion extends UpdateCompanion<PlaylistItem> {
     this.announceMode = const Value.absent(),
     this.announcementText = const Value.absent(),
     this.announcementClipPath = const Value.absent(),
+    this.soundCueId = const Value.absent(),
     this.crossfadeMs = const Value.absent(),
     this.fadeInCurve = const Value.absent(),
     this.fadeOutCurve = const Value.absent(),
@@ -5432,6 +6009,7 @@ class PlaylistItemsCompanion extends UpdateCompanion<PlaylistItem> {
     Expression<String>? announceMode,
     Expression<String>? announcementText,
     Expression<String>? announcementClipPath,
+    Expression<String>? soundCueId,
     Expression<int>? crossfadeMs,
     Expression<String>? fadeInCurve,
     Expression<String>? fadeOutCurve,
@@ -5457,6 +6035,7 @@ class PlaylistItemsCompanion extends UpdateCompanion<PlaylistItem> {
       if (announcementText != null) 'announcement_text': announcementText,
       if (announcementClipPath != null)
         'announcement_clip_path': announcementClipPath,
+      if (soundCueId != null) 'sound_cue_id': soundCueId,
       if (crossfadeMs != null) 'crossfade_ms': crossfadeMs,
       if (fadeInCurve != null) 'fade_in_curve': fadeInCurve,
       if (fadeOutCurve != null) 'fade_out_curve': fadeOutCurve,
@@ -5483,6 +6062,7 @@ class PlaylistItemsCompanion extends UpdateCompanion<PlaylistItem> {
     Value<AnnounceMode?>? announceMode,
     Value<String?>? announcementText,
     Value<String?>? announcementClipPath,
+    Value<String?>? soundCueId,
     Value<Duration?>? crossfadeMs,
     Value<FadeCurve?>? fadeInCurve,
     Value<FadeCurve?>? fadeOutCurve,
@@ -5507,6 +6087,7 @@ class PlaylistItemsCompanion extends UpdateCompanion<PlaylistItem> {
       announceMode: announceMode ?? this.announceMode,
       announcementText: announcementText ?? this.announcementText,
       announcementClipPath: announcementClipPath ?? this.announcementClipPath,
+      soundCueId: soundCueId ?? this.soundCueId,
       crossfadeMs: crossfadeMs ?? this.crossfadeMs,
       fadeInCurve: fadeInCurve ?? this.fadeInCurve,
       fadeOutCurve: fadeOutCurve ?? this.fadeOutCurve,
@@ -5558,6 +6139,9 @@ class PlaylistItemsCompanion extends UpdateCompanion<PlaylistItem> {
       map['announcement_clip_path'] = Variable<String>(
         announcementClipPath.value,
       );
+    }
+    if (soundCueId.present) {
+      map['sound_cue_id'] = Variable<String>(soundCueId.value);
     }
     if (crossfadeMs.present) {
       map['crossfade_ms'] = Variable<int>(
@@ -5633,6 +6217,7 @@ class PlaylistItemsCompanion extends UpdateCompanion<PlaylistItem> {
           ..write('announceMode: $announceMode, ')
           ..write('announcementText: $announcementText, ')
           ..write('announcementClipPath: $announcementClipPath, ')
+          ..write('soundCueId: $soundCueId, ')
           ..write('crossfadeMs: $crossfadeMs, ')
           ..write('fadeInCurve: $fadeInCurve, ')
           ..write('fadeOutCurve: $fadeOutCurve, ')
@@ -7517,526 +8102,6 @@ class PlayHistoryCompanion extends UpdateCompanion<PlayHistoryEntry> {
   }
 }
 
-class $SoundCuesTable extends SoundCues
-    with TableInfo<$SoundCuesTable, SoundCueRow> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $SoundCuesTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  @override
-  late final GeneratedColumn<String> id = GeneratedColumn<String>(
-    'id',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _labelMeta = const VerificationMeta('label');
-  @override
-  late final GeneratedColumn<String> label = GeneratedColumn<String>(
-    'label',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _filePathMeta = const VerificationMeta(
-    'filePath',
-  );
-  @override
-  late final GeneratedColumn<String> filePath = GeneratedColumn<String>(
-    'file_path',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _duckLevelMeta = const VerificationMeta(
-    'duckLevel',
-  );
-  @override
-  late final GeneratedColumn<double> duckLevel = GeneratedColumn<double>(
-    'duck_level',
-    aliasedName,
-    false,
-    type: DriftSqlType.double,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(1.0),
-  );
-  @override
-  late final GeneratedColumnWithTypeConverter<Duration, int> duckFadeMs =
-      GeneratedColumn<int>(
-        'duck_fade_ms',
-        aliasedName,
-        false,
-        type: DriftSqlType.int,
-        requiredDuringInsert: false,
-        defaultValue: const Constant(120),
-      ).withConverter<Duration>($SoundCuesTable.$converterduckFadeMs);
-  @override
-  late final GeneratedColumnWithTypeConverter<Duration, int> restoreFadeMs =
-      GeneratedColumn<int>(
-        'restore_fade_ms',
-        aliasedName,
-        false,
-        type: DriftSqlType.int,
-        requiredDuringInsert: false,
-        defaultValue: const Constant(400),
-      ).withConverter<Duration>($SoundCuesTable.$converterrestoreFadeMs);
-  static const VerificationMeta _hotkeyMeta = const VerificationMeta('hotkey');
-  @override
-  late final GeneratedColumn<String> hotkey = GeneratedColumn<String>(
-    'hotkey',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _sortIndexMeta = const VerificationMeta(
-    'sortIndex',
-  );
-  @override
-  late final GeneratedColumn<int> sortIndex = GeneratedColumn<int>(
-    'sort_index',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(0),
-  );
-  @override
-  List<GeneratedColumn> get $columns => [
-    id,
-    label,
-    filePath,
-    duckLevel,
-    duckFadeMs,
-    restoreFadeMs,
-    hotkey,
-    sortIndex,
-  ];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'sound_cues';
-  @override
-  VerificationContext validateIntegrity(
-    Insertable<SoundCueRow> instance, {
-    bool isInserting = false,
-  }) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    } else if (isInserting) {
-      context.missing(_idMeta);
-    }
-    if (data.containsKey('label')) {
-      context.handle(
-        _labelMeta,
-        label.isAcceptableOrUnknown(data['label']!, _labelMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_labelMeta);
-    }
-    if (data.containsKey('file_path')) {
-      context.handle(
-        _filePathMeta,
-        filePath.isAcceptableOrUnknown(data['file_path']!, _filePathMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_filePathMeta);
-    }
-    if (data.containsKey('duck_level')) {
-      context.handle(
-        _duckLevelMeta,
-        duckLevel.isAcceptableOrUnknown(data['duck_level']!, _duckLevelMeta),
-      );
-    }
-    if (data.containsKey('hotkey')) {
-      context.handle(
-        _hotkeyMeta,
-        hotkey.isAcceptableOrUnknown(data['hotkey']!, _hotkeyMeta),
-      );
-    }
-    if (data.containsKey('sort_index')) {
-      context.handle(
-        _sortIndexMeta,
-        sortIndex.isAcceptableOrUnknown(data['sort_index']!, _sortIndexMeta),
-      );
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {id};
-  @override
-  SoundCueRow map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return SoundCueRow(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}id'],
-      )!,
-      label: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}label'],
-      )!,
-      filePath: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}file_path'],
-      )!,
-      duckLevel: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}duck_level'],
-      )!,
-      duckFadeMs: $SoundCuesTable.$converterduckFadeMs.fromSql(
-        attachedDatabase.typeMapping.read(
-          DriftSqlType.int,
-          data['${effectivePrefix}duck_fade_ms'],
-        )!,
-      ),
-      restoreFadeMs: $SoundCuesTable.$converterrestoreFadeMs.fromSql(
-        attachedDatabase.typeMapping.read(
-          DriftSqlType.int,
-          data['${effectivePrefix}restore_fade_ms'],
-        )!,
-      ),
-      hotkey: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}hotkey'],
-      ),
-      sortIndex: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}sort_index'],
-      )!,
-    );
-  }
-
-  @override
-  $SoundCuesTable createAlias(String alias) {
-    return $SoundCuesTable(attachedDatabase, alias);
-  }
-
-  static TypeConverter<Duration, int> $converterduckFadeMs =
-      const MillisDurationConverter();
-  static TypeConverter<Duration, int> $converterrestoreFadeMs =
-      const MillisDurationConverter();
-}
-
-class SoundCueRow extends DataClass implements Insertable<SoundCueRow> {
-  final String id;
-
-  /// What the button says. 'Whistle', 'Bell', 'Rotate'.
-  final String label;
-  final String filePath;
-
-  /// Where the music sits while the cue plays, as a fraction of its level.
-  ///
-  /// One leaves the music alone, which is right for a whistle: it is louder
-  /// than the mix and cuts through on its own, and dipping for it would
-  /// announce the cue before the cue does.
-  final double duckLevel;
-  final Duration duckFadeMs;
-  final Duration restoreFadeMs;
-
-  /// '1' to '9'. Null is a cue with a button and no shortcut.
-  final String? hotkey;
-  final int sortIndex;
-  const SoundCueRow({
-    required this.id,
-    required this.label,
-    required this.filePath,
-    required this.duckLevel,
-    required this.duckFadeMs,
-    required this.restoreFadeMs,
-    this.hotkey,
-    required this.sortIndex,
-  });
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['id'] = Variable<String>(id);
-    map['label'] = Variable<String>(label);
-    map['file_path'] = Variable<String>(filePath);
-    map['duck_level'] = Variable<double>(duckLevel);
-    {
-      map['duck_fade_ms'] = Variable<int>(
-        $SoundCuesTable.$converterduckFadeMs.toSql(duckFadeMs),
-      );
-    }
-    {
-      map['restore_fade_ms'] = Variable<int>(
-        $SoundCuesTable.$converterrestoreFadeMs.toSql(restoreFadeMs),
-      );
-    }
-    if (!nullToAbsent || hotkey != null) {
-      map['hotkey'] = Variable<String>(hotkey);
-    }
-    map['sort_index'] = Variable<int>(sortIndex);
-    return map;
-  }
-
-  SoundCuesCompanion toCompanion(bool nullToAbsent) {
-    return SoundCuesCompanion(
-      id: Value(id),
-      label: Value(label),
-      filePath: Value(filePath),
-      duckLevel: Value(duckLevel),
-      duckFadeMs: Value(duckFadeMs),
-      restoreFadeMs: Value(restoreFadeMs),
-      hotkey: hotkey == null && nullToAbsent
-          ? const Value.absent()
-          : Value(hotkey),
-      sortIndex: Value(sortIndex),
-    );
-  }
-
-  factory SoundCueRow.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return SoundCueRow(
-      id: serializer.fromJson<String>(json['id']),
-      label: serializer.fromJson<String>(json['label']),
-      filePath: serializer.fromJson<String>(json['filePath']),
-      duckLevel: serializer.fromJson<double>(json['duckLevel']),
-      duckFadeMs: serializer.fromJson<Duration>(json['duckFadeMs']),
-      restoreFadeMs: serializer.fromJson<Duration>(json['restoreFadeMs']),
-      hotkey: serializer.fromJson<String?>(json['hotkey']),
-      sortIndex: serializer.fromJson<int>(json['sortIndex']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<String>(id),
-      'label': serializer.toJson<String>(label),
-      'filePath': serializer.toJson<String>(filePath),
-      'duckLevel': serializer.toJson<double>(duckLevel),
-      'duckFadeMs': serializer.toJson<Duration>(duckFadeMs),
-      'restoreFadeMs': serializer.toJson<Duration>(restoreFadeMs),
-      'hotkey': serializer.toJson<String?>(hotkey),
-      'sortIndex': serializer.toJson<int>(sortIndex),
-    };
-  }
-
-  SoundCueRow copyWith({
-    String? id,
-    String? label,
-    String? filePath,
-    double? duckLevel,
-    Duration? duckFadeMs,
-    Duration? restoreFadeMs,
-    Value<String?> hotkey = const Value.absent(),
-    int? sortIndex,
-  }) => SoundCueRow(
-    id: id ?? this.id,
-    label: label ?? this.label,
-    filePath: filePath ?? this.filePath,
-    duckLevel: duckLevel ?? this.duckLevel,
-    duckFadeMs: duckFadeMs ?? this.duckFadeMs,
-    restoreFadeMs: restoreFadeMs ?? this.restoreFadeMs,
-    hotkey: hotkey.present ? hotkey.value : this.hotkey,
-    sortIndex: sortIndex ?? this.sortIndex,
-  );
-  SoundCueRow copyWithCompanion(SoundCuesCompanion data) {
-    return SoundCueRow(
-      id: data.id.present ? data.id.value : this.id,
-      label: data.label.present ? data.label.value : this.label,
-      filePath: data.filePath.present ? data.filePath.value : this.filePath,
-      duckLevel: data.duckLevel.present ? data.duckLevel.value : this.duckLevel,
-      duckFadeMs: data.duckFadeMs.present
-          ? data.duckFadeMs.value
-          : this.duckFadeMs,
-      restoreFadeMs: data.restoreFadeMs.present
-          ? data.restoreFadeMs.value
-          : this.restoreFadeMs,
-      hotkey: data.hotkey.present ? data.hotkey.value : this.hotkey,
-      sortIndex: data.sortIndex.present ? data.sortIndex.value : this.sortIndex,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('SoundCueRow(')
-          ..write('id: $id, ')
-          ..write('label: $label, ')
-          ..write('filePath: $filePath, ')
-          ..write('duckLevel: $duckLevel, ')
-          ..write('duckFadeMs: $duckFadeMs, ')
-          ..write('restoreFadeMs: $restoreFadeMs, ')
-          ..write('hotkey: $hotkey, ')
-          ..write('sortIndex: $sortIndex')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(
-    id,
-    label,
-    filePath,
-    duckLevel,
-    duckFadeMs,
-    restoreFadeMs,
-    hotkey,
-    sortIndex,
-  );
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is SoundCueRow &&
-          other.id == this.id &&
-          other.label == this.label &&
-          other.filePath == this.filePath &&
-          other.duckLevel == this.duckLevel &&
-          other.duckFadeMs == this.duckFadeMs &&
-          other.restoreFadeMs == this.restoreFadeMs &&
-          other.hotkey == this.hotkey &&
-          other.sortIndex == this.sortIndex);
-}
-
-class SoundCuesCompanion extends UpdateCompanion<SoundCueRow> {
-  final Value<String> id;
-  final Value<String> label;
-  final Value<String> filePath;
-  final Value<double> duckLevel;
-  final Value<Duration> duckFadeMs;
-  final Value<Duration> restoreFadeMs;
-  final Value<String?> hotkey;
-  final Value<int> sortIndex;
-  final Value<int> rowid;
-  const SoundCuesCompanion({
-    this.id = const Value.absent(),
-    this.label = const Value.absent(),
-    this.filePath = const Value.absent(),
-    this.duckLevel = const Value.absent(),
-    this.duckFadeMs = const Value.absent(),
-    this.restoreFadeMs = const Value.absent(),
-    this.hotkey = const Value.absent(),
-    this.sortIndex = const Value.absent(),
-    this.rowid = const Value.absent(),
-  });
-  SoundCuesCompanion.insert({
-    required String id,
-    required String label,
-    required String filePath,
-    this.duckLevel = const Value.absent(),
-    this.duckFadeMs = const Value.absent(),
-    this.restoreFadeMs = const Value.absent(),
-    this.hotkey = const Value.absent(),
-    this.sortIndex = const Value.absent(),
-    this.rowid = const Value.absent(),
-  }) : id = Value(id),
-       label = Value(label),
-       filePath = Value(filePath);
-  static Insertable<SoundCueRow> custom({
-    Expression<String>? id,
-    Expression<String>? label,
-    Expression<String>? filePath,
-    Expression<double>? duckLevel,
-    Expression<int>? duckFadeMs,
-    Expression<int>? restoreFadeMs,
-    Expression<String>? hotkey,
-    Expression<int>? sortIndex,
-    Expression<int>? rowid,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (label != null) 'label': label,
-      if (filePath != null) 'file_path': filePath,
-      if (duckLevel != null) 'duck_level': duckLevel,
-      if (duckFadeMs != null) 'duck_fade_ms': duckFadeMs,
-      if (restoreFadeMs != null) 'restore_fade_ms': restoreFadeMs,
-      if (hotkey != null) 'hotkey': hotkey,
-      if (sortIndex != null) 'sort_index': sortIndex,
-      if (rowid != null) 'rowid': rowid,
-    });
-  }
-
-  SoundCuesCompanion copyWith({
-    Value<String>? id,
-    Value<String>? label,
-    Value<String>? filePath,
-    Value<double>? duckLevel,
-    Value<Duration>? duckFadeMs,
-    Value<Duration>? restoreFadeMs,
-    Value<String?>? hotkey,
-    Value<int>? sortIndex,
-    Value<int>? rowid,
-  }) {
-    return SoundCuesCompanion(
-      id: id ?? this.id,
-      label: label ?? this.label,
-      filePath: filePath ?? this.filePath,
-      duckLevel: duckLevel ?? this.duckLevel,
-      duckFadeMs: duckFadeMs ?? this.duckFadeMs,
-      restoreFadeMs: restoreFadeMs ?? this.restoreFadeMs,
-      hotkey: hotkey ?? this.hotkey,
-      sortIndex: sortIndex ?? this.sortIndex,
-      rowid: rowid ?? this.rowid,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<String>(id.value);
-    }
-    if (label.present) {
-      map['label'] = Variable<String>(label.value);
-    }
-    if (filePath.present) {
-      map['file_path'] = Variable<String>(filePath.value);
-    }
-    if (duckLevel.present) {
-      map['duck_level'] = Variable<double>(duckLevel.value);
-    }
-    if (duckFadeMs.present) {
-      map['duck_fade_ms'] = Variable<int>(
-        $SoundCuesTable.$converterduckFadeMs.toSql(duckFadeMs.value),
-      );
-    }
-    if (restoreFadeMs.present) {
-      map['restore_fade_ms'] = Variable<int>(
-        $SoundCuesTable.$converterrestoreFadeMs.toSql(restoreFadeMs.value),
-      );
-    }
-    if (hotkey.present) {
-      map['hotkey'] = Variable<String>(hotkey.value);
-    }
-    if (sortIndex.present) {
-      map['sort_index'] = Variable<int>(sortIndex.value);
-    }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('SoundCuesCompanion(')
-          ..write('id: $id, ')
-          ..write('label: $label, ')
-          ..write('filePath: $filePath, ')
-          ..write('duckLevel: $duckLevel, ')
-          ..write('duckFadeMs: $duckFadeMs, ')
-          ..write('restoreFadeMs: $restoreFadeMs, ')
-          ..write('hotkey: $hotkey, ')
-          ..write('sortIndex: $sortIndex, ')
-          ..write('rowid: $rowid')
-          ..write(')'))
-        .toString();
-  }
-}
-
 class $ParticipantsTable extends Participants
     with TableInfo<$ParticipantsTable, Participant> {
   @override
@@ -8412,12 +8477,12 @@ abstract class _$SayawDatabase extends GeneratedDatabase {
   late final $DanceTypesTable danceTypes = $DanceTypesTable(this);
   late final $TracksTable tracks = $TracksTable(this);
   late final $PlaylistsTable playlists = $PlaylistsTable(this);
+  late final $SoundCuesTable soundCues = $SoundCuesTable(this);
   late final $PlaylistItemsTable playlistItems = $PlaylistItemsTable(this);
   late final $CacheEntriesTable cacheEntries = $CacheEntriesTable(this);
   late final $AnnouncementCacheTable announcementCache =
       $AnnouncementCacheTable(this);
   late final $PlayHistoryTable playHistory = $PlayHistoryTable(this);
-  late final $SoundCuesTable soundCues = $SoundCuesTable(this);
   late final $ParticipantsTable participants = $ParticipantsTable(this);
   late final TrackDao trackDao = TrackDao(this as SayawDatabase);
   late final PlaylistDao playlistDao = PlaylistDao(this as SayawDatabase);
@@ -8441,11 +8506,11 @@ abstract class _$SayawDatabase extends GeneratedDatabase {
     danceTypes,
     tracks,
     playlists,
+    soundCues,
     playlistItems,
     cacheEntries,
     announcementCache,
     playHistory,
-    soundCues,
     participants,
   ];
   @override
@@ -8481,6 +8546,13 @@ abstract class _$SayawDatabase extends GeneratedDatabase {
     WritePropagation(
       on: TableUpdateQuery.onTableName(
         'dance_types',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('playlist_items', kind: UpdateKind.update)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'sound_cues',
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('playlist_items', kind: UpdateKind.update)],
@@ -11556,6 +11628,372 @@ typedef $$PlaylistsTableProcessedTableManager =
       Playlist,
       PrefetchHooks Function({bool playlistItemsRefs, bool playHistoryRefs})
     >;
+typedef $$SoundCuesTableCreateCompanionBuilder = SoundCuesCompanion Function({
+  required String id,
+  required String label,
+  required String filePath,
+  Value<double> duckLevel,
+  Value<Duration> duckFadeMs,
+  Value<Duration> restoreFadeMs,
+  Value<String?> hotkey,
+  Value<int> sortIndex,
+  Value<int> rowid,
+});
+typedef $$SoundCuesTableUpdateCompanionBuilder = SoundCuesCompanion Function({
+  Value<String> id,
+  Value<String> label,
+  Value<String> filePath,
+  Value<double> duckLevel,
+  Value<Duration> duckFadeMs,
+  Value<Duration> restoreFadeMs,
+  Value<String?> hotkey,
+  Value<int> sortIndex,
+  Value<int> rowid,
+});
+
+final class $$SoundCuesTableReferences
+    extends BaseReferences<_$SayawDatabase, $SoundCuesTable, SoundCueRow> {
+  $$SoundCuesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$PlaylistItemsTable, List<PlaylistItem>>
+  _playlistItemsRefsTable(_$SayawDatabase db) => MultiTypedResultKey.fromTable(
+    db.playlistItems,
+    aliasName: 'sound_cues__id__playlist_items__sound_cue_id',
+  );
+
+  $$PlaylistItemsTableProcessedTableManager get playlistItemsRefs {
+    final manager = $$PlaylistItemsTableTableManager(
+      $_db,
+      $_db.playlistItems,
+    ).filter((f) => f.soundCueId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_playlistItemsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$SoundCuesTableFilterComposer
+    extends Composer<_$SayawDatabase, $SoundCuesTable> {
+  $$SoundCuesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get filePath => $composableBuilder(
+    column: $table.filePath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get duckLevel => $composableBuilder(
+    column: $table.duckLevel,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<Duration, Duration, int> get duckFadeMs =>
+      $composableBuilder(
+        column: $table.duckFadeMs,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnWithTypeConverterFilters<Duration, Duration, int> get restoreFadeMs =>
+      $composableBuilder(
+        column: $table.restoreFadeMs,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<String> get hotkey => $composableBuilder(
+    column: $table.hotkey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortIndex => $composableBuilder(
+    column: $table.sortIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> playlistItemsRefs(
+    Expression<bool> Function($$PlaylistItemsTableFilterComposer f) f,
+  ) {
+    final $$PlaylistItemsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.playlistItems,
+      getReferencedColumn: (t) => t.soundCueId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PlaylistItemsTableFilterComposer(
+            $db: $db,
+            $table: $db.playlistItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$SoundCuesTableOrderingComposer
+    extends Composer<_$SayawDatabase, $SoundCuesTable> {
+  $$SoundCuesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get filePath => $composableBuilder(
+    column: $table.filePath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get duckLevel => $composableBuilder(
+    column: $table.duckLevel,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get duckFadeMs => $composableBuilder(
+    column: $table.duckFadeMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get restoreFadeMs => $composableBuilder(
+    column: $table.restoreFadeMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get hotkey => $composableBuilder(
+    column: $table.hotkey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortIndex => $composableBuilder(
+    column: $table.sortIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SoundCuesTableAnnotationComposer
+    extends Composer<_$SayawDatabase, $SoundCuesTable> {
+  $$SoundCuesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get label =>
+      $composableBuilder(column: $table.label, builder: (column) => column);
+
+  GeneratedColumn<String> get filePath =>
+      $composableBuilder(column: $table.filePath, builder: (column) => column);
+
+  GeneratedColumn<double> get duckLevel =>
+      $composableBuilder(column: $table.duckLevel, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<Duration, int> get duckFadeMs =>
+      $composableBuilder(
+        column: $table.duckFadeMs,
+        builder: (column) => column,
+      );
+
+  GeneratedColumnWithTypeConverter<Duration, int> get restoreFadeMs =>
+      $composableBuilder(
+        column: $table.restoreFadeMs,
+        builder: (column) => column,
+      );
+
+  GeneratedColumn<String> get hotkey =>
+      $composableBuilder(column: $table.hotkey, builder: (column) => column);
+
+  GeneratedColumn<int> get sortIndex =>
+      $composableBuilder(column: $table.sortIndex, builder: (column) => column);
+
+  Expression<T> playlistItemsRefs<T extends Object>(
+    Expression<T> Function($$PlaylistItemsTableAnnotationComposer a) f,
+  ) {
+    final $$PlaylistItemsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.playlistItems,
+      getReferencedColumn: (t) => t.soundCueId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PlaylistItemsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.playlistItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$SoundCuesTableTableManager
+    extends
+        RootTableManager<
+          _$SayawDatabase,
+          $SoundCuesTable,
+          SoundCueRow,
+          $$SoundCuesTableFilterComposer,
+          $$SoundCuesTableOrderingComposer,
+          $$SoundCuesTableAnnotationComposer,
+          $$SoundCuesTableCreateCompanionBuilder,
+          $$SoundCuesTableUpdateCompanionBuilder,
+          (SoundCueRow, $$SoundCuesTableReferences),
+          SoundCueRow,
+          PrefetchHooks Function({bool playlistItemsRefs})
+        > {
+  $$SoundCuesTableTableManager(_$SayawDatabase db, $SoundCuesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SoundCuesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SoundCuesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SoundCuesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> label = const Value.absent(),
+                Value<String> filePath = const Value.absent(),
+                Value<double> duckLevel = const Value.absent(),
+                Value<Duration> duckFadeMs = const Value.absent(),
+                Value<Duration> restoreFadeMs = const Value.absent(),
+                Value<String?> hotkey = const Value.absent(),
+                Value<int> sortIndex = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SoundCuesCompanion(
+                id: id,
+                label: label,
+                filePath: filePath,
+                duckLevel: duckLevel,
+                duckFadeMs: duckFadeMs,
+                restoreFadeMs: restoreFadeMs,
+                hotkey: hotkey,
+                sortIndex: sortIndex,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String label,
+                required String filePath,
+                Value<double> duckLevel = const Value.absent(),
+                Value<Duration> duckFadeMs = const Value.absent(),
+                Value<Duration> restoreFadeMs = const Value.absent(),
+                Value<String?> hotkey = const Value.absent(),
+                Value<int> sortIndex = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SoundCuesCompanion.insert(
+                id: id,
+                label: label,
+                filePath: filePath,
+                duckLevel: duckLevel,
+                duckFadeMs: duckFadeMs,
+                restoreFadeMs: restoreFadeMs,
+                hotkey: hotkey,
+                sortIndex: sortIndex,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$SoundCuesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({playlistItemsRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (playlistItemsRefs) db.playlistItems,
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (playlistItemsRefs)
+                    await $_getPrefetchedData<
+                      SoundCueRow,
+                      $SoundCuesTable,
+                      PlaylistItem
+                    >(
+                      currentTable: table,
+                      referencedTable: $$SoundCuesTableReferences
+                          ._playlistItemsRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$SoundCuesTableReferences(
+                            db,
+                            table,
+                            p0,
+                          ).playlistItemsRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.soundCueId == item.id),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$SoundCuesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$SayawDatabase,
+      $SoundCuesTable,
+      SoundCueRow,
+      $$SoundCuesTableFilterComposer,
+      $$SoundCuesTableOrderingComposer,
+      $$SoundCuesTableAnnotationComposer,
+      $$SoundCuesTableCreateCompanionBuilder,
+      $$SoundCuesTableUpdateCompanionBuilder,
+      (SoundCueRow, $$SoundCuesTableReferences),
+      SoundCueRow,
+      PrefetchHooks Function({bool playlistItemsRefs})
+    >;
 typedef $$PlaylistItemsTableCreateCompanionBuilder =
     PlaylistItemsCompanion Function({
       required String id,
@@ -11567,6 +12005,7 @@ typedef $$PlaylistItemsTableCreateCompanionBuilder =
       Value<AnnounceMode?> announceMode,
       Value<String?> announcementText,
       Value<String?> announcementClipPath,
+      Value<String?> soundCueId,
       Value<Duration?> crossfadeMs,
       Value<FadeCurve?> fadeInCurve,
       Value<FadeCurve?> fadeOutCurve,
@@ -11592,6 +12031,7 @@ typedef $$PlaylistItemsTableUpdateCompanionBuilder =
       Value<AnnounceMode?> announceMode,
       Value<String?> announcementText,
       Value<String?> announcementClipPath,
+      Value<String?> soundCueId,
       Value<Duration?> crossfadeMs,
       Value<FadeCurve?> fadeInCurve,
       Value<FadeCurve?> fadeOutCurve,
@@ -11660,6 +12100,23 @@ final class $$PlaylistItemsTableReferences
       $_db.danceTypes,
     ).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_danceTypeIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $SoundCuesTable _soundCueIdTable(_$SayawDatabase db) =>
+      db.soundCues.createAlias('playlist_items__sound_cue_id__sound_cues__id');
+
+  $$SoundCuesTableProcessedTableManager? get soundCueId {
+    final $_column = $_itemColumn<String>('sound_cue_id');
+    if ($_column == null) return null;
+    final manager = $$SoundCuesTableTableManager(
+      $_db,
+      $_db.soundCues,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_soundCueIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -11845,6 +12302,29 @@ class $$PlaylistItemsTableFilterComposer
     );
     return composer;
   }
+
+  $$SoundCuesTableFilterComposer get soundCueId {
+    final $$SoundCuesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.soundCueId,
+      referencedTable: $db.soundCues,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SoundCuesTableFilterComposer(
+            $db: $db,
+            $table: $db.soundCues,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$PlaylistItemsTableOrderingComposer
@@ -12006,6 +12486,29 @@ class $$PlaylistItemsTableOrderingComposer
           }) => $$DanceTypesTableOrderingComposer(
             $db: $db,
             $table: $db.danceTypes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$SoundCuesTableOrderingComposer get soundCueId {
+    final $$SoundCuesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.soundCueId,
+      referencedTable: $db.soundCues,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SoundCuesTableOrderingComposer(
+            $db: $db,
+            $table: $db.soundCues,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -12176,6 +12679,29 @@ class $$PlaylistItemsTableAnnotationComposer
     );
     return composer;
   }
+
+  $$SoundCuesTableAnnotationComposer get soundCueId {
+    final $$SoundCuesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.soundCueId,
+      referencedTable: $db.soundCues,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SoundCuesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.soundCues,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$PlaylistItemsTableTableManager
@@ -12195,6 +12721,7 @@ class $$PlaylistItemsTableTableManager
             bool playlistId,
             bool trackId,
             bool danceTypeId,
+            bool soundCueId,
           })
         > {
   $$PlaylistItemsTableTableManager(
@@ -12221,6 +12748,7 @@ class $$PlaylistItemsTableTableManager
                 Value<AnnounceMode?> announceMode = const Value.absent(),
                 Value<String?> announcementText = const Value.absent(),
                 Value<String?> announcementClipPath = const Value.absent(),
+                Value<String?> soundCueId = const Value.absent(),
                 Value<Duration?> crossfadeMs = const Value.absent(),
                 Value<FadeCurve?> fadeInCurve = const Value.absent(),
                 Value<FadeCurve?> fadeOutCurve = const Value.absent(),
@@ -12244,6 +12772,7 @@ class $$PlaylistItemsTableTableManager
                 announceMode: announceMode,
                 announcementText: announcementText,
                 announcementClipPath: announcementClipPath,
+                soundCueId: soundCueId,
                 crossfadeMs: crossfadeMs,
                 fadeInCurve: fadeInCurve,
                 fadeOutCurve: fadeOutCurve,
@@ -12269,6 +12798,7 @@ class $$PlaylistItemsTableTableManager
                 Value<AnnounceMode?> announceMode = const Value.absent(),
                 Value<String?> announcementText = const Value.absent(),
                 Value<String?> announcementClipPath = const Value.absent(),
+                Value<String?> soundCueId = const Value.absent(),
                 Value<Duration?> crossfadeMs = const Value.absent(),
                 Value<FadeCurve?> fadeInCurve = const Value.absent(),
                 Value<FadeCurve?> fadeOutCurve = const Value.absent(),
@@ -12292,6 +12822,7 @@ class $$PlaylistItemsTableTableManager
                 announceMode: announceMode,
                 announcementText: announcementText,
                 announcementClipPath: announcementClipPath,
+                soundCueId: soundCueId,
                 crossfadeMs: crossfadeMs,
                 fadeInCurve: fadeInCurve,
                 fadeOutCurve: fadeOutCurve,
@@ -12315,7 +12846,12 @@ class $$PlaylistItemsTableTableManager
               )
               .toList(),
           prefetchHooksCallback:
-              ({playlistId = false, trackId = false, danceTypeId = false}) {
+              ({
+                playlistId = false,
+                trackId = false,
+                danceTypeId = false,
+                soundCueId = false,
+              }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [],
@@ -12368,6 +12904,17 @@ class $$PlaylistItemsTableTableManager
                                 .id,
                           ) as T;
                         }
+                        if (soundCueId) {
+                          state = state.withJoin(
+                            currentTable: table,
+                            currentColumn: table.soundCueId,
+                            referencedTable: $$PlaylistItemsTableReferences
+                                ._soundCueIdTable(db),
+                            referencedColumn: $$PlaylistItemsTableReferences
+                                ._soundCueIdTable(db)
+                                .id,
+                          ) as T;
+                        }
 
                         return state;
                       },
@@ -12392,7 +12939,12 @@ typedef $$PlaylistItemsTableProcessedTableManager =
       $$PlaylistItemsTableUpdateCompanionBuilder,
       (PlaylistItem, $$PlaylistItemsTableReferences),
       PlaylistItem,
-      PrefetchHooks Function({bool playlistId, bool trackId, bool danceTypeId})
+      PrefetchHooks Function({
+        bool playlistId,
+        bool trackId,
+        bool danceTypeId,
+        bool soundCueId,
+      })
     >;
 typedef $$CacheEntriesTableCreateCompanionBuilder =
     CacheEntriesCompanion Function({
@@ -13701,269 +14253,6 @@ typedef $$PlayHistoryTableProcessedTableManager =
       PlayHistoryEntry,
       PrefetchHooks Function({bool trackId, bool playlistId, bool danceTypeId})
     >;
-typedef $$SoundCuesTableCreateCompanionBuilder = SoundCuesCompanion Function({
-  required String id,
-  required String label,
-  required String filePath,
-  Value<double> duckLevel,
-  Value<Duration> duckFadeMs,
-  Value<Duration> restoreFadeMs,
-  Value<String?> hotkey,
-  Value<int> sortIndex,
-  Value<int> rowid,
-});
-typedef $$SoundCuesTableUpdateCompanionBuilder = SoundCuesCompanion Function({
-  Value<String> id,
-  Value<String> label,
-  Value<String> filePath,
-  Value<double> duckLevel,
-  Value<Duration> duckFadeMs,
-  Value<Duration> restoreFadeMs,
-  Value<String?> hotkey,
-  Value<int> sortIndex,
-  Value<int> rowid,
-});
-
-class $$SoundCuesTableFilterComposer
-    extends Composer<_$SayawDatabase, $SoundCuesTable> {
-  $$SoundCuesTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<String> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get label => $composableBuilder(
-    column: $table.label,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get filePath => $composableBuilder(
-    column: $table.filePath,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<double> get duckLevel => $composableBuilder(
-    column: $table.duckLevel,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnWithTypeConverterFilters<Duration, Duration, int> get duckFadeMs =>
-      $composableBuilder(
-        column: $table.duckFadeMs,
-        builder: (column) => ColumnWithTypeConverterFilters(column),
-      );
-
-  ColumnWithTypeConverterFilters<Duration, Duration, int> get restoreFadeMs =>
-      $composableBuilder(
-        column: $table.restoreFadeMs,
-        builder: (column) => ColumnWithTypeConverterFilters(column),
-      );
-
-  ColumnFilters<String> get hotkey => $composableBuilder(
-    column: $table.hotkey,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get sortIndex => $composableBuilder(
-    column: $table.sortIndex,
-    builder: (column) => ColumnFilters(column),
-  );
-}
-
-class $$SoundCuesTableOrderingComposer
-    extends Composer<_$SayawDatabase, $SoundCuesTable> {
-  $$SoundCuesTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<String> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get label => $composableBuilder(
-    column: $table.label,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get filePath => $composableBuilder(
-    column: $table.filePath,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<double> get duckLevel => $composableBuilder(
-    column: $table.duckLevel,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get duckFadeMs => $composableBuilder(
-    column: $table.duckFadeMs,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get restoreFadeMs => $composableBuilder(
-    column: $table.restoreFadeMs,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get hotkey => $composableBuilder(
-    column: $table.hotkey,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get sortIndex => $composableBuilder(
-    column: $table.sortIndex,
-    builder: (column) => ColumnOrderings(column),
-  );
-}
-
-class $$SoundCuesTableAnnotationComposer
-    extends Composer<_$SayawDatabase, $SoundCuesTable> {
-  $$SoundCuesTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<String> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get label =>
-      $composableBuilder(column: $table.label, builder: (column) => column);
-
-  GeneratedColumn<String> get filePath =>
-      $composableBuilder(column: $table.filePath, builder: (column) => column);
-
-  GeneratedColumn<double> get duckLevel =>
-      $composableBuilder(column: $table.duckLevel, builder: (column) => column);
-
-  GeneratedColumnWithTypeConverter<Duration, int> get duckFadeMs =>
-      $composableBuilder(
-        column: $table.duckFadeMs,
-        builder: (column) => column,
-      );
-
-  GeneratedColumnWithTypeConverter<Duration, int> get restoreFadeMs =>
-      $composableBuilder(
-        column: $table.restoreFadeMs,
-        builder: (column) => column,
-      );
-
-  GeneratedColumn<String> get hotkey =>
-      $composableBuilder(column: $table.hotkey, builder: (column) => column);
-
-  GeneratedColumn<int> get sortIndex =>
-      $composableBuilder(column: $table.sortIndex, builder: (column) => column);
-}
-
-class $$SoundCuesTableTableManager
-    extends
-        RootTableManager<
-          _$SayawDatabase,
-          $SoundCuesTable,
-          SoundCueRow,
-          $$SoundCuesTableFilterComposer,
-          $$SoundCuesTableOrderingComposer,
-          $$SoundCuesTableAnnotationComposer,
-          $$SoundCuesTableCreateCompanionBuilder,
-          $$SoundCuesTableUpdateCompanionBuilder,
-          (
-            SoundCueRow,
-            BaseReferences<_$SayawDatabase, $SoundCuesTable, SoundCueRow>,
-          ),
-          SoundCueRow,
-          PrefetchHooks Function()
-        > {
-  $$SoundCuesTableTableManager(_$SayawDatabase db, $SoundCuesTable table)
-    : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$SoundCuesTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$SoundCuesTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$SoundCuesTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<String> id = const Value.absent(),
-                Value<String> label = const Value.absent(),
-                Value<String> filePath = const Value.absent(),
-                Value<double> duckLevel = const Value.absent(),
-                Value<Duration> duckFadeMs = const Value.absent(),
-                Value<Duration> restoreFadeMs = const Value.absent(),
-                Value<String?> hotkey = const Value.absent(),
-                Value<int> sortIndex = const Value.absent(),
-                Value<int> rowid = const Value.absent(),
-              }) => SoundCuesCompanion(
-                id: id,
-                label: label,
-                filePath: filePath,
-                duckLevel: duckLevel,
-                duckFadeMs: duckFadeMs,
-                restoreFadeMs: restoreFadeMs,
-                hotkey: hotkey,
-                sortIndex: sortIndex,
-                rowid: rowid,
-              ),
-          createCompanionCallback:
-              ({
-                required String id,
-                required String label,
-                required String filePath,
-                Value<double> duckLevel = const Value.absent(),
-                Value<Duration> duckFadeMs = const Value.absent(),
-                Value<Duration> restoreFadeMs = const Value.absent(),
-                Value<String?> hotkey = const Value.absent(),
-                Value<int> sortIndex = const Value.absent(),
-                Value<int> rowid = const Value.absent(),
-              }) => SoundCuesCompanion.insert(
-                id: id,
-                label: label,
-                filePath: filePath,
-                duckLevel: duckLevel,
-                duckFadeMs: duckFadeMs,
-                restoreFadeMs: restoreFadeMs,
-                hotkey: hotkey,
-                sortIndex: sortIndex,
-                rowid: rowid,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
-              .toList(),
-          prefetchHooksCallback: null,
-        ),
-      );
-}
-
-typedef $$SoundCuesTableProcessedTableManager =
-    ProcessedTableManager<
-      _$SayawDatabase,
-      $SoundCuesTable,
-      SoundCueRow,
-      $$SoundCuesTableFilterComposer,
-      $$SoundCuesTableOrderingComposer,
-      $$SoundCuesTableAnnotationComposer,
-      $$SoundCuesTableCreateCompanionBuilder,
-      $$SoundCuesTableUpdateCompanionBuilder,
-      (
-        SoundCueRow,
-        BaseReferences<_$SayawDatabase, $SoundCuesTable, SoundCueRow>,
-      ),
-      SoundCueRow,
-      PrefetchHooks Function()
-    >;
 typedef $$ParticipantsTableCreateCompanionBuilder =
     ParticipantsCompanion Function({
       required String id,
@@ -14177,6 +14466,8 @@ class $SayawDatabaseManager {
       $$TracksTableTableManager(_db, _db.tracks);
   $$PlaylistsTableTableManager get playlists =>
       $$PlaylistsTableTableManager(_db, _db.playlists);
+  $$SoundCuesTableTableManager get soundCues =>
+      $$SoundCuesTableTableManager(_db, _db.soundCues);
   $$PlaylistItemsTableTableManager get playlistItems =>
       $$PlaylistItemsTableTableManager(_db, _db.playlistItems);
   $$CacheEntriesTableTableManager get cacheEntries =>
@@ -14185,8 +14476,6 @@ class $SayawDatabaseManager {
       $$AnnouncementCacheTableTableManager(_db, _db.announcementCache);
   $$PlayHistoryTableTableManager get playHistory =>
       $$PlayHistoryTableTableManager(_db, _db.playHistory);
-  $$SoundCuesTableTableManager get soundCues =>
-      $$SoundCuesTableTableManager(_db, _db.soundCues);
   $$ParticipantsTableTableManager get participants =>
       $$ParticipantsTableTableManager(_db, _db.participants);
 }

@@ -221,9 +221,25 @@ List<String> _columns(Iterable<Map<String, Object?>> rows) => [
 /// versions rather than one named version is the point: this compares an
 /// upgraded install against a fresh one, and it only says anything true if a
 /// migration added later is applied here too rather than quietly skipped.
-List<String> _upgradesTouching(String table, {required int from}) => [
-      for (final version in schemaUpgrades.keys.toList()..sort())
-        if (version > from)
-          for (final statement in schemaUpgrades[version]!)
-            if (statement.contains(table)) statement,
-    ];
+/// Every upgrade after [from] whose *subject* is [table] — the statements that
+/// create it, alter it, or index it.
+///
+/// The subject rather than any mention of the name. A column added to one
+/// table can carry a foreign key naming another, and a plain substring match
+/// hands that statement to a database holding only the table it named — which
+/// is an `ALTER TABLE` against a table that is not there.
+List<String> _upgradesTouching(String table, {required int from}) {
+  final subject = RegExp(
+    r'(?:CREATE\s+TABLE|ALTER\s+TABLE|CREATE\s+INDEX\s+\w+\s+ON)\s+'
+    '$table'
+    r'\b',
+    caseSensitive: false,
+  );
+
+  return [
+    for (final version in schemaUpgrades.keys.toList()..sort())
+      if (version > from)
+        for (final statement in schemaUpgrades[version]!)
+          if (subject.hasMatch(statement)) statement,
+  ];
+}

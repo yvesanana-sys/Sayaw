@@ -296,6 +296,17 @@ class PlaylistItems extends Table {
   /// Overrides TTS entirely.
   TextColumn get announcementClipPath => text().nullable()();
 
+  /// A soundboard cue tagged to this row, played as its announcement.
+  ///
+  /// The operator's own recording, picked from the cues they already loaded,
+  /// so a clip reaches a transition without being typed as a path anywhere.
+  /// The most specific of the three announcement sources — it wins over both
+  /// of the above — and `SET NULL` because deleting a whistle should quiet a
+  /// row, not delete it out of the set.
+  TextColumn get soundCueId => text()
+      .nullable()
+      .references(SoundCues, #id, onDelete: KeyAction.setNull)();
+
   // per-item transition overrides. Null inherits from the playlist. ---------
   IntColumn get crossfadeMs =>
       integer().nullable().map(const MillisDurationConverter())();

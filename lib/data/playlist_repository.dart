@@ -125,11 +125,10 @@ class PlaylistRepository {
     return QueueEntry(
       itemId: item.id,
       media: media,
-      spec: specFor(playlist, item),
+      spec: specFor(playlist, item, taggedCue: row.soundCue != null),
       danceTypeName: row.danceType?.name,
       announcementText: announcementTextFor(row, next: nextDanceTypeName),
-      announcementClipPath:
-          item.announcementClipPath ?? row.danceType?.customClipPath,
+      announcementClipPath: announcementClipFor(row),
       // The row's own cap first, then the set's. Null on both plays the track
       // to its end, which is what a set built song by song wants; a rotation
       // or a competition round sets one on the playlist and every row inherits
@@ -185,12 +184,26 @@ class PlaylistRepository {
   ///
   /// Null on a row means inherit, which is why these columns are nullable in a
   /// table whose playlist-level equivalents are not.
-  static TransitionSpec specFor(Playlist playlist, PlaylistItem item) =>
+  ///
+  /// [taggedCue] says the operator has pointed this row at one of their own
+  /// clips. That is a statement about *when* as well as what: tagging a cue to
+  /// a row means "play this across the transition", so it carries the set's
+  /// announcement mode over to `duckOver` on its own. A row that names a mode
+  /// explicitly still wins, and a rotation still forces the sequential shape
+  /// whatever this says — see `TransitionSpec.isSequential` — so The Mixer
+  /// plays the same tagged clip cleanly in its gap rather than over a fade
+  /// that is not happening.
+  static TransitionSpec specFor(
+    Playlist playlist,
+    PlaylistItem item, {
+    bool taggedCue = false,
+  }) =>
       TransitionSpec(
         crossfade: item.crossfadeMs ?? playlist.crossfadeMs,
         fadeInCurve: item.fadeInCurve ?? playlist.fadeInCurve,
         fadeOutCurve: item.fadeOutCurve ?? playlist.fadeOutCurve,
-        announceMode: item.announceMode ?? playlist.announceMode,
+        announceMode: item.announceMode ??
+            (taggedCue ? AnnounceMode.duckOver : playlist.announceMode),
         // The duck envelope is a property of the room and the voice, not of one
         // song, so it is deliberately not overridable per row.
         duckLevel: playlist.duckLevel,
@@ -240,6 +253,17 @@ class PlaylistRepository {
         return TidalSource(accountId: account.id, trackId: track.sourceId!);
     }
   }
+
+  /// Which audio file announces this row, most specific first.
+  ///
+  /// A cue the operator tagged to this one row beats a path set on the row,
+  /// which beats the clip recorded for the whole dance type. All three are
+  /// files on the announcement deck by the time the engine sees them, so a
+  /// hand-recorded MC and a synthesised voice cost a transition the same.
+  static String? announcementClipFor(PlaylistRow row) =>
+      row.soundCue?.filePath ??
+      row.item.announcementClipPath ??
+      row.danceType?.customClipPath;
 
   /// What the voice will say before this row.
   ///
