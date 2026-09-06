@@ -274,9 +274,18 @@ class MediaKitDeck with VolumeCoalescing implements Deck {
   Duration? _duration;
   double _volume = 1.0;
 
+  /// How long to wait for libmpv to report a file's length before giving up on
+  /// it. Normally satisfied in milliseconds; the bound exists so a file it
+  /// cannot parse costs a moment rather than a transition.
+  static const _durationTimeout = Duration(seconds: 2);
+
   @override
   Future<void> load(PlayableMedia media) async {
     _media = media;
+    // Cleared before the open, never after: every reader between here and the
+    // new length arriving would otherwise be handed the length of the file
+    // that was loaded before this one.
+    _duration = null;
     _status.add(const DeckStatus(DeckPlaybackState.loading));
     try {
       await _player.setVolume(0);
@@ -290,10 +299,37 @@ class MediaKitDeck with VolumeCoalescing implements Deck {
         ),
         play: false,
       );
+      await _settleDuration();
       _status.add(const DeckStatus(DeckPlaybackState.ready));
     } catch (e) {
       _status.add(DeckStatus(DeckPlaybackState.error, error: e));
       rethrow;
+    }
+  }
+
+  /// Holds the load open until the file's length is known.
+  ///
+  /// libmpv reports it on a stream once it has parsed the file, not from
+  /// `open`, so a caller reading [duration] the instant a load returned saw
+  /// null — and answered as though the file had no length. That is what made
+  /// every announcement on this backend silent: the clip was loaded, its
+  /// length came back null, and the announcement was dropped rather than
+  /// played.
+  Future<void> _settleDuration() async {
+    if (_duration != null) return;
+
+    try {
+      _duration = await _player.stream.duration
+          .firstWhere((d) => d > Duration.zero)
+          .timeout(_durationTimeout);
+    } on TimeoutException {
+      // media_kit's duration stream is distinct, so two files of exactly the
+      // same length in a row emit nothing at all — indistinguishable, from
+      // here, from a file whose length mpv could not work out. What the player
+      // already holds is right in the first case and no worse than null in the
+      // second.
+      final known = _player.state.duration;
+      _duration = known > Duration.zero ? known : null;
     }
   }
 

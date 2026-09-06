@@ -104,35 +104,55 @@ class AnnouncementEngine {
 
   /// Called by the engine as soon as an item is preloaded, so synthesis never
   /// happens on the critical path of a transition.
-  Future<void> warm(QueueEntry entry) => clipFor(entry).then((_) {});
+  Future<void> warm(QueueEntry entry) async {
+    try {
+      await clipFor(entry);
+    } on Object {
+      // Nothing waits on a warm. A clip that cannot be rendered or read is
+      // answered again at the transition, where the decision to go without it
+      // is made — an unhandled error here would take the app down for a file
+      // the operator moved.
+    }
+  }
 
   /// Returns a playable clip for [entry], or null if it has no announcement.
-  Future<AnnouncementClip?> clipFor(QueueEntry entry) {
-    // A hand-recorded clip bypasses TTS entirely.
-    final custom = entry.announcementClipPath;
-    if (custom != null && custom.isNotEmpty && _clips.exists(custom)) {
-      return _clips.probe(custom, text: entry.danceTypeName ?? '');
-    }
-
-    final text = _textFor(entry);
-    if (text == null) return Future.value(null);
-
-    final hash = _hashFor(text);
-
-    // Deduplicate: a playlist with forty Cha-Chas renders "Cha-Cha" once.
-    return _inFlight.putIfAbsent(hash, () async {
-      try {
-        final cached = await _store.get(hash);
-        if (cached != null && _clips.exists(cached.filePath)) return cached;
-
-        final clip = await _clips.render(text, hash);
-        if (clip != null) await _store.put(clip);
-        return clip;
-      } finally {
-        // Keep the map small; the durable cache is _store.
-        scheduleMicrotask(() => _inFlight.remove(hash));
+  ///
+  /// Null covers "nothing to say" and "nothing that can be said" alike, and it
+  /// never throws. This is called from inside a transition that has already
+  /// begun: an exception here does not lose an announcement, it stops a
+  /// crossfade with a room on the floor. A file the operator moved, a TTS
+  /// engine that will not answer, a cache that cannot be read — all of them
+  /// cost the voice and none of them cost the set.
+  Future<AnnouncementClip?> clipFor(QueueEntry entry) async {
+    try {
+      // A hand-recorded clip bypasses TTS entirely.
+      final custom = entry.announcementClipPath;
+      if (custom != null && custom.isNotEmpty && _clips.exists(custom)) {
+        return await _clips.probe(custom, text: entry.danceTypeName ?? '');
       }
-    });
+
+      final text = _textFor(entry);
+      if (text == null) return null;
+
+      final hash = _hashFor(text);
+
+      // Deduplicate: a playlist with forty Cha-Chas renders "Cha-Cha" once.
+      return await _inFlight.putIfAbsent(hash, () async {
+        try {
+          final cached = await _store.get(hash);
+          if (cached != null && _clips.exists(cached.filePath)) return cached;
+
+          final clip = await _clips.render(text, hash);
+          if (clip != null) await _store.put(clip);
+          return clip;
+        } finally {
+          // Keep the map small; the durable cache is _store.
+          scheduleMicrotask(() => _inFlight.remove(hash));
+        }
+      });
+    } on Object {
+      return null;
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -299,17 +319,31 @@ class PlatformClipFactory implements ClipFactory {
     return probe(outPath, text: text, hash: hash);
   }
 
+  /// The length assumed for a clip whose backend will not report one.
+  ///
+  /// Announcing on a guessed envelope is a small error — the music comes back
+  /// up a little early or late. Announcing nothing is a silent one, and it is
+  /// the failure this whole path exists to prevent. `Soundboard.assumedLength`
+  /// is the same trade for the same reason.
+  static const assumedLength = Duration(seconds: 3);
+
   /// Loads the file on the voice deck purely to read its duration back.
   @override
   Future<AnnouncementClip?> probe(String path,
       {required String text, String? hash}) async {
-    await _deck.load(PlayableMedia(uri: Uri.file(path)));
-    final d = _deck.duration;
-    if (d == null) return null;
+    try {
+      await _deck.load(PlayableMedia(uri: Uri.file(path)));
+    } on Object {
+      // A file the operator has moved, or one the backend cannot decode. This
+      // runs on the path of a transition that is already under way, so it
+      // answers "no clip" rather than throwing into it.
+      return null;
+    }
+
     return AnnouncementClip(
       hash: hash ?? announcementHash(text, settings),
       filePath: path,
-      duration: d,
+      duration: _deck.duration ?? assumedLength,
       text: text,
     );
   }

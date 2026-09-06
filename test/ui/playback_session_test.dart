@@ -335,6 +335,61 @@ void main() {
     });
   });
 
+  group('what the next transition will say', () {
+    setUp(() async {
+      await _addTracks(db, set, music, ['a', 'b']);
+    });
+
+    test('nothing, when the row coming up has nothing to say', () async {
+      await session.openPlaylist(set);
+
+      expect(container.read(playbackProvider).announcement, isNull);
+    });
+
+    test('the name the operator gave their own recording', () async {
+      await session.openPlaylist(set);
+      final cue = await db.soundCueDao
+          .add(label: 'Take your partners', filePath: '/clips/p.wav');
+
+      await session.tagSoundCue(itemId: 'item-b', cueId: cue);
+      await _settle();
+
+      // The cue's name, not its path: a path is not what the operator called
+      // it, and the engine holds nothing else.
+      final next = container.read(playbackProvider).announcement!;
+      expect(next.label, 'Take your partners');
+      expect(next.isRecording, isTrue);
+      expect(next.timing, AnnouncementTiming.overTheCrossfade);
+    });
+
+    test('it describes the row cued up, not the one playing', () async {
+      await session.openPlaylist(set);
+      final cue = await db.soundCueDao
+          .add(label: 'Take your partners', filePath: '/clips/p.wav');
+
+      // Track a is audible; tagging it says nothing about the transition into
+      // track b, which is the one about to happen. This is the mistake the
+      // strip exists to make visible.
+      await session.tagSoundCue(itemId: 'item-a', cueId: cue);
+      await _settle();
+
+      expect(container.read(playbackProvider).announcement, isNull);
+    });
+
+    test('clearing the tag empties it again', () async {
+      await session.openPlaylist(set);
+      final cue = await db.soundCueDao
+          .add(label: 'Take your partners', filePath: '/clips/p.wav');
+      await session.tagSoundCue(itemId: 'item-b', cueId: cue);
+      await _settle();
+
+      await session.tagSoundCue(itemId: 'item-b', cueId: null);
+      await _settle();
+
+      expect(container.read(playbackProvider).announcement, isNull);
+    });
+  });
+
   group('the library', () {
     test('search finds what a scan imported', () async {
       _touch(music, 'library/kiss-of-fire.flac');

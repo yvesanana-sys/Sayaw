@@ -515,6 +515,53 @@ class PlaybackSession
   ///
   /// One direction only: the engine is the authority while a session is
   /// attached, so nothing here reads back what the controller last drew.
+  /// What the next transition will say, read off the row that is cued up.
+  ///
+  /// The cued row, not the audible one: an announcement introduces the track
+  /// it belongs to, so it is heard on the way *into* that row. Tagging the
+  /// song already playing and then pressing crossfade is the mistake this
+  /// exists to make visible, because from the operator's seat it looks
+  /// identical to a tag that did not work.
+  ///
+  /// The cue's name comes from the queue on screen rather than the engine: the
+  /// engine holds a file path, and a path is not what the operator called it.
+  NextAnnouncementUi? _nextAnnouncement(QueueEntry? next) {
+    if (next == null) return null;
+
+    final spec = next.spec;
+    if (spec.announceMode == AnnounceMode.off) return null;
+
+    final timing = spec.rotationGap > Duration.zero
+        ? AnnouncementTiming.inTheRotationGap
+        : spec.isSequential
+            ? AnnouncementTiming.beforeTheMusic
+            : AnnouncementTiming.overTheCrossfade;
+
+    if (next.announcementClipPath != null &&
+        next.announcementClipPath!.isNotEmpty) {
+      final tagged = controller.queueSnapshot
+          .where((item) => item.id == next.itemId)
+          .firstOrNull;
+
+      return NextAnnouncementUi(
+        label: tagged?.soundCueLabel ?? 'Recorded clip',
+        isRecording: true,
+        timing: timing,
+      );
+    }
+
+    // What the voice would say. Null when the row has no dance type and no
+    // line of its own, which is a row that announces nothing at all.
+    final spoken = next.announcementText;
+    if (spoken == null || spoken.isEmpty) return null;
+
+    return NextAnnouncementUi(
+      label: spoken,
+      isRecording: false,
+      timing: timing,
+    );
+  }
+
   void _publish() {
     final entry = engine.currentEntry;
     final active = activeSlot;
@@ -527,6 +574,7 @@ class PlaybackSession
       currentIndex: _queueIndexOf(entry?.itemId),
       crossfader: _crossfaderPosition(),
       snowball: _snowballProgress(),
+      announcement: _nextAnnouncement(next),
       active: DeckUiState(
         title: entry?.title ?? '',
         artist: entry?.artist ?? '',

@@ -5,6 +5,7 @@ import '../layout/breakpoints.dart';
 import '../state/playback_ui_state.dart';
 import '../theme/sayaw_theme.dart';
 import '../touch/touch_targets.dart';
+import '../widgets/announcer_strip.dart';
 import '../widgets/crossfader.dart';
 import '../widgets/deck_panel.dart';
 import '../widgets/library_pane.dart';
@@ -221,6 +222,11 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                 DeckPanel(slot: DeckSlot.a),
                 const SizedBox(height: 8),
                 const Crossfader(),
+                const SizedBox(height: 8),
+                // Between the decks because that is where it is heard: the
+                // voice rides the crossfade from A into B. Blank when the row
+                // coming up has nothing to say.
+                const AnnouncerStrip(),
                 const SizedBox(height: 8),
                 DeckPanel(slot: DeckSlot.b),
                 const SizedBox(height: 8),

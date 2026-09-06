@@ -187,6 +187,48 @@ class QueueItemUi {
       );
 }
 
+/// What will be heard at the next transition, and where in it.
+///
+/// Derived from the row that is cued up rather than from the one playing: an
+/// announcement introduces the track it is attached to, which is the one being
+/// faded *to*. That is the single most confusing thing about tagging a row,
+/// and this is what makes it visible before the transition rather than after.
+@immutable
+class NextAnnouncementUi {
+  const NextAnnouncementUi({
+    required this.label,
+    required this.isRecording,
+    required this.timing,
+  });
+
+  /// The cue's name when the operator tagged one, otherwise the words that
+  /// will be spoken.
+  final String label;
+
+  /// Their own recording rather than a synthesised voice.
+  final bool isRecording;
+
+  final AnnouncementTiming timing;
+}
+
+/// Where in the transition the announcement lands.
+enum AnnouncementTiming {
+  /// Over the crossfade, with the music ducked underneath it.
+  overTheCrossfade,
+
+  /// The music out, the voice alone, then the music in.
+  beforeTheMusic,
+
+  /// In the silence a rotation holds for the floor to change partners.
+  inTheRotationGap;
+
+  String get description => switch (this) {
+        AnnouncementTiming.overTheCrossfade => 'over the crossfade',
+        AnnouncementTiming.beforeTheMusic => 'before the music',
+        AnnouncementTiming.inTheRotationGap => 'in the rotation gap',
+      };
+}
+
 @immutable
 class PlaybackUiState {
   const PlaybackUiState({
@@ -200,6 +242,7 @@ class PlaybackUiState {
     this.networkMode = NetworkMode.online,
     this.offlineServices = const [],
     this.snowball,
+    this.announcement,
   });
 
   final DeckUiState deckA;
@@ -223,6 +266,9 @@ class PlaybackUiState {
 
   /// Where a Snowball has climbed to. Null when the open set is not one.
   final SnowballProgress? snowball;
+
+  /// What the next transition will say. Null when it will say nothing.
+  final NextAnnouncementUi? announcement;
 
   DeckUiState deck(DeckSlot slot) =>
       slot == DeckSlot.a ? deckA : deckB;
@@ -253,6 +299,7 @@ class PlaybackUiState {
       networkMode: networkMode ?? this.networkMode,
       offlineServices: offlineServices ?? this.offlineServices,
       snowball: snowball,
+      announcement: announcement,
     );
   }
 
@@ -271,6 +318,25 @@ class PlaybackUiState {
         networkMode: networkMode,
         offlineServices: offlineServices,
         snowball: snowball,
+        announcement: announcement,
+      );
+
+  /// Its own method for the same reason [withSnowball] is: null means "the
+  /// next transition says nothing", which a `copyWith` argument could not tell
+  /// from "leave it alone" — and going quiet is half of what tagging does.
+  PlaybackUiState withAnnouncement(NextAnnouncementUi? announcement) =>
+      PlaybackUiState(
+        deckA: deckA,
+        deckB: deckB,
+        crossfader: crossfader,
+        queue: queue,
+        currentIndex: currentIndex,
+        phase: phase,
+        performanceMode: performanceMode,
+        networkMode: networkMode,
+        offlineServices: offlineServices,
+        snowball: snowball,
+        announcement: announcement,
       );
 }
 
@@ -314,6 +380,7 @@ class PlaybackController extends Notifier<PlaybackUiState> {
     required DeckUiState standby,
     double? crossfader,
     SnowballProgress? snowball,
+    NextAnnouncementUi? announcement,
   }) {
     state = state.copyWith(
       deckA: activeSlot == DeckSlot.a ? active : standby,
@@ -323,7 +390,7 @@ class PlaybackController extends Notifier<PlaybackUiState> {
       // Null means the operator has the fader, and the engine is following
       // them rather than the other way round.
       crossfader: crossfader,
-    ).withSnowball(snowball);
+    ).withSnowball(snowball).withAnnouncement(announcement);
   }
 
   // -- transport -------------------------------------------------------------
@@ -551,4 +618,11 @@ final networkModeProvider = Provider<NetworkMode>(
 /// Where a Snowball has climbed to, or null when the set is not one.
 final snowballProvider = Provider<SnowballProgress?>(
   (ref) => ref.watch(playbackProvider.select((s) => s.snowball)),
+);
+
+/// What the next transition will say. Narrow, like the two above: the strip
+/// that draws it sits between the decks and must not rebuild on a position
+/// tick.
+final nextAnnouncementProvider = Provider<NextAnnouncementUi?>(
+  (ref) => ref.watch(playbackProvider.select((s) => s.announcement)),
 );
