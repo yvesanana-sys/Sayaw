@@ -88,6 +88,7 @@ class Soundboard {
     _sounding = true;
 
     StreamSubscription<DeckStatus>? errorSub;
+    var failedAsync = false;
 
     try {
       // A press during a press restarts it. One deck cannot overlap itself,
@@ -109,17 +110,13 @@ class Soundboard {
       // returned without throwing. Watched for the run of the cue so that
       // failure is never silent: a cue that "played" and made no noise is
       // worse than one that threw, because nothing told the operator why.
-      final failure = Completer<void>();
       errorSub = _deck.statusStream.listen((status) {
-        if (status.state == DeckPlaybackState.error && !failure.isCompleted) {
-          failure.complete();
-        }
+        if (status.state == DeckPlaybackState.error) failedAsync = true;
       });
 
       final length = _deck.duration ?? assumedLength;
       await _deck.play();
-      await Future.any([Future<void>.delayed(length), failure.future]);
-      final failedAsync = failure.isCompleted;
+      await Future<void>.delayed(length);
 
       if (generation == _generation) await _deck.stop();
       return !failedAsync;
