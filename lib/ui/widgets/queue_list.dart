@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../format/track_title.dart';
 import '../layout/breakpoints.dart';
 import '../screens/cue_tag_dialog.dart';
 import '../state/playback_ui_state.dart';
@@ -129,9 +130,10 @@ class _QueueRow extends ConsumerWidget {
     // is not drawn at all — the same rule the soundboard bar follows, and it
     // keeps a row that has never met the feature exactly as it was.
     final hasCues = ref.watch(soundCuesProvider).value?.isNotEmpty ?? false;
+    final rowTitle = displayTitle(item.title);
 
     final title = Text(
-      item.title,
+      rowTitle,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: TextStyle(
@@ -159,9 +161,9 @@ class _QueueRow extends ConsumerWidget {
     return Semantics(
       container: true,
       label: unavailable
-          ? '${item.title} by ${item.artist}. Unavailable: '
+          ? '$rowTitle by ${item.artist}. Unavailable: '
               '${item.unavailable!.message}'
-          : '${item.title} by ${item.artist}'
+          : '$rowTitle by ${item.artist}'
               '${item.danceType == null ? '' : ', ${item.danceType}'}'
               '${item.hasSoundCue ? ', announced by ${item.soundCueLabel}' : ''}'
               '${isCurrent ? ', now playing' : ''}',
@@ -248,7 +250,7 @@ class QueueDragHandle extends StatelessWidget {
   Widget build(BuildContext context) {
     final handle = Semantics(
       button: true,
-      label: 'Reorder ${item.title}',
+      label: 'Reorder ${displayTitle(item.title)}',
       child: const SizedBox(
         width: kMinTouchTarget,
         height: kMinTouchTarget,
@@ -280,6 +282,7 @@ class QueueCueButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final access = ref.watch(cueTagProvider);
     final tagged = item.hasSoundCue;
+    final title = displayTitle(item.title);
 
     return Semantics(
       button: true,
@@ -288,8 +291,8 @@ class QueueCueButton extends ConsumerWidget {
       // is drawn for.
       label: tagged
           ? 'Announced by ${item.soundCueLabel}. '
-              'Change the announcement for ${item.title}'
-          : 'Announce ${item.title} with a sound',
+              'Change the announcement for $title'
+          : 'Announce $title with a sound',
       excludeSemantics: true,
       child: SizedBox(
         width: kMinTouchTarget,

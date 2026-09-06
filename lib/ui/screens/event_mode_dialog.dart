@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/event_mode.dart';
+import '../format/track_title.dart';
 import '../state/library_access.dart';
 import '../state/playback_ui_state.dart';
 import '../theme/sayaw_theme.dart';
@@ -156,8 +157,8 @@ class _Report extends StatelessWidget {
               padding: const EdgeInsets.only(top: 4),
               child: Text(
                 item.detail == null
-                    ? item.title
-                    : '${item.title} — ${item.detail}',
+                    ? displayTitle(item.title)
+                    : '${displayTitle(item.title)} — ${item.detail}',
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(color: SayawColors.onSurfaceVariant),

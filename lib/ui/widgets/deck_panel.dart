@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../format/track_title.dart';
 import '../state/playback_ui_state.dart';
 import '../theme/sayaw_theme.dart';
 
@@ -17,13 +18,14 @@ class DeckPanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final deck = ref.watch(playbackProvider.select((s) => s.deck(slot)));
+    final title = deck.isLoaded ? displayTitle(deck.title) : '';
     final accent =
         slot == DeckSlot.a ? SayawColors.primary : SayawColors.secondary;
 
     return Semantics(
       container: true,
       label: deck.isLoaded
-          ? 'Deck ${slot.label}: ${deck.title} by ${deck.artist}, '
+          ? 'Deck ${slot.label}: $title by ${deck.artist}, '
               '${_clock(deck.position)} of ${_clock(deck.duration)}'
           : 'Deck ${slot.label}: empty',
       child: ExcludeSemantics(
@@ -72,7 +74,7 @@ class DeckPanel extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                deck.isLoaded ? deck.title : 'Empty',
+                deck.isLoaded ? title : 'Empty',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
