@@ -123,7 +123,14 @@ class Soundboard {
     } on Object {
       return false;
     } finally {
-      await errorSub?.cancel();
+      // Deliberately not awaited. Nothing below needs the cancel to have
+      // finished, and the music must not wait on it: `cancel()` returns a
+      // future that never completes under `fake_async`, which left the duck
+      // restore below unreachable and every cue sounding forever. A finally
+      // that exists to bring the music back up is the last place to put an
+      // await that can hang.
+      final sub = errorSub;
+      if (sub != null) unawaited(sub.cancel());
       // Whatever went wrong — a file that has been moved, a deck that will not
       // load it — the music must not be left sitting in a dip nobody can see
       // the cause of.
