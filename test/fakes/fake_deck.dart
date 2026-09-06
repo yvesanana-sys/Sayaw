@@ -133,6 +133,12 @@ class FakeDeck implements Deck {
   @override
   Future<void> preroll() async => _record('preroll');
 
+  /// Simulates a backend that accepts [load] without throwing and then fails
+  /// to actually play — reported only here, the way `Soundboard.fire` cannot
+  /// see without watching the status stream.
+  void emitAsyncError(Object error) =>
+      _status.add(DeckStatus(DeckPlaybackState.error, error: error));
+
   @override
   Future<void> play() async {
     _record('play');

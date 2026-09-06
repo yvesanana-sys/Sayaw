@@ -160,6 +160,24 @@ void main() {
         expect(sounded, isTrue);
       });
     });
+
+    test('a cue the backend accepted but failed to play also says so', () {
+      // The gap `load()` throwing cannot cover: a file the backend takes
+      // without complaint and then fails to sound, reported only on the
+      // status stream after playback has already started.
+      fakeAsync((async) {
+        final rig = _Rig(cue: const Duration(seconds: 2));
+
+        bool? sounded;
+        rig.board.fire(_whistle).then((value) => sounded = value);
+        async.flushMicrotasks();
+
+        rig.deck.emitAsyncError(StateError('backend gave up'));
+        async.flushMicrotasks();
+
+        expect(sounded, isFalse);
+      });
+    });
   });
 
   group('pressing it twice', () {

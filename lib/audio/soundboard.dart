@@ -87,6 +87,8 @@ class Soundboard {
     final generation = ++_generation;
     _sounding = true;
 
+    StreamSubscription<DeckStatus>? errorSub;
+
     try {
       // A press during a press restarts it. One deck cannot overlap itself,
       // and twice on the whistle means twice.
@@ -102,15 +104,29 @@ class Soundboard {
         );
       }
 
+      // A file the backend accepts at `load` can still fail to actually sound
+      // — reported only on the status stream, after `load` has already
+      // returned without throwing. Watched for the run of the cue so that
+      // failure is never silent: a cue that "played" and made no noise is
+      // worse than one that threw, because nothing told the operator why.
+      final failure = Completer<void>();
+      errorSub = _deck.statusStream.listen((status) {
+        if (status.state == DeckPlaybackState.error && !failure.isCompleted) {
+          failure.complete();
+        }
+      });
+
       final length = _deck.duration ?? assumedLength;
       await _deck.play();
-      await Future<void>.delayed(length);
+      await Future.any([Future<void>.delayed(length), failure.future]);
+      final failedAsync = failure.isCompleted;
 
       if (generation == _generation) await _deck.stop();
-      return true;
+      return !failedAsync;
     } on Object {
       return false;
     } finally {
+      await errorSub?.cancel();
       // Whatever went wrong — a file that has been moved, a deck that will not
       // load it — the music must not be left sitting in a dip nobody can see
       // the cause of.
