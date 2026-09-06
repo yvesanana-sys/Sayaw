@@ -20,6 +20,7 @@ QueueEntry _entry(
   Duration? cueOut,
   Duration? targetDuration,
   String? danceTypeName,
+  String? announcementClipPath,
   DateTime? expiresAt,
   double duckLevel = 0.2,
   Duration duckFade = const Duration(milliseconds: 600),
@@ -46,6 +47,7 @@ QueueEntry _entry(
     ),
     targetDuration: targetDuration,
     danceTypeName: danceTypeName,
+    announcementClipPath: announcementClipPath,
     title: id,
   );
 }
@@ -436,6 +438,65 @@ void main() {
         expect(lowest, closeTo(0.2, 0.01), reason: 'should reach duckLevel');
         expect(values.last.value, closeTo(1.0, 1e-6),
             reason: 'should return to unity');
+      });
+    });
+
+    test('a clip that cannot be read costs the announcement, not the set', () {
+      // The file the operator tagged has been moved since. The transition is
+      // already under way when that is discovered, so it goes ahead without a
+      // voice rather than stopping in the middle of it.
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(seconds: 8));
+        rig.clips.throwOnProbe = true;
+
+        rig.start([
+          _entry('one'),
+          _entry('two',
+              mode: AnnounceMode.duckOver,
+              announcementClipPath: '/clips/moved.wav'),
+        ], async);
+
+        async.elapse(const Duration(seconds: 20));
+        async.flushMicrotasks();
+
+        expect(rig.activeItems, contains('two'),
+            reason: 'the set carried on into the next track');
+        expect(rig.duckValues.isEmpty || rig.duckValues.last.value == 1.0,
+            isTrue,
+            reason: 'the music was never left ducked for a voice that '
+                'never spoke');
+      });
+    });
+
+    test('and the crossfade button still works afterwards', () {
+      // The flag that guards a transition has to be released on the way out of
+      // a failure as well as a success. Left set, every later crossfade is a
+      // silent no-op — the operator presses it in front of a room and nothing
+      // happens, for the rest of the night.
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(minutes: 5));
+        rig.clips.throwOnProbe = true;
+
+        rig.start([
+          _entry('one'),
+          _entry('two',
+              mode: AnnounceMode.duckOver,
+              announcementClipPath: '/clips/moved.wav'),
+          _entry('three',
+              mode: AnnounceMode.duckOver,
+              announcementClipPath: '/clips/moved.wav'),
+        ], async);
+
+        rig.engine.skipNext();
+        async.elapse(const Duration(seconds: 10));
+        async.flushMicrotasks();
+        expect(rig.activeItems, contains('two'));
+
+        rig.engine.skipNext();
+        async.elapse(const Duration(seconds: 10));
+        async.flushMicrotasks();
+        expect(rig.activeItems, contains('three'),
+            reason: 'a second crossfade after a failed announcement');
       });
     });
 

@@ -21,6 +21,10 @@ class FakeClipFactory implements ClipFactory {
   /// Set to make every render fail, as a mute TTS engine would.
   bool failRender = false;
 
+  /// Set to make every probe throw, as a clip the operator has moved does when
+  /// the deck is asked to load it.
+  bool throwOnProbe = false;
+
   @override
   bool exists(String path) => true;
 
@@ -40,6 +44,7 @@ class FakeClipFactory implements ClipFactory {
   Future<AnnouncementClip?> probe(String path,
       {required String text, String? hash}) async {
     probed.add(path);
+    if (throwOnProbe) throw StateError('cannot load $path');
     return AnnouncementClip(
       hash: hash ?? 'fake-$path',
       filePath: path,

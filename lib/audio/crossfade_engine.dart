@@ -617,7 +617,18 @@ class CrossfadeEngine {
   Future<void> _beginTransition() async {
     if (_transitionInFlight) return;
     _transitionInFlight = true;
+    try {
+      await _transition();
+    } finally {
+      // Released whatever happened. Left set by a throw on the way through,
+      // this flag turns every later crossfade into a no-op — the operator
+      // presses the button in front of a room and nothing happens, for the
+      // rest of the night.
+      _transitionInFlight = false;
+    }
+  }
 
+  Future<void> _transition() async {
     final outgoing = _activeEntry;
     final incoming = _standbyEntry;
 
@@ -628,17 +639,13 @@ class CrossfadeEngine {
         outgoing?.spec.fadeOutCurve ?? FadeCurve.equalPower,
       );
       if (faded) await stop();
-      _transitionInFlight = false;
       return;
     }
 
     final spec = incoming.spec;
 
     if (spec.isSequential) {
-      if (!await _runSequential(spec, incoming)) {
-        _transitionInFlight = false;
-        return;
-      }
+      if (!await _runSequential(spec, incoming)) return;
     } else {
       switch (spec.announceMode) {
         case AnnounceMode.off:
@@ -659,8 +666,6 @@ class CrossfadeEngine {
           break;
       }
     }
-
-    _transitionInFlight = false;
 
     if (spec.pauseAfter) {
       await pause();
