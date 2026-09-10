@@ -72,14 +72,21 @@ sudo apt-get update
 sudo apt-get install -y \
   clang cmake ninja-build pkg-config \
   libgtk-3-dev liblzma-dev libstdc++-12-dev \
-  libmpv-dev mpv
+  libmpv-dev mpv \
+  espeak-ng
 ```
 
 `libmpv` is the audio engine and is a **runtime** dependency on Linux — unlike
 Windows, where it ships inside the installer. It has to stay installed.
 
+`espeak-ng` is what speaks the announcements. It is also a runtime dependency,
+and it is the one thing here whose absence is **silent**: without it a set
+still plays, transitions still run, and every spoken announcement is simply
+missing — which looks exactly like a row nobody tagged. Windows and macOS use
+the synthesiser already built into the system and need nothing installed.
+
 On Fedora the equivalent is `clang cmake ninja-build pkgconf-pkg-config
-gtk3-devel xz-devel mpv-libs-devel`.
+gtk3-devel xz-devel mpv-libs-devel espeak-ng`.
 
 ### 2. Flutter
 
