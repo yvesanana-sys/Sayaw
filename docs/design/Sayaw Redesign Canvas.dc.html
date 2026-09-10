@@ -3,6 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- React is vendored so the canvas opens from a checkout with no network.
+     support.js loads it from unpkg only when window.React is absent. -->
+<script src="./vendor/react.production.min.js"></script>
+<script src="./vendor/react-dom.production.min.js"></script>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -635,7 +639,7 @@
               <div style="font-size:26px;font-weight:600;line-height:1.35;text-wrap:pretty;">In <span style="font-variant-numeric:tabular-nums;">38 seconds</span> the floor gets silence: <span style="color:#FF9A94;">Obsesión can’t play, and the words “Next dance: Bachata” couldn’t be made.</span></div>
               <div style="display:flex;flex-direction:column;gap:8px;">
                 <div style="display:flex;gap:10px;align-items:flex-start;"><span style="flex:0 0 auto;height:26px;display:inline-flex;align-items:center;padding:0 10px;border-radius:999px;background:#4C1512;color:#FF9A94;font-size:12px;font-weight:700;">SONG</span><span style="font-size:15px;color:#ECEAF2;line-height:1.5;">The file isn’t where it was — the drive it lives on isn’t connected.</span></div>
-                <div style="display:flex;gap:10px;align-items:flex-start;"><span style="flex:0 0 auto;height:26px;display:inline-flex;align-items:center;padding:0 10px;border-radius:999px;background:#4C1512;color:#FF9A94;font-size:12px;font-weight:700;">VOICE</span><span style="font-size:15px;color:#ECEAF2;line-height:1.5;">This announcement was never made before doors, and there’s no internet to make it now.</span></div>
+                <div style="display:flex;gap:10px;align-items:flex-start;"><span style="flex:0 0 auto;height:26px;display:inline-flex;align-items:center;padding:0 10px;border-radius:999px;background:#4C1512;color:#FF9A94;font-size:12px;font-weight:700;">VOICE</span><span style="font-size:15px;color:#ECEAF2;line-height:1.5;">This announcement was never made before doors, and this machine has nothing to say it with — no speech synthesiser is installed.</span></div>
               </div>
             </div>
 

@@ -12,7 +12,7 @@ Eleven artboards cover the 90% path (open a set → press play → see what is p
 
 `Sayaw Redesign Canvas.dc.html` is a **design reference created in HTML** — a prototype showing intended look, wording and layout. It is not production code and should not be ported line-for-line.
 
-The task is to **recreate these designs in the existing Flutter app**, using its established patterns: `SayawColors` / `SayawTheme`, `SayawBreakpoints`, `TouchTargets`, the existing `Riverpod` providers and `PlaybackUiState`. Widget names below map onto the files that exist today.
+The task is to **recreate these designs in the existing Flutter app**, using its established patterns: `SayawColors` / `SayawTheme`, `SayawBreakpoint` / `SayawLayout`, the `kMinTouchTarget` / `kTransportTouchTarget` constants, the existing `Riverpod` providers and `PlaybackUiState`. Widget names below map onto the files that exist today.
 
 Open the HTML file in any browser. Annotations (numbered pins in the gutter + note panels to the right of each board) explain what changed and why; both can be toggled off via the `showPins` / `showNotes` props.
 
@@ -174,7 +174,7 @@ The compound worst case, 38 seconds before it becomes audible.
 - **Ribbon** gains a 48dp red count pill: `#4C1512` fill, 1px `#FF9A94`, "2 problems" 14/700.
 - **The sentence slot goes red, in the exact position and height the good news occupied** — `#2A1210`, 2px `#FF9A94`. Same 26/600 sentence: "In 38 seconds the floor gets silence: **Obsesión can't play, and the words 'Next dance: Bachata' couldn't be made.**" Below it two labelled causes so a compound failure doesn't read as one vague problem:
   - `SONG` — "The file isn't where it was — the drive it lives on isn't connected."
-  - `VOICE` — "This announcement was never made before doors, and there's no internet to make it now."
+  - `VOICE` — "This announcement was never made before doors, and this machine has nothing to say it with — no speech synthesiser is installed."
 - **Three ways out, with a default that fires by itself.** "Pick one — or do nothing and Sayaw takes the first option by itself in 38s."
   - Primary 72dp: **Skip to Propuesta Indecente** / "Bachata, downloaded, announcement ready"
   - **Play Bachata without the words** / "you announce it yourself"
@@ -267,7 +267,7 @@ All from `lib/ui/theme/sayaw_theme.dart` — none invented.
 
 **Radius** — 8 chips-small · 12 lane/small surfaces · 14 sound buttons · 16 secondary cards · 18 primary cards & transport · 22 window · 999 pills.
 
-**Touch** — 48dp minimum hit region everywhere (`TouchTargets.minimum`). Transport 72dp painted / 64dp minimum, 12dp apart. Rail and bottom-nav destinations 72dp. List rows 64dp min (72dp in the full set list). Hit region and painted size stay independent, as today.
+**Touch** — 48dp minimum hit region everywhere (`kMinTouchTarget` in `lib/ui/touch/touch_targets.dart`). Transport 72dp painted / 64dp minimum, 12dp apart. Rail and bottom-nav destinations 72dp. List rows 64dp min (72dp in the full set list). Hit region and painted size stay independent, as today.
 
 **Elevation** — flat. The one shadow is on the lifted drag proxy: `0 18px 40px rgba(0,0,0,.65)`.
 
@@ -307,4 +307,4 @@ None new. Icons come from the app's existing Material set; every one is paired w
 
 1. **Medium width (1i):** the sounds strip and Coming-in card currently drop out. Keep them at the cost of set-list width?
 2. **Prepare / Adjust split (1g):** worth a sanity read that each of the six consolidated icons landed in the right home.
-3. **Announcement pre-generation:** the redesign assumes announcements can be generated and cached before doors (Prepare row 3). If that isn't possible today, the "VOICE" failure in 1h becomes far more common and may deserve a louder pre-event warning.
+3. ~~**Announcement pre-generation:** the redesign assumes announcements can be generated and cached before doors.~~ **Answered — yes.** `AnnouncementEngine.warm()` renders each row's clip the moment it is preloaded, and the file is cached by text-and-voice hash, so a set opened before doors has every announcement on disk before the first song. Synthesis is on-device (`lib/audio/system_voice.dart`: SAPI on Windows, `say` on macOS, `espeak-ng` on Linux), so the network is never a factor — the 1f copy "works with the wifi down" is literally true. The one real VOICE failure is a Linux machine without `espeak-ng` installed, which is what the 1h copy now says; INSTALL.md lists it as a runtime dependency. A Prepare-screen row that checks for the synthesiser before doors would catch it an hour early, and is the right place for it.
