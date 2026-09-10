@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:path/path.dart' as p;
 
@@ -11,6 +11,7 @@ import 'crossfade_engine.dart';
 import 'deck.dart';
 import 'fade_curves.dart';
 import 'gain_bus.dart';
+import 'system_voice.dart';
 
 /// A rendered announcement: a real audio file with a *known* duration.
 ///
@@ -272,16 +273,19 @@ class PlatformClipFactory implements ClipFactory {
     required Deck deck,
     required String cacheDirectory,
     required this.settings,
+    SystemVoice? voice,
   })  // A named parameter cannot be private, so `this._deck` is unavailable.
       // ignore: prefer_initializing_formals
       : _deck = deck,
-        _cacheDir = cacheDirectory;
-
-  static const _desktopTts = MethodChannel('sayaw/tts');
+        _cacheDir = cacheDirectory,
+        _voice = voice ?? SystemVoice.platform();
 
   final Deck _deck;
   final String _cacheDir;
   final TtsVoiceSettings settings;
+
+  /// The desktop synthesiser. Injected in tests so nothing has to shell out.
+  final SystemVoice _voice;
 
   final FlutterTts _tts = FlutterTts();
 
@@ -301,18 +305,24 @@ class PlatformClipFactory implements ClipFactory {
       final ok = await _tts.synthesizeToFile(text, '$hash.wav');
       if (ok != 1) return null;
     } else {
-      // Windows: SpeechSynthesizer.SynthesizeTextToStreamAsync
-      // macOS:   AVSpeechSynthesizer.write(_:toBufferCallback:)
-      // Both are ~40 lines of platform code behind this channel; flutter_tts's
-      // desktop synthesizeToFile coverage is not dependable enough to rely on.
-      final result = await _desktopTts.invokeMethod<String>('synthesizeToFile', {
-        'text': text,
-        'path': outPath,
-        'voiceId': settings.voiceId,
-        'rate': settings.rate,
-        'pitch': settings.pitch,
-      });
-      if (result == null) return null;
+      // The desktop platforms have no dependable render-to-file plugin, so
+      // this drives the synthesiser the operating system already ships.
+      final spoke = await _voice.synthesize(
+        text: text,
+        outPath: outPath,
+        settings: settings,
+      );
+      if (!spoke) {
+        // Every caller above turns a null clip into a transition that simply
+        // runs without a voice, which on the floor is indistinguishable from a
+        // row nobody tagged. This is the one place that still knows *why*, so
+        // it is the only place that can say so.
+        debugPrint(
+          'sayaw: announcement not rendered — '
+          '${await _voice.describeMissing() ?? 'the synthesiser failed.'}',
+        );
+        return null;
+      }
     }
 
     if (!exists(outPath)) return null;
