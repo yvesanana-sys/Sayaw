@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+<style>
+  html, body { margin:0; background:#08080B; color:#ECEAF2; font-family:"Inter","InterVariable",system-ui,-apple-system,sans-serif; -webkit-font-smoothing:antialiased; }
+  a { color:#C7A9F5; text-decoration:none; }
+  a:hover { color:#E0CCFF; }
+</style>
+</helmet>
+
+<section style="padding:56px;display:flex;flex-direction:column;gap:24px;background:#08080B;">
+  <div style="display:flex;flex-direction:column;gap:12px;max-width:1100px;">
+    <div style="font-size:13px;font-weight:700;letter-spacing:2px;color:#F2C46B;">TURN 1 · SAYAW OPERATOR REDESIGN</div>
+    <h1 style="margin:0;font-size:44px;font-weight:600;letter-spacing:-1px;line-height:1.05;">A night you can run without being a DJ</h1>
+    <p style="margin:0;font-size:17px;line-height:1.6;color:#B9B4C7;max-width:70ch;text-wrap:pretty;">Eleven artboards. The central change: the two audio decks stop being the interface. The screen is now a <strong style="color:#ECEAF2;font-weight:600;">handover lane</strong> — what the floor is dancing to, what is coming, and one plain sentence saying what happens and when. Deck A and B survive only as lane colour (lavender <span style="color:#C7A9F5;">■</span> on the floor / mint <span style="color:#7FD1C1;">■</span> coming in), never as a word the operator has to learn. Amber <span style="color:#F2C46B;">■</span> is always the voice.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">
+      <span style="padding:8px 14px;border-radius:999px;background:#17171E;border:1px solid #3A3648;font-size:13px;color:#B9B4C7;">Ground #0E0E12 · AA 4.5:1 everywhere</span>
+      <span style="padding:8px 14px;border-radius:999px;background:#17171E;border:1px solid #3A3648;font-size:13px;color:#B9B4C7;">48dp targets · 64dp transport · 12dp apart</span>
+      <span style="padding:8px 14px;border-radius:999px;background:#17171E;border:1px solid #3A3648;font-size:13px;color:#B9B4C7;">Controls hold position in all three layouts</span>
+      <span style="padding:8px 14px;border-radius:999px;background:#17171E;border:1px solid #3A3648;font-size:13px;color:#B9B4C7;">No hover-only affordance · every icon labelled</span>
+      <span style="padding:8px 14px;border-radius:999px;background:#17171E;border:1px solid #3A3648;font-size:13px;color:#B9B4C7;">Boards <a href="#1a">1a</a> – <a href="#1k">1k</a></span>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:72px;align-items:flex-start;">
+
+    <!-- ============ 1a  MAIN — COMPACT ============ -->
+    <div id="1a" style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:baseline;gap:12px;">
+        <span style="padding:4px 10px;border-radius:8px;background:#C7A9F5;color:#12081F;font-size:13px;font-weight:800;">1a</span>
+        <span style="font-size:20px;font-weight:600;">Main screen — compact, 640dp (tablet portrait)</span>
+      </div>
+      <div style="position:relative;display:flex;gap:28px;align-items:flex-start;">
+        <div style="position:relative;width:640px;height:1000px;background:#0E0E12;border:1px solid #3A3648;border-radius:22px;overflow:hidden;display:flex;flex-direction:column;">
+
+          <!-- status ribbon -->
+          <div style="height:64px;flex:0 0 64px;background:#17171E;border-bottom:1px solid #3A3648;display:flex;align-items:center;gap:12px;padding:0 12px;">
+            <div style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;">
+              <div style="font-size:15px;font-weight:600;color:#ECEAF2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Friday Social</div>
+              <div style="font-size:12px;color:#B9B4C7;font-variant-numeric:tabular-nums;">Song 9 of 34 · 2h 41m of music left</div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:8px;height:48px;padding:0 16px;border-radius:999px;background:#2A2A36;border:1px solid #6E6880;font-size:14px;font-weight:600;color:#ECEAF2;">Adjust</div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:8px;height:48px;padding:0 16px;border-radius:999px;background:#2A2A36;border:1px solid #6E6880;font-size:14px;font-weight:600;color:#ECEAF2;">Stage view</div>
+          </div>
+
+          <div style="flex:1;display:flex;flex-direction:column;gap:12px;padding:16px;min-height:0;">
+
+            <!-- ON THE FLOOR -->
+            <div style="background:#1F1F28;border:2px solid #C7A9F5;border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:14px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:12px;font-weight:800;letter-spacing:1.4px;color:#C7A9F5;">ON THE FLOOR NOW</span>
+                <span style="font-size:13px;color:#B9B4C7;font-variant-numeric:tabular-nums;">3:04 / 4:16</span>
+              </div>
+              <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;">
+                <div style="min-width:0;">
+                  <div style="font-size:40px;font-weight:700;letter-spacing:-1px;color:#C7A9F5;line-height:1;">Salsa</div>
+                  <div style="margin-top:10px;font-size:22px;font-weight:600;color:#ECEAF2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Vivir Mi Vida</div>
+                  <div style="font-size:16px;color:#B9B4C7;">Marc Anthony</div>
+                </div>
+                <div style="text-align:right;flex:0 0 auto;">
+                  <div style="font-size:56px;font-weight:600;color:#ECEAF2;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-2px;">1:12</div>
+                  <div style="font-size:14px;color:#B9B4C7;">left</div>
+                </div>
+              </div>
+              <div style="height:10px;border-radius:5px;background:#2A2A36;overflow:hidden;"><div style="width:72%;height:100%;background:#C7A9F5;"></div></div>
+            </div>
+
+            <!-- WHAT HAPPENS NEXT — the loudest sentence -->
+            <div style="background:#241D0F;border:2px solid #F2C46B;border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:12px;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span style="width:10px;height:10px;border-radius:5px;background:#F2C46B;"></span>
+                <span style="font-size:12px;font-weight:800;letter-spacing:1.4px;color:#F2C46B;">WHAT HAPPENS NEXT</span>
+              </div>
+              <div style="font-size:26px;font-weight:600;line-height:1.35;color:#ECEAF2;text-wrap:pretty;">In <span style="font-variant-numeric:tabular-nums;">40 seconds</span>, the music blends into <span style="color:#7FD1C1;">Bachata</span> and the room hears “Next dance: Bachata”.</div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                <span style="height:32px;display:inline-flex;align-items:center;padding:0 12px;border-radius:999px;background:#3D3116;color:#F2C46B;font-size:13px;font-weight:600;">Voice ready</span>
+                <span style="height:32px;display:inline-flex;align-items:center;padding:0 12px;border-radius:999px;background:#2A2A36;color:#ECEAF2;font-size:13px;font-weight:600;">Blend takes 8s</span>
+                <span style="height:32px;display:inline-flex;align-items:center;padding:0 12px;border-radius:999px;background:#2A2A36;color:#ECEAF2;font-size:13px;font-weight:600;">Happens on its own</span>
+              </div>
+            </div>
+
+            <!-- COMING IN -->
+            <div style="background:#1F1F28;border:1px solid #3A3648;border-radius:18px;padding:18px;display:flex;align-items:center;gap:16px;">
+              <div style="min-width:0;flex:1;">
+                <div style="font-size:12px;font-weight:800;letter-spacing:1.4px;color:#7FD1C1;">COMING IN</div>
+                <div style="margin-top:8px;font-size:20px;font-weight:600;color:#ECEAF2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Obsesión</div>
+                <div style="font-size:15px;color:#B9B4C7;">Aventura · 4:02</div>
+              </div>
+              <div style="flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+                <span style="height:34px;display:inline-flex;align-items:center;padding:0 14px;border-radius:999px;background:#1B3D38;color:#7FD1C1;font-size:15px;font-weight:700;">Bachata</span>
+                <span style="font-size:13px;color:#B9B4C7;">ready and cued</span>
+              </div>
+            </div>
+
+            <!-- HANDOVER LANE (was: crossfader) -->
+            <div style="background:#17171E;border:1px solid #3A3648;border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;letter-spacing:1px;">
+                <span style="color:#C7A9F5;">SALSA OUT</span>
+                <span style="color:#B9B4C7;font-weight:600;letter-spacing:0;">Blend by hand — drag anywhere on the lane</span>
+                <span style="color:#7FD1C1;">BACHATA IN</span>
+              </div>
+              <div style="position:relative;height:44px;border-radius:12px;background:linear-gradient(90deg,#C7A9F5 0%,#C7A9F5 30%,#2A2A36 30%,#2A2A36 70%,#7FD1C1 70%,#7FD1C1 100%);">
+                <div style="position:absolute;left:26%;top:-4px;width:28px;height:52px;border-radius:14px;background:#ECEAF2;border:2px solid #0E0E12;"></div>
+              </div>
+            </div>
+
+            <!-- sounds -->
+            <div style="display:flex;gap:12px;">
+              <div style="flex:1;height:56px;border-radius:14px;background:#1F1F28;border:1px solid #3A3648;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:600;color:#ECEAF2;">Whistle <span style="color:#B9B4C7;font-size:12px;">1</span></div>
+              <div style="flex:1;height:56px;border-radius:14px;background:#1F1F28;border:1px solid #3A3648;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:600;color:#ECEAF2;">Rotate <span style="color:#B9B4C7;font-size:12px;">2</span></div>
+              <div style="flex:1;height:56px;border-radius:14px;background:#1F1F28;border:1px solid #3A3648;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:600;color:#ECEAF2;">Applause <span style="color:#B9B4C7;font-size:12px;">3</span></div>
+            </div>
+          </div>
+
+          <!-- FIXED ACTION BAR — same place in every layout -->
+          <div style="flex:0 0 auto;background:#17171E;border-top:1px solid #3A3648;padding:14px 16px;display:flex;gap:12px;align-items:stretch;">
+            <div style="width:88px;height:72px;border-radius:18px;background:#2A2A36;border:2px solid #C7A9F5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;">
+              <div style="width:0;height:0;border-left:0;border-top:9px solid transparent;border-bottom:9px solid transparent;box-sizing:border-box;border-left:16px solid transparent;"></div>
+              <div style="display:flex;gap:5px;"><span style="width:6px;height:20px;background:#C7A9F5;border-radius:2px;"></span><span style="width:6px;height:20px;background:#C7A9F5;border-radius:2px;"></span></div>
+              <span style="font-size:12px;font-weight:700;color:#ECEAF2;">Pause</span>
+            </div>
+            <div style="flex:1;height:72px;border-radius:18px;background:#C7A9F5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">
+              <span style="font-size:20px;font-weight:700;color:#12081F;">Start Bachata now</span>
+              <span style="font-size:13px;font-weight:600;color:#2A1747;">blend + announce, right away</span>
+            </div>
+            <div style="width:88px;height:72px;border-radius:18px;background:#3D3116;border:2px solid #F2C46B;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;">
+              <span style="width:22px;height:22px;border-radius:11px;border:3px solid #F2C46B;"></span>
+              <span style="font-size:12px;font-weight:700;color:#F2C46B;">Say it</span>
+            </div>
+          </div>
+
+          <!-- bottom nav -->
+          <div style="flex:0 0 72px;height:72px;background:#1F1F28;border-top:1px solid #3A3648;display:flex;">
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:#3A2A55;"><span style="width:20px;height:20px;border-radius:6px;background:#C7A9F5;"></span><span style="font-size:12px;font-weight:700;color:#ECEAF2;">Now</span></div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;"><span style="width:20px;height:20px;border-radius:6px;background:#6E6880;"></span><span style="font-size:12px;font-weight:600;color:#B9B4C7;">Set list</span></div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;"><span style="width:20px;height:20px;border-radius:6px;background:#6E6880;"></span><span style="font-size:12px;font-weight:600;color:#B9B4C7;">Music</span></div>
+          </div>
+
+
+        </div>
+        <sc-if value="{{ showPins }}" hint-placeholder-val="{{ true }}">
+            <div style="position:absolute;left:-40px;top:0;bottom:0;width:30px;pointer-events:none;">
+              <span style="position:absolute;left:2px;top:78px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">1</span>
+              <span style="position:absolute;left:2px;top:294px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">2</span>
+              <span style="position:absolute;left:2px;top:600px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">3</span>
+              <span style="position:absolute;left:2px;top:838px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">4</span>
+              <span style="position:absolute;left:2px;top:944px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">5</span>
+            </div>
+          </sc-if>
+
+        <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+          <div style="width:340px;display:flex;flex-direction:column;gap:14px;">
+            <div style="font-size:12px;font-weight:800;letter-spacing:1.4px;color:#B9B4C7;">WHAT CHANGED, AND WHY</div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">1</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;"><strong style="color:#ECEAF2;">Six unlabelled icons became two words.</strong> Sources, set shape, offline prep, Snowball and Jack &amp; Jill all moved into <strong style="color:#ECEAF2;">Adjust</strong> (<a href="#1g">1g</a>); fullscreen became <strong style="color:#ECEAF2;">Stage view</strong>. Nothing on the main screen is guessable-only.</p></div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">2</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;"><strong style="color:#ECEAF2;">The plain sentence is the biggest thing on screen after the clock.</strong> The old announcer strip stated a label and a timing fragment; this states the event, the delay and the words the room will hear. It keeps its box when there is nothing to say, so nothing below it moves.</p></div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">3</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;"><strong style="color:#ECEAF2;">“Deck A / Deck B” is gone.</strong> Two decks are now one handover lane: what is going out on the left, what is coming in on the right, in the two mandated hues and lightnesses. The whole 44dp band is draggable, as it already was — but it is now labelled in words, not with the letters A and B.</p></div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">4</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;"><strong style="color:#ECEAF2;">Two equal actions, one named after the music.</strong> Pause is the state, “Start Bachata now” is the act — 72dp tall, 12dp apart, in the same coordinates in every layout. The old bar had six identical squares (cue / play / load × 2) plus FADE; cue and load are now automatic and demoted to Adjust.</p></div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">5</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;"><strong style="color:#ECEAF2;">Three panes, three plain nouns.</strong> Library → <em>Music</em>, Queue → <em>Set list</em>, Decks → <em>Now</em>. Same three destinations as the rail at wider widths, in the same order.</p></div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 1b  MAIN — EXPANDED ============ -->
+    <div id="1b" style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:baseline;gap:12px;">
+        <span style="padding:4px 10px;border-radius:8px;background:#C7A9F5;color:#12081F;font-size:13px;font-weight:800;">1b</span>
+        <span style="font-size:20px;font-weight:600;">Main screen — expanded, 1440dp (desktop, three panes)</span>
+      </div>
+      <div style="position:relative;display:flex;gap:28px;align-items:flex-start;">
+        <div style="position:relative;width:1440px;height:900px;background:#0E0E12;border:1px solid #3A3648;border-radius:22px;overflow:hidden;display:flex;flex-direction:column;">
+          <div style="height:64px;flex:0 0 64px;background:#17171E;border-bottom:1px solid #3A3648;display:flex;align-items:center;gap:16px;padding:0 16px;">
+            <div style="font-size:16px;font-weight:600;">Friday Social</div>
+            <div style="font-size:13px;color:#B9B4C7;font-variant-numeric:tabular-nums;">Song 9 of 34 · 2h 41m of music left · doors 20:00</div>
+            <div style="flex:1;"></div>
+            <div style="height:48px;display:flex;align-items:center;padding:0 18px;border-radius:999px;background:#2A2A36;border:1px solid #6E6880;font-size:14px;font-weight:600;">Prepare</div>
+            <div style="height:48px;display:flex;align-items:center;padding:0 18px;border-radius:999px;background:#2A2A36;border:1px solid #6E6880;font-size:14px;font-weight:600;">Adjust</div>
+            <div style="height:48px;display:flex;align-items:center;padding:0 18px;border-radius:999px;background:#2A2A36;border:1px solid #6E6880;font-size:14px;font-weight:600;">Stage view</div>
+          </div>
+
+          <div style="flex:1;display:flex;min-height:0;">
+            <!-- rail -->
+            <div style="flex:0 0 88px;width:88px;background:#1F1F28;border-right:1px solid #3A3648;display:flex;flex-direction:column;padding-top:12px;">
+              <div style="height:72px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:#3A2A55;"><span style="width:22px;height:22px;border-radius:7px;background:#C7A9F5;"></span><span style="font-size:12px;font-weight:700;">Now</span></div>
+              <div style="height:72px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;"><span style="width:22px;height:22px;border-radius:7px;background:#6E6880;"></span><span style="font-size:12px;font-weight:600;color:#B9B4C7;">Set list</span></div>
+              <div style="height:72px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;"><span style="width:22px;height:22px;border-radius:7px;background:#6E6880;"></span><span style="font-size:12px;font-weight:600;color:#B9B4C7;">Music</span></div>
+            </div>
+
+            <!-- music pane -->
+            <div style="flex:0 0 320px;width:320px;border-right:1px solid #3A3648;display:flex;flex-direction:column;">
+              <div style="padding:12px;"><div style="height:48px;border-radius:12px;background:#1F1F28;border:1px solid #3A3648;display:flex;align-items:center;padding:0 14px;font-size:14px;color:#B9B4C7;">Search your music</div></div>
+              <div style="padding:0 12px 8px;font-size:12px;font-weight:800;letter-spacing:1.2px;color:#B9B4C7;">318 SONGS · ADDED THIS WEEK</div>
+              <div style="flex:1;display:flex;flex-direction:column;">
+                <div style="height:64px;display:flex;align-items:center;gap:12px;padding:0 12px;border-bottom:1px solid #262330;"><div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Ven Devórame Otra Vez</div><div style="font-size:12px;color:#B9B4C7;">Lalo Rodríguez · Salsa</div></div><div style="width:48px;height:48px;border-radius:24px;background:#2C2340;display:flex;align-items:center;justify-content:center;color:#C7A9F5;font-size:22px;font-weight:600;">+</div></div>
+                <div style="height:64px;display:flex;align-items:center;gap:12px;padding:0 12px;border-bottom:1px solid #262330;"><div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Propuesta Indecente</div><div style="font-size:12px;color:#B9B4C7;">Romeo Santos · Bachata</div></div><div style="width:48px;height:48px;border-radius:24px;background:#2C2340;display:flex;align-items:center;justify-content:center;color:#C7A9F5;font-size:22px;font-weight:600;">+</div></div>
+                <div style="height:64px;display:flex;align-items:center;gap:12px;padding:0 12px;border-bottom:1px solid #262330;"><div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Sway</div><div style="font-size:12px;color:#B9B4C7;">Dean Martin · Cha-Cha</div></div><div style="width:48px;height:48px;border-radius:24px;background:#2C2340;display:flex;align-items:center;justify-content:center;color:#C7A9F5;font-size:22px;font-weight:600;">+</div></div>
+                <div style="height:64px;display:flex;align-items:center;gap:12px;padding:0 12px;border-bottom:1px solid #262330;"><div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Bailando</div><div style="font-size:12px;color:#B9B4C7;">Enrique Iglesias · Bachata</div></div><div style="width:48px;height:48px;border-radius:24px;background:#2C2340;display:flex;align-items:center;justify-content:center;color:#C7A9F5;font-size:22px;font-weight:600;">+</div></div>
+              </div>
+            </div>
+
+            <!-- now pane -->
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+              <div style="flex:1;padding:16px;display:flex;flex-direction:column;gap:12px;min-height:0;">
+                <div style="background:#1F1F28;border:2px solid #C7A9F5;border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:14px;">
+                  <div style="display:flex;align-items:center;justify-content:space-between;"><span style="font-size:12px;font-weight:800;letter-spacing:1.4px;color:#C7A9F5;">ON THE FLOOR NOW</span><span style="font-size:13px;color:#B9B4C7;font-variant-numeric:tabular-nums;">3:04 / 4:16</span></div>
+                  <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;">
+                    <div style="min-width:0;"><div style="font-size:44px;font-weight:700;letter-spacing:-1px;color:#C7A9F5;line-height:1;">Salsa</div><div style="margin-top:10px;font-size:24px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Vivir Mi Vida</div><div style="font-size:16px;color:#B9B4C7;">Marc Anthony</div></div>
+                    <div style="text-align:right;flex:0 0 auto;"><div style="font-size:64px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-2px;">1:12</div><div style="font-size:14px;color:#B9B4C7;">left</div></div>
+                  </div>
+                  <div style="height:10px;border-radius:5px;background:#2A2A36;overflow:hidden;"><div style="width:72%;height:100%;background:#C7A9F5;"></div></div>
+                </div>
+                <div style="background:#241D0F;border:2px solid #F2C46B;border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:12px;">
+                  <div style="font-size:12px;font-weight:800;letter-spacing:1.4px;color:#F2C46B;">WHAT HAPPENS NEXT</div>
+                  <div style="font-size:26px;font-weight:600;line-height:1.35;text-wrap:pretty;">In <span style="font-variant-numeric:tabular-nums;">40 seconds</span>, the music blends into <span style="color:#7FD1C1;">Bachata</span> and the room hears “Next dance: Bachata”.</div>
+                  <div style="display:flex;gap:8px;"><span style="height:32px;display:inline-flex;align-items:center;padding:0 12px;border-radius:999px;background:#3D3116;color:#F2C46B;font-size:13px;font-weight:600;">Voice ready</span><span style="height:32px;display:inline-flex;align-items:center;padding:0 12px;border-radius:999px;background:#2A2A36;font-size:13px;font-weight:600;">Blend takes 8s</span><span style="height:32px;display:inline-flex;align-items:center;padding:0 12px;border-radius:999px;background:#2A2A36;font-size:13px;font-weight:600;">Happens on its own</span></div>
+                </div>
+                <div style="background:#1F1F28;border:1px solid #3A3648;border-radius:18px;padding:18px;display:flex;align-items:center;gap:16px;">
+                  <div style="min-width:0;flex:1;"><div style="font-size:12px;font-weight:800;letter-spacing:1.4px;color:#7FD1C1;">COMING IN</div><div style="margin-top:8px;font-size:20px;font-weight:600;">Obsesión</div><div style="font-size:15px;color:#B9B4C7;">Aventura · 4:02</div></div>
+                  <span style="height:34px;display:inline-flex;align-items:center;padding:0 14px;border-radius:999px;background:#1B3D38;color:#7FD1C1;font-size:15px;font-weight:700;">Bachata</span>
+                </div>
+                <div style="background:#17171E;border:1px solid #3A3648;border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+                  <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;letter-spacing:1px;"><span style="color:#C7A9F5;">SALSA OUT</span><span style="color:#B9B4C7;font-weight:600;letter-spacing:0;">Blend by hand — drag anywhere on the lane</span><span style="color:#7FD1C1;">BACHATA IN</span></div>
+                  <div style="position:relative;height:44px;border-radius:12px;background:linear-gradient(90deg,#C7A9F5 0%,#C7A9F5 30%,#2A2A36 30%,#2A2A36 70%,#7FD1C1 70%,#7FD1C1 100%);"><div style="position:absolute;left:26%;top:-4px;width:28px;height:52px;border-radius:14px;background:#ECEAF2;border:2px solid #0E0E12;"></div></div>
+                </div>
+                <div style="display:flex;gap:12px;">
+                  <div style="flex:1;height:56px;border-radius:14px;background:#1F1F28;border:1px solid #3A3648;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:600;">Whistle <span style="color:#B9B4C7;font-size:12px;">1</span></div>
+                  <div style="flex:1;height:56px;border-radius:14px;background:#1F1F28;border:1px solid #3A3648;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:600;">Rotate <span style="color:#B9B4C7;font-size:12px;">2</span></div>
+                  <div style="flex:1;height:56px;border-radius:14px;background:#1F1F28;border:1px solid #3A3648;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:600;">Applause <span style="color:#B9B4C7;font-size:12px;">3</span></div>
+                </div>
+              </div>
+              <div style="flex:0 0 auto;background:#17171E;border-top:1px solid #3A3648;padding:14px 16px;display:flex;gap:12px;">
+                <div style="width:88px;height:72px;border-radius:18px;background:#2A2A36;border:2px solid #C7A9F5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;"><div style="display:flex;gap:5px;"><span style="width:6px;height:20px;background:#C7A9F5;border-radius:2px;"></span><span style="width:6px;height:20px;background:#C7A9F5;border-radius:2px;"></span></div><span style="font-size:12px;font-weight:700;">Pause</span></div>
+                <div style="flex:1;height:72px;border-radius:18px;background:#C7A9F5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;"><span style="font-size:20px;font-weight:700;color:#12081F;">Start Bachata now</span><span style="font-size:13px;font-weight:600;color:#2A1747;">blend + announce, right away</span></div>
+                <div style="width:88px;height:72px;border-radius:18px;background:#3D3116;border:2px solid #F2C46B;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;"><span style="width:22px;height:22px;border-radius:11px;border:3px solid #F2C46B;"></span><span style="font-size:12px;font-weight:700;color:#F2C46B;">Say it</span></div>
+              </div>
+            </div>
+
+            <!-- set list pane -->
+            <div style="flex:0 0 360px;width:360px;border-left:1px solid #3A3648;display:flex;flex-direction:column;">
+              <div style="padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;"><span style="font-size:12px;font-weight:800;letter-spacing:1.2px;color:#B9B4C7;">TONIGHT’S SET LIST</span><span style="font-size:12px;color:#B9B4C7;font-variant-numeric:tabular-nums;">34</span></div>
+              <div style="padding:0 16px 12px;font-size:13px;color:#B9B4C7;">5 songs per dance · 20s gap for the floor to change</div>
+              <div style="flex:1;display:flex;flex-direction:column;">
+                <div style="min-height:64px;display:flex;align-items:center;gap:10px;padding:8px 12px;background:#1E1830;border-left:3px solid #C7A9F5;"><span style="width:24px;text-align:center;font-size:12px;color:#B9B4C7;font-variant-numeric:tabular-nums;">9</span><div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Vivir Mi Vida</div><div style="font-size:12px;color:#C7A9F5;">on the floor now</div></div></div>
+                <div style="min-height:64px;display:flex;align-items:center;gap:10px;padding:8px 12px;background:#141C1B;border-left:3px solid #7FD1C1;"><span style="width:24px;text-align:center;font-size:12px;color:#B9B4C7;font-variant-numeric:tabular-nums;">10</span><div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Obsesión</div><div style="font-size:12px;color:#7FD1C1;">coming in · says “Next dance: Bachata”</div></div><span style="height:26px;display:inline-flex;align-items:center;padding:0 10px;border-radius:999px;background:#2A2A36;font-size:11px;font-weight:700;color:#B9B4C7;">Bachata</span></div>
+                <div style="min-height:64px;display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #262330;"><span style="width:24px;text-align:center;font-size:12px;color:#B9B4C7;font-variant-numeric:tabular-nums;">11</span><div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Propuesta Indecente</div><div style="font-size:12px;color:#B9B4C7;">Romeo Santos</div></div><span style="height:26px;display:inline-flex;align-items:center;padding:0 10px;border-radius:999px;background:#2A2A36;font-size:11px;font-weight:700;color:#B9B4C7;">Bachata</span><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;color:#B9B4C7;font-size:18px;">≡</span></div>
+                <div style="min-height:64px;display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #262330;"><span style="width:24px;text-align:center;font-size:12px;color:#B9B4C7;font-variant-numeric:tabular-nums;">12</span><div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Bailando</div><div style="font-size:12px;color:#B9B4C7;">Enrique Iglesias</div></div><span style="height:26px;display:inline-flex;align-items:center;padding:0 10px;border-radius:999px;background:#2A2A36;font-size:11px;font-weight:700;color:#B9B4C7;">Bachata</span><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;color:#B9B4C7;font-size:18px;">≡</span></div>
+                <div style="min-height:64px;display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #262330;"><span style="width:24px;text-align:center;font-size:12px;color:#B9B4C7;font-variant-numeric:tabular-nums;">13</span><div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Sway</div><div style="font-size:12px;color:#B9B4C7;">Dean Martin</div></div><span style="height:26px;display:inline-flex;align-items:center;padding:0 10px;border-radius:999px;background:#2A2A36;font-size:11px;font-weight:700;color:#B9B4C7;">Cha-Cha</span><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;color:#B9B4C7;font-size:18px;">≡</span></div>
+              </div>
+            </div>
+          </div>
+
+
+        </div>
+        <sc-if value="{{ showPins }}" hint-placeholder-val="{{ true }}">
+            <div style="position:absolute;left:-40px;top:0;bottom:0;width:30px;pointer-events:none;">
+              <span style="position:absolute;left:2px;top:20px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">1</span>
+              <span style="position:absolute;left:2px;top:76px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">2</span>
+              <span style="position:absolute;left:2px;top:120px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">3</span>
+              <span style="position:absolute;left:2px;top:790px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">4</span>
+            </div>
+          </sc-if>
+
+        <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+          <div style="width:340px;display:flex;flex-direction:column;gap:14px;">
+            <div style="font-size:12px;font-weight:800;letter-spacing:1.4px;color:#B9B4C7;">WHAT CHANGED, AND WHY</div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">1</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;">Wider windows earn one extra word, not extra controls: <strong style="color:#ECEAF2;">Prepare</strong> appears beside Adjust because a desktop is where the night gets set up an hour early.</p></div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">2</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;"><strong style="color:#ECEAF2;">The centre column is byte-identical to compact.</strong> Same cards, same order, same sizes; the wide window adds panes on either side rather than rearranging what a hand already knows.</p></div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">3</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;"><strong style="color:#ECEAF2;">The set list states relationships, not chips.</strong> “on the floor now” and “coming in · says …” replace a left-border colour the newcomer had to decode, and the two rows carry the same two lane hues as the handover lane.</p></div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">4</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;"><strong style="color:#ECEAF2;">Action bar pinned to the bottom of the centre pane</strong> — the same offset from the bottom edge as compact, so muscle memory survives a mid-set window drag in either direction.</p></div>
+            <p style="margin:8px 0 0;font-size:13px;line-height:1.6;color:#B9B4C7;">Rail order and destinations are unchanged from the existing <code style="color:#B9B4C7;">SayawPane</code> enum, so the width-only breakpoint logic and its tests stay valid.</p>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 1c  PERFORMANCE / STAGE VIEW ============ -->
+    <div id="1c" style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:baseline;gap:12px;">
+        <span style="padding:4px 10px;border-radius:8px;background:#C7A9F5;color:#12081F;font-size:13px;font-weight:800;">1c</span>
+        <span style="font-size:20px;font-weight:600;">Stage view (Performance Mode) — borderless, readable across a room</span>
+      </div>
+      <div style="position:relative;display:flex;gap:28px;align-items:flex-start;">
+        <div style="position:relative;width:1440px;height:810px;background:#0E0E12;border-radius:6px;overflow:hidden;display:flex;flex-direction:column;padding:48px;gap:28px;">
+          <div style="display:flex;align-items:center;gap:20px;">
+            <span style="font-size:18px;font-weight:700;letter-spacing:2px;color:#C7A9F5;">ON THE FLOOR</span>
+            <span style="flex:1;height:2px;background:#2A2A36;"></span>
+            <span style="font-size:18px;color:#B9B4C7;font-variant-numeric:tabular-nums;">Song 9 of 34 · Friday Social</span>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:48px;">
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:112px;font-weight:700;line-height:0.95;letter-spacing:-4px;color:#C7A9F5;">Salsa</div>
+              <div style="margin-top:16px;font-size:40px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Vivir Mi Vida</div>
+              <div style="font-size:28px;color:#B9B4C7;">Marc Anthony</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:180px;font-weight:600;line-height:0.85;letter-spacing:-8px;font-variant-numeric:tabular-nums;">1:12</div>
+              <div style="font-size:26px;color:#B9B4C7;margin-top:8px;">left on this song</div>
+            </div>
+          </div>
+          <div style="height:16px;border-radius:8px;background:#2A2A36;overflow:hidden;"><div style="width:72%;height:100%;background:#C7A9F5;"></div></div>
+          <div style="background:#241D0F;border:2px solid #F2C46B;border-radius:20px;padding:28px 32px;display:flex;align-items:center;gap:28px;">
+            <div style="flex:1;font-size:40px;font-weight:600;line-height:1.25;text-wrap:pretty;">In <span style="font-variant-numeric:tabular-nums;">40 seconds</span>: blend into <span style="color:#7FD1C1;">Bachata</span>, and say “Next dance: Bachata”.</div>
+            <div style="flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:8px;"><span style="width:28px;height:28px;border-radius:14px;background:#F2C46B;"></span><span style="font-size:16px;font-weight:700;color:#F2C46B;">VOICE READY</span></div>
+          </div>
+          <div style="flex:1;"></div>
+          <div style="display:flex;gap:16px;align-items:stretch;">
+            <div style="width:200px;height:112px;border-radius:20px;background:#2A2A36;border:2px solid #C7A9F5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;"><div style="display:flex;gap:8px;"><span style="width:10px;height:32px;background:#C7A9F5;border-radius:3px;"></span><span style="width:10px;height:32px;background:#C7A9F5;border-radius:3px;"></span></div><span style="font-size:20px;font-weight:700;">Pause</span></div>
+            <div style="flex:1;height:112px;border-radius:20px;background:#C7A9F5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;"><span style="font-size:34px;font-weight:700;color:#12081F;">Start Bachata now</span><span style="font-size:18px;font-weight:600;color:#2A1747;">blend + announce, right away</span></div>
+            <div style="width:200px;height:112px;border-radius:20px;background:#3D3116;border:2px solid #F2C46B;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;"><span style="width:30px;height:30px;border-radius:15px;border:4px solid #F2C46B;"></span><span style="font-size:20px;font-weight:700;color:#F2C46B;">Say it</span></div>
+            <div style="width:200px;height:112px;border-radius:20px;background:#17171E;border:1px solid #6E6880;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;"><span style="font-size:18px;font-weight:600;color:#ECEAF2;">Leave stage view</span><span style="font-size:14px;color:#B9B4C7;">or press Esc</span></div>
+          </div>
+
+        </div>
+        <sc-if value="{{ showPins }}" hint-placeholder-val="{{ true }}">
+            <div style="position:absolute;left:-40px;top:0;bottom:0;width:30px;pointer-events:none;">
+              <span style="position:absolute;left:2px;top:16px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">1</span>
+              <span style="position:absolute;left:2px;top:404px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">2</span>
+              <span style="position:absolute;left:2px;top:656px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">3</span>
+            </div>
+          </sc-if>
+        <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+          <div style="width:340px;display:flex;flex-direction:column;gap:14px;">
+            <div style="font-size:12px;font-weight:800;letter-spacing:1.4px;color:#B9B4C7;">WHAT CHANGED, AND WHY</div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">1</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;"><strong style="color:#ECEAF2;">Not a bigger main screen — a different question answered.</strong> Stage view answers “what is playing, how long, what next” from three metres away: dance name at 112px, clock at 180px, sentence at 40px. Panes, search and set list are all dropped.</p></div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">2</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;">The amber sentence survives into stage view because it is the one thing a caller reads out loud. Its box is fixed-height; when nothing is queued it says “Nothing after this song” in the same slot.</p></div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">3</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;"><strong style="color:#ECEAF2;">A visible way out.</strong> The old mode was exitable by F11 or Esc — invisible on a tablet. A labelled fourth button sits beside the transport, which keeps the three transport controls in their existing left-to-right order.</p></div>
+            <p style="margin:8px 0 0;font-size:13px;line-height:1.6;color:#B9B4C7;">Borderless and chrome-free as today: no app bar, no title bar, near-black ground so nothing glows on a stage monitor.</p>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 1d  FIRST RUN ============ -->
+    <div id="1d" style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:baseline;gap:12px;">
+        <span style="padding:4px 10px;border-radius:8px;background:#C7A9F5;color:#12081F;font-size:13px;font-weight:800;">1d</span>
+        <span style="font-size:20px;font-weight:600;">First run — no set, no music, no sources</span>
+      </div>
+      <div style="position:relative;display:flex;gap:28px;align-items:flex-start;">
+        <div style="position:relative;width:1100px;height:850px;background:#0E0E12;border:1px solid #3A3648;border-radius:22px;overflow:hidden;display:flex;flex-direction:column;">
+          <div style="height:64px;flex:0 0 64px;background:#17171E;border-bottom:1px solid #3A3648;display:flex;align-items:center;padding:0 16px;gap:12px;"><span style="font-size:16px;font-weight:700;letter-spacing:0.5px;">Sayaw</span><span style="font-size:13px;color:#B9B4C7;">first time here</span></div>
+          <div style="flex:1;padding:48px 56px;display:flex;flex-direction:column;gap:32px;">
+            <div>
+              <h2 style="margin:0;font-size:38px;font-weight:600;letter-spacing:-1px;">Let’s get tonight ready.</h2>
+              <p style="margin:10px 0 0;font-size:18px;color:#B9B4C7;line-height:1.5;max-width:60ch;text-wrap:pretty;">Three steps, about five minutes. You can run a whole night with just the first two.</p>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:16px;">
+              <div style="background:#1F1F28;border:2px solid #C7A9F5;border-radius:18px;padding:24px;display:flex;align-items:center;gap:24px;">
+                <span style="flex:0 0 48px;width:48px;height:48px;border-radius:24px;background:#C7A9F5;color:#12081F;font-size:22px;font-weight:800;display:flex;align-items:center;justify-content:center;">1</span>
+                <div style="flex:1;min-width:0;"><div style="font-size:22px;font-weight:600;">Point Sayaw at your music</div><div style="margin-top:4px;font-size:15px;color:#B9B4C7;">A folder on this machine or a drive. Nothing is copied or uploaded.</div></div>
+                <div style="height:64px;padding:0 28px;border-radius:999px;background:#C7A9F5;color:#12081F;font-size:18px;font-weight:700;display:flex;align-items:center;">Choose a folder</div>
+              </div>
+              <div style="background:#17171E;border:1px solid #3A3648;border-radius:18px;padding:24px;display:flex;align-items:center;gap:24px;">
+                <span style="flex:0 0 48px;width:48px;height:48px;border-radius:24px;background:#2A2A36;color:#B9B4C7;font-size:22px;font-weight:800;display:flex;align-items:center;justify-content:center;">2</span>
+                <div style="flex:1;min-width:0;"><div style="font-size:22px;font-weight:600;color:#B9B4C7;">Build tonight’s set list</div><div style="margin-top:4px;font-size:15px;color:#B9B4C7;">Or let Sayaw shape one: five songs per dance, in the order you pick.</div></div>
+                <div style="height:64px;padding:0 28px;border-radius:999px;background:#1F1F28;border:1px solid #3A3648;color:#B9B4C7;font-size:18px;font-weight:600;display:flex;align-items:center;">After step 1</div>
+              </div>
+              <div style="background:#17171E;border:1px solid #3A3648;border-radius:18px;padding:24px;display:flex;align-items:center;gap:24px;">
+                <span style="flex:0 0 48px;width:48px;height:48px;border-radius:24px;background:#2A2A36;color:#B9B4C7;font-size:22px;font-weight:800;display:flex;align-items:center;justify-content:center;">3</span>
+                <div style="flex:1;min-width:0;"><div style="font-size:22px;font-weight:600;color:#B9B4C7;">Decide what the room hears between dances</div><div style="margin-top:4px;font-size:15px;color:#B9B4C7;">A spoken “Next dance: Bachata”, your own recording, or nothing at all.</div></div>
+                <div style="height:64px;padding:0 28px;border-radius:999px;background:#1F1F28;border:1px solid #3A3648;color:#B9B4C7;font-size:18px;font-weight:600;display:flex;align-items:center;">Optional</div>
+              </div>
+            </div>
+            <div style="flex:1;"></div>
+            <div style="border-top:1px solid #262330;padding-top:24px;display:flex;align-items:center;gap:24px;">
+              <div style="flex:1;"><div style="font-size:16px;font-weight:600;">Your music lives on a Plex server?</div><div style="margin-top:2px;font-size:14px;color:#B9B4C7;">Local files work without any of this — a server is for the rest of your library.</div></div>
+              <div style="height:48px;padding:0 22px;border-radius:999px;background:#2A2A36;border:1px solid #6E6880;font-size:15px;font-weight:600;display:flex;align-items:center;">Connect a Plex server</div>
+            </div>
+          </div>
+
+        </div>
+        <sc-if value="{{ showPins }}" hint-placeholder-val="{{ true }}">
+            <div style="position:absolute;left:-40px;top:0;bottom:0;width:30px;pointer-events:none;">
+              <span style="position:absolute;left:2px;top:210px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">1</span>
+              <span style="position:absolute;left:2px;top:330px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">2</span>
+              <span style="position:absolute;left:2px;top:700px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">3</span>
+            </div>
+          </sc-if>
+        <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+          <div style="width:340px;display:flex;flex-direction:column;gap:14px;">
+            <div style="font-size:12px;font-weight:800;letter-spacing:1.4px;color:#B9B4C7;">WHAT CHANGED, AND WHY</div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">1</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;"><strong style="color:#ECEAF2;">One live step at a time.</strong> Today a fresh install shows empty decks, an empty queue, an empty library and a “Search your library” hint — four dead ends and no order. This is a single ordered path with exactly one enabled button.</p></div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">2</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;">Steps 2 and 3 are visible but explicitly not-yet — “After step 1”, “Optional”. A volunteer learns the shape of the night before they are asked to do anything.</p></div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">3</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;"><strong style="color:#ECEAF2;">Plex is demoted, not hidden</strong> — footer weight, with the existing reassurance from the sources screen kept verbatim. It was previously an unlabelled server-rack icon in the app bar.</p></div>
+            <p style="margin:8px 0 0;font-size:13px;line-height:1.6;color:#B9B4C7;">Once step 1 completes this screen is replaced by the main screen; it never returns unless the music folder goes missing.</p>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 1e  SET LIST MID-DRAG ============ -->
+    <div id="1e" style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:baseline;gap:12px;">
+        <span style="padding:4px 10px;border-radius:8px;background:#C7A9F5;color:#12081F;font-size:13px;font-weight:800;">1e</span>
+        <span style="font-size:20px;font-weight:600;">Set list — a row mid-drag</span>
+      </div>
+      <div style="position:relative;display:flex;gap:28px;align-items:flex-start;">
+        <div style="position:relative;width:760px;height:940px;background:#0E0E12;border:1px solid #3A3648;border-radius:22px;overflow:hidden;display:flex;flex-direction:column;">
+          <div style="flex:0 0 auto;background:#17171E;border-bottom:1px solid #3A3648;padding:16px;display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;align-items:center;gap:12px;"><span style="font-size:18px;font-weight:600;flex:1;">Tonight’s set list</span><span style="height:48px;padding:0 18px;border-radius:999px;background:#2A2A36;border:1px solid #6E6880;font-size:14px;font-weight:600;display:flex;align-items:center;">Adjust the shape</span></div>
+            <div style="font-size:14px;color:#B9B4C7;font-variant-numeric:tabular-nums;">34 songs · 2h 41m · Salsa 10 · Bachata 9 · Cha-Cha 8 · Swing 7</div>
+            <div style="font-size:14px;color:#F2C46B;">Holding “Propuesta Indecente” — drop it where you want it played.</div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;min-height:0;">
+            <div style="min-height:72px;display:flex;align-items:center;gap:10px;padding:8px 12px;background:#1E1830;border-left:3px solid #C7A9F5;"><span style="width:28px;text-align:center;font-size:13px;color:#B9B4C7;font-variant-numeric:tabular-nums;">9</span><div style="flex:1;min-width:0;"><div style="font-size:16px;font-weight:700;">Vivir Mi Vida</div><div style="font-size:13px;color:#C7A9F5;">on the floor now · 1:12 left</div></div><span style="height:28px;display:inline-flex;align-items:center;padding:0 12px;border-radius:999px;background:#2A2A36;font-size:12px;font-weight:700;color:#B9B4C7;">Salsa</span><span style="width:48px;height:48px;"></span></div>
+            <div style="min-height:72px;display:flex;align-items:center;gap:10px;padding:8px 12px;background:#141C1B;border-left:3px solid #7FD1C1;"><span style="width:28px;text-align:center;font-size:13px;color:#B9B4C7;font-variant-numeric:tabular-nums;">10</span><div style="flex:1;min-width:0;"><div style="font-size:16px;font-weight:600;">Obsesión</div><div style="font-size:13px;color:#7FD1C1;">coming in next</div></div><span style="height:28px;display:inline-flex;align-items:center;padding:0 12px;border-radius:999px;background:#3D3116;color:#F2C46B;font-size:12px;font-weight:700;">says “Next dance: Bachata”</span><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;color:#B9B4C7;font-size:20px;">≡</span></div>
+
+            <!-- drop target -->
+            <div style="height:72px;margin:0 12px;border-radius:14px;border:2px dashed #C7A9F5;background:#1A1526;display:flex;align-items:center;justify-content:center;gap:10px;"><span style="font-size:14px;font-weight:600;color:#C7A9F5;">Drop here — plays 11th, after Obsesión</span></div>
+
+            <!-- lifted row -->
+            <div style="margin:10px 12px;border-radius:16px;background:#2A2A36;border:2px solid #C7A9F5;box-shadow:0 18px 40px rgba(0,0,0,0.65);padding:14px 12px;display:flex;align-items:center;gap:10px;transform:rotate(-0.4deg);"><span style="width:28px;text-align:center;font-size:13px;color:#B9B4C7;">—</span><div style="flex:1;min-width:0;"><div style="font-size:16px;font-weight:700;">Propuesta Indecente</div><div style="font-size:13px;color:#B9B4C7;">Romeo Santos · 4:12</div></div><span style="height:28px;display:inline-flex;align-items:center;padding:0 12px;border-radius:999px;background:#1F1F28;font-size:12px;font-weight:700;color:#B9B4C7;">Bachata</span><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;color:#C7A9F5;font-size:20px;">≡</span></div>
+
+            <div style="min-height:72px;display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #262330;"><span style="width:28px;text-align:center;font-size:13px;color:#B9B4C7;font-variant-numeric:tabular-nums;">12</span><div style="flex:1;min-width:0;"><div style="font-size:16px;font-weight:500;">Bailando</div><div style="font-size:13px;color:#B9B4C7;">Enrique Iglesias · 4:03</div></div><span style="height:28px;display:inline-flex;align-items:center;padding:0 12px;border-radius:999px;background:#2A2A36;font-size:12px;font-weight:700;color:#B9B4C7;">Bachata</span><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;color:#B9B4C7;font-size:20px;">≡</span></div>
+            <div style="min-height:72px;display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #262330;background:#1A1416;"><span style="width:28px;text-align:center;font-size:13px;color:#B9B4C7;font-variant-numeric:tabular-nums;">13</span><div style="flex:1;min-width:0;"><div style="font-size:16px;font-weight:500;color:#B9B4C7;text-decoration:line-through;">Kizomba Nights</div><div style="font-size:13px;color:#FF9A94;">Won’t play — file not found. Plug the drive in, or remove it.</div></div><span style="height:48px;padding:0 16px;border-radius:999px;background:#2A2A36;border:1px solid #6E6880;font-size:13px;font-weight:600;display:flex;align-items:center;">Fix</span><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;color:#B9B4C7;font-size:20px;">≡</span></div>
+            <div style="min-height:72px;display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #262330;"><span style="width:28px;text-align:center;font-size:13px;color:#B9B4C7;font-variant-numeric:tabular-nums;">14</span><div style="flex:1;min-width:0;"><div style="font-size:16px;font-weight:500;">Sway</div><div style="font-size:13px;color:#B9B4C7;">Dean Martin · 3:14</div></div><span style="height:28px;display:inline-flex;align-items:center;padding:0 12px;border-radius:999px;background:#2A2A36;font-size:12px;font-weight:700;color:#B9B4C7;">Cha-Cha</span><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;color:#B9B4C7;font-size:20px;">≡</span></div>
+            <div style="min-height:72px;display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #262330;"><span style="width:28px;text-align:center;font-size:13px;color:#B9B4C7;font-variant-numeric:tabular-nums;">15</span><div style="flex:1;min-width:0;"><div style="font-size:16px;font-weight:500;">Oye Como Va</div><div style="font-size:13px;color:#B9B4C7;">Tito Puente · 4:20</div></div><span style="height:28px;display:inline-flex;align-items:center;padding:0 12px;border-radius:999px;background:#2A2A36;font-size:12px;font-weight:700;color:#B9B4C7;">Cha-Cha</span><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;color:#B9B4C7;font-size:20px;">≡</span></div>
+          </div>
+          <div style="flex:0 0 auto;background:#17171E;border-top:1px solid #3A3648;padding:14px 16px;display:flex;gap:12px;align-items:center;">
+            <div style="flex:1;font-size:14px;color:#B9B4C7;">Playing continues while you edit. Nothing you drop changes the song on the floor.</div>
+            <div style="height:56px;padding:0 24px;border-radius:999px;background:#C7A9F5;color:#12081F;font-size:16px;font-weight:700;display:flex;align-items:center;">Done</div>
+          </div>
+
+        </div>
+        <sc-if value="{{ showPins }}" hint-placeholder-val="{{ true }}">
+            <div style="position:absolute;left:-40px;top:0;bottom:0;width:30px;pointer-events:none;">
+              <span style="position:absolute;left:2px;top:96px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">1</span>
+              <span style="position:absolute;left:2px;top:334px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">2</span>
+              <span style="position:absolute;left:2px;top:566px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">3</span>
+              <span style="position:absolute;left:2px;top:850px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">4</span>
+            </div>
+          </sc-if>
+        <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+          <div style="width:340px;display:flex;flex-direction:column;gap:14px;">
+            <div style="font-size:12px;font-weight:800;letter-spacing:1.4px;color:#B9B4C7;">WHAT CHANGED, AND WHY</div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">1</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;"><strong style="color:#ECEAF2;">The drag says what will happen, in words.</strong> An amber line names the row in hand, and the drop target states the consequence — “plays 11th, after Obsesión” — instead of leaving the operator to count rows.</p></div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">2</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;">The lifted row keeps the existing elevation-8 proxy, plus a lavender border and a barely-there tilt so it reads as “in your hand” in a dark room. Handles stay 48dp, long-press on touch and press-to-drag with a mouse, exactly as today.</p></div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">3</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;"><strong style="color:#ECEAF2;">An unplayable row carries its remedy, not just its reason.</strong> Today it shows “File not found.” — true, and no help. Now: what to do, and a labelled <em>Fix</em> button next to it.</p></div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">4</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;">The one sentence a nervous volunteer needs while editing mid-set: <strong style="color:#ECEAF2;">editing the list cannot interrupt the music.</strong></p></div>
+            <p style="margin:8px 0 0;font-size:13px;line-height:1.6;color:#B9B4C7;">Dance chips now show at every width. Hiding them in compact (today’s behaviour) hides the single most important attribute of a row on the device most likely to be in use.</p>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 1f  TAGGING A SONG ============ -->
+    <div id="1f" style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:baseline;gap:12px;">
+        <span style="padding:4px 10px;border-radius:8px;background:#C7A9F5;color:#12081F;font-size:13px;font-weight:800;">1f</span>
+        <span style="font-size:20px;font-weight:600;">Tagging one song — dance type and what gets said</span>
+      </div>
+      <div style="position:relative;display:flex;gap:28px;align-items:flex-start;">
+        <div style="position:relative;width:760px;height:1040px;background:#0E0E12;border:1px solid #3A3648;border-radius:22px;overflow:hidden;display:flex;flex-direction:column;">
+          <div style="flex:0 0 auto;padding:20px;background:#17171E;border-bottom:1px solid #3A3648;">
+            <div style="font-size:13px;color:#B9B4C7;">Song 11 of 34</div>
+            <div style="margin-top:4px;font-size:24px;font-weight:600;">Propuesta Indecente</div>
+            <div style="font-size:15px;color:#B9B4C7;">Romeo Santos · 4:12</div>
+          </div>
+          <div style="flex:1;padding:20px;display:flex;flex-direction:column;gap:22px;overflow:hidden;">
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <div style="font-size:17px;font-weight:600;">Which dance is this?</div>
+              <div style="display:flex;flex-wrap:wrap;gap:10px;">
+                <span style="height:56px;display:inline-flex;align-items:center;padding:0 22px;border-radius:14px;background:#7FD1C1;color:#00201A;font-size:17px;font-weight:700;">Bachata</span>
+                <span style="height:56px;display:inline-flex;align-items:center;padding:0 22px;border-radius:14px;background:#1F1F28;border:1px solid #3A3648;font-size:17px;font-weight:600;">Salsa</span>
+                <span style="height:56px;display:inline-flex;align-items:center;padding:0 22px;border-radius:14px;background:#1F1F28;border:1px solid #3A3648;font-size:17px;font-weight:600;">Cha-Cha</span>
+                <span style="height:56px;display:inline-flex;align-items:center;padding:0 22px;border-radius:14px;background:#1F1F28;border:1px solid #3A3648;font-size:17px;font-weight:600;">Merengue</span>
+                <span style="height:56px;display:inline-flex;align-items:center;padding:0 22px;border-radius:14px;background:#1F1F28;border:1px solid #3A3648;font-size:17px;font-weight:600;">Swing</span>
+                <span style="height:56px;display:inline-flex;align-items:center;padding:0 22px;border-radius:14px;background:#1F1F28;border:1px solid #3A3648;font-size:17px;font-weight:600;">Waltz</span>
+                <span style="height:56px;display:inline-flex;align-items:center;padding:0 22px;border-radius:14px;background:#1F1F28;border:1px solid #3A3648;font-size:17px;font-weight:600;">Tango</span>
+                <span style="height:56px;display:inline-flex;align-items:center;padding:0 22px;border-radius:14px;background:#1F1F28;border:1px solid #6E6880;font-size:17px;font-weight:600;color:#B9B4C7;">More…</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <div style="font-size:17px;font-weight:600;">What should the room hear before it?</div>
+              <div style="display:flex;flex-direction:column;gap:10px;">
+                <div style="min-height:64px;border-radius:14px;background:#241D0F;border:2px solid #F2C46B;padding:14px 16px;display:flex;align-items:center;gap:14px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;border:7px solid #F2C46B;background:#0E0E12;"></span><div style="flex:1;"><div style="font-size:16px;font-weight:600;">A spoken “Next dance: Bachata”</div><div style="font-size:13px;color:#B9B4C7;">Made on this machine — works with the wifi down.</div></div></div>
+                <div style="min-height:64px;border-radius:14px;background:#1F1F28;border:1px solid #3A3648;padding:14px 16px;display:flex;align-items:center;gap:14px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;border:2px solid #6E6880;"></span><div style="flex:1;"><div style="font-size:16px;font-weight:600;">One of your own recordings</div><div style="font-size:13px;color:#B9B4C7;">Whistle · Rotate · Applause · “Next dance: Bachata” (your voice)</div></div></div>
+                <div style="min-height:64px;border-radius:14px;background:#1F1F28;border:1px solid #3A3648;padding:14px 16px;display:flex;align-items:center;gap:14px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;border:2px solid #6E6880;"></span><div style="flex:1;"><div style="font-size:16px;font-weight:600;">Nothing — let the music change on its own</div></div></div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <div style="font-size:17px;font-weight:600;">When?</div>
+              <div style="display:flex;gap:10px;">
+                <div style="flex:1;min-height:80px;border-radius:14px;background:#241D0F;border:2px solid #F2C46B;padding:12px 14px;"><div style="font-size:15px;font-weight:700;">Over the blend</div><div style="margin-top:2px;font-size:13px;color:#B9B4C7;">Music dips underneath the voice.</div></div>
+                <div style="flex:1;min-height:80px;border-radius:14px;background:#1F1F28;border:1px solid #3A3648;padding:12px 14px;"><div style="font-size:15px;font-weight:700;">In the quiet first</div><div style="margin-top:2px;font-size:13px;color:#B9B4C7;">Voice alone, then the music starts.</div></div>
+              </div>
+            </div>
+            <div style="background:#17171E;border:1px solid #3A3648;border-radius:14px;padding:16px;display:flex;align-items:center;gap:14px;">
+              <div style="flex:1;"><div style="font-size:15px;font-weight:600;">Do this for every Bachata in the set</div><div style="font-size:13px;color:#B9B4C7;">9 songs. You can change any one of them later.</div></div>
+              <span style="width:64px;height:36px;border-radius:18px;background:#C7A9F5;position:relative;flex:0 0 auto;"><span style="position:absolute;right:3px;top:3px;width:30px;height:30px;border-radius:15px;background:#12081F;"></span></span>
+            </div>
+          </div>
+          <div style="flex:0 0 auto;background:#17171E;border-top:1px solid #3A3648;padding:16px;display:flex;flex-direction:column;gap:12px;">
+            <div style="font-size:15px;color:#F2C46B;">At this transition the room will hear: “Next dance: Bachata”, over the blend.</div>
+            <div style="display:flex;gap:12px;"><div style="height:56px;flex:0 0 auto;padding:0 24px;border-radius:999px;background:#2A2A36;border:1px solid #6E6880;font-size:16px;font-weight:600;display:flex;align-items:center;">Hear it in my headphones</div><div style="flex:1;height:56px;border-radius:999px;background:#C7A9F5;color:#12081F;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center;">Save</div></div>
+          </div>
+
+        </div>
+        <sc-if value="{{ showPins }}" hint-placeholder-val="{{ true }}">
+            <div style="position:absolute;left:-40px;top:0;bottom:0;width:30px;pointer-events:none;">
+              <span style="position:absolute;left:2px;top:92px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">1</span>
+              <span style="position:absolute;left:2px;top:330px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">2</span>
+              <span style="position:absolute;left:2px;top:686px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">3</span>
+              <span style="position:absolute;left:2px;top:850px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">4</span>
+            </div>
+          </sc-if>
+        <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+          <div style="width:340px;display:flex;flex-direction:column;gap:14px;">
+            <div style="font-size:12px;font-weight:800;letter-spacing:1.4px;color:#B9B4C7;">WHAT CHANGED, AND WHY</div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">1</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;"><strong style="color:#ECEAF2;">One screen, not two.</strong> Dance type and announcement were separate concerns in separate places (row edit vs. the “Announce with” dialog). They are one decision — the dance decides the words — so they are one screen, in the order a person thinks in.</p></div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">2</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;"><strong style="color:#ECEAF2;">Options are named by outcome.</strong> “Nothing / Whistle / duck level 0.3” became “what the room hears”, and the ducking explanation moved into the option that causes it: <em>music dips underneath the voice</em>.</p></div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">3</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;"><strong style="color:#ECEAF2;">Tag once, apply to the dance.</strong> Tagging 34 rows by hand is why volunteers give up. Default on, reversible per row — and it states how many rows it touches.</p></div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">4</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;">A read-back sentence in the same amber as the main screen, so the wording learned here is the wording read there. Preview is explicitly <strong style="color:#ECEAF2;">headphones only</strong> — the old dialog refused a preview entirely rather than risk a whistle over a full floor; naming the output makes it safe to offer.</p></div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 1g  ADVANCED: PREPARE + ADJUST ============ -->
+    <div id="1g" style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:baseline;gap:12px;">
+        <span style="padding:4px 10px;border-radius:8px;background:#C7A9F5;color:#12081F;font-size:13px;font-weight:800;">1g</span>
+        <span style="font-size:20px;font-weight:600;">The other 10% — “Prepare” before doors, “Adjust” during the set</span>
+      </div>
+      <div style="position:relative;display:flex;gap:28px;align-items:flex-start;">
+        <div style="position:relative;display:flex;gap:24px;">
+          <!-- PREPARE -->
+          <div style="position:relative;"><div style="position:relative;width:760px;height:900px;background:#0E0E12;border:1px solid #3A3648;border-radius:22px;overflow:hidden;display:flex;flex-direction:column;">
+            <div style="flex:0 0 auto;padding:20px;background:#17171E;border-bottom:1px solid #3A3648;"><div style="font-size:22px;font-weight:600;">Prepare for tonight</div><div style="margin-top:4px;font-size:14px;color:#B9B4C7;">Do this on the venue wifi, before doors. Then the set stops depending on it.</div></div>
+            <div style="flex:1;padding:16px;display:flex;flex-direction:column;gap:12px;">
+              <div style="border-radius:16px;background:#1F1F28;border:1px solid #3A3648;padding:16px;display:flex;align-items:center;gap:14px;"><span style="flex:0 0 28px;width:28px;height:28px;border-radius:14px;background:#7FD1C1;color:#00201A;font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center;">✓</span><div style="flex:1;"><div style="font-size:17px;font-weight:600;">Music is where it should be</div><div style="font-size:13px;color:#B9B4C7;">318 songs · folder “D:\Dance Music” · checked just now</div></div></div>
+              <div style="border-radius:16px;background:#241D0F;border:2px solid #F2C46B;padding:16px;display:flex;align-items:center;gap:14px;"><span style="flex:0 0 28px;width:28px;height:28px;border-radius:14px;background:#F2C46B;color:#3D1400;font-size:16px;font-weight:800;display:flex;align-items:center;justify-content:center;">!</span><div style="flex:1;"><div style="font-size:17px;font-weight:600;">6 songs still need the internet</div><div style="font-size:13px;color:#B9B4C7;">28 of 34 are downloaded and will play with the wifi down.</div></div><span style="height:48px;padding:0 20px;border-radius:999px;background:#F2C46B;color:#3D1400;font-size:15px;font-weight:700;display:flex;align-items:center;">Download them</span></div>
+              <div style="border-radius:16px;background:#1F1F28;border:1px solid #3A3648;padding:16px;display:flex;align-items:center;gap:14px;"><span style="flex:0 0 28px;width:28px;height:28px;border-radius:14px;background:#7FD1C1;color:#00201A;font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center;">✓</span><div style="flex:1;"><div style="font-size:17px;font-weight:600;">All 24 announcements are made and saved</div><div style="font-size:13px;color:#B9B4C7;">They will play even with no connection.</div></div></div>
+              <div style="border-radius:16px;background:#1F1F28;border:1px solid #3A3648;padding:16px;display:flex;flex-direction:column;gap:12px;">
+                <div style="display:flex;align-items:center;gap:14px;"><span style="flex:0 0 28px;width:28px;height:28px;border-radius:14px;background:#2A2A36;color:#B9B4C7;font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center;">→</span><div style="flex:1;"><div style="font-size:17px;font-weight:600;">The shape of the night</div><div style="font-size:13px;color:#B9B4C7;">5 songs per dance · stop each song at 4:00 · 20s gap for the floor</div></div><span style="height:48px;padding:0 20px;border-radius:999px;background:#2A2A36;border:1px solid #6E6880;font-size:15px;font-weight:600;display:flex;align-items:center;">Change</span></div>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;"><span style="height:36px;display:inline-flex;align-items:center;padding:0 14px;border-radius:999px;background:#3A2A55;color:#ECEAF2;font-size:13px;font-weight:600;">Social night</span><span style="height:36px;display:inline-flex;align-items:center;padding:0 14px;border-radius:999px;background:#17171E;border:1px solid #3A3648;color:#B9B4C7;font-size:13px;font-weight:600;">Class</span><span style="height:36px;display:inline-flex;align-items:center;padding:0 14px;border-radius:999px;background:#17171E;border:1px solid #3A3648;color:#B9B4C7;font-size:13px;font-weight:600;">Competition rounds</span><span style="height:36px;display:inline-flex;align-items:center;padding:0 14px;border-radius:999px;background:#17171E;border:1px solid #3A3648;color:#B9B4C7;font-size:13px;font-weight:600;">Practice</span></div>
+              </div>
+              <div style="border-radius:16px;background:#17171E;border:1px solid #3A3648;padding:16px;display:flex;align-items:center;gap:14px;"><div style="flex:1;"><div style="font-size:16px;font-weight:600;color:#B9B4C7;">Special formats</div><div style="font-size:13px;color:#B9B4C7;">Snowball staged set · Jack &amp; Jill partner draw · both off</div></div><span style="height:48px;padding:0 20px;border-radius:999px;background:#2A2A36;border:1px solid #6E6880;font-size:15px;font-weight:600;display:flex;align-items:center;">Set up</span></div>
+              <div style="border-radius:16px;background:#17171E;border:1px solid #3A3648;padding:16px;display:flex;align-items:center;gap:14px;"><div style="flex:1;"><div style="font-size:16px;font-weight:600;color:#B9B4C7;">Where your music comes from</div><div style="font-size:13px;color:#B9B4C7;">This machine · Plex server “Attic NAS” connected</div></div><span style="height:48px;padding:0 20px;border-radius:999px;background:#2A2A36;border:1px solid #6E6880;font-size:15px;font-weight:600;display:flex;align-items:center;">Manage</span></div>
+              <div style="flex:1;"></div>
+              <div style="height:72px;border-radius:18px;background:#C7A9F5;color:#12081F;display:flex;align-items:center;justify-content:center;gap:10px;font-size:19px;font-weight:700;">Check everything again</div>
+            </div>
+
+          </div>
+        <sc-if value="{{ showPins }}" hint-placeholder-val="{{ true }}">
+              <div style="position:absolute;left:-40px;top:0;bottom:0;width:30px;pointer-events:none;">
+                <span style="position:absolute;left:2px;top:96px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">1</span>
+                <span style="position:absolute;left:2px;top:530px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">2</span>
+              </div>
+            </sc-if></div>
+          <!-- ADJUST -->
+          <div style="position:relative;"><div style="position:relative;width:520px;height:1000px;background:#0E0E12;border:1px solid #3A3648;border-radius:22px;overflow:hidden;display:flex;flex-direction:column;">
+            <div style="flex:0 0 auto;padding:20px;background:#17171E;border-bottom:1px solid #3A3648;"><div style="font-size:20px;font-weight:600;">Adjust</div><div style="margin-top:4px;font-size:14px;color:#B9B4C7;">Changes take effect at the next transition. The music keeps playing.</div></div>
+            <div style="flex:1;padding:16px;display:flex;flex-direction:column;gap:16px;">
+              <div style="border-radius:16px;background:#1F1F28;border:1px solid #3A3648;padding:16px;display:flex;flex-direction:column;gap:12px;">
+                <div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font-size:16px;font-weight:600;">How long the blend takes</span><span style="font-size:18px;font-weight:700;color:#C7A9F5;font-variant-numeric:tabular-nums;">8s</span></div>
+                <div style="position:relative;height:44px;border-radius:12px;background:#2A2A36;"><div style="position:absolute;left:0;top:0;bottom:0;width:46%;border-radius:12px;background:#3A2A55;"></div><div style="position:absolute;left:44%;top:-4px;width:28px;height:52px;border-radius:14px;background:#C7A9F5;border:2px solid #0E0E12;"></div></div>
+                <div style="display:flex;justify-content:space-between;font-size:12px;color:#B9B4C7;"><span>Quick, 2s</span><span>Long, 16s</span></div>
+              </div>
+              <div style="border-radius:16px;background:#1F1F28;border:1px solid #3A3648;padding:16px;display:flex;flex-direction:column;gap:12px;">
+                <div style="font-size:16px;font-weight:600;">Announcements tonight</div>
+                <div style="min-height:56px;border-radius:12px;background:#241D0F;border:2px solid #F2C46B;padding:10px 14px;display:flex;align-items:center;gap:12px;"><span style="flex:0 0 20px;width:20px;height:20px;border-radius:10px;border:6px solid #F2C46B;background:#0E0E12;"></span><span style="font-size:15px;font-weight:600;">Over the blend</span></div>
+                <div style="min-height:56px;border-radius:12px;background:#17171E;border:1px solid #3A3648;padding:10px 14px;display:flex;align-items:center;gap:12px;"><span style="flex:0 0 20px;width:20px;height:20px;border-radius:10px;border:2px solid #6E6880;"></span><span style="font-size:15px;font-weight:600;color:#B9B4C7;">In the quiet before the music</span></div>
+                <div style="min-height:56px;border-radius:12px;background:#17171E;border:1px solid #3A3648;padding:10px 14px;display:flex;align-items:center;gap:12px;"><span style="flex:0 0 20px;width:20px;height:20px;border-radius:10px;border:2px solid #6E6880;"></span><span style="font-size:15px;font-weight:600;color:#B9B4C7;">Silent for the rest of the night</span></div>
+              </div>
+              <div style="border-radius:16px;background:#1F1F28;border:1px solid #3A3648;padding:16px;display:flex;align-items:center;gap:14px;"><div style="flex:1;"><div style="font-size:16px;font-weight:600;">Move on by itself</div><div style="font-size:13px;color:#B9B4C7;">Off means you press to start each dance.</div></div><span style="width:64px;height:36px;border-radius:18px;background:#C7A9F5;position:relative;flex:0 0 auto;"><span style="position:absolute;right:3px;top:3px;width:30px;height:30px;border-radius:15px;background:#12081F;"></span></span></div>
+              <div style="border-radius:16px;background:#17171E;border:1px solid #3A3648;padding:16px;display:flex;align-items:center;gap:14px;"><div style="flex:1;"><div style="font-size:15px;font-weight:600;color:#B9B4C7;">Your sounds</div><div style="font-size:13px;color:#B9B4C7;">3 on the bar · keys 1–3</div></div><span style="height:48px;padding:0 18px;border-radius:999px;background:#2A2A36;border:1px solid #6E6880;font-size:14px;font-weight:600;display:flex;align-items:center;">Edit</span></div>
+              <div style="border-radius:16px;background:#17171E;border:1px solid #3A3648;padding:16px;display:flex;align-items:center;gap:14px;"><div style="flex:1;"><div style="font-size:15px;font-weight:600;color:#B9B4C7;">Blend shape</div><div style="font-size:13px;color:#B9B4C7;">Equal-power — no dip in the middle</div></div><span style="height:48px;padding:0 18px;border-radius:999px;background:#2A2A36;border:1px solid #6E6880;font-size:14px;font-weight:600;display:flex;align-items:center;">Change</span></div>
+              <div style="flex:1;"></div>
+              <div style="height:64px;border-radius:16px;background:#2A2A36;border:1px solid #6E6880;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;">Back to the floor</div>
+            </div>
+
+          </div>
+        <sc-if value="{{ showPins }}" hint-placeholder-val="{{ true }}">
+              <div style="position:absolute;left:-30px;top:0;bottom:0;width:30px;pointer-events:none;">
+                <span style="position:absolute;left:2px;top:96px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">3</span>
+                <span style="position:absolute;left:2px;top:640px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">4</span>
+              </div>
+            </sc-if></div>
+        </div>
+        <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+          <div style="width:360px;display:flex;flex-direction:column;gap:14px;">
+            <div style="font-size:12px;font-weight:800;letter-spacing:1.4px;color:#B9B4C7;">WHAT CHANGED, AND WHY</div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">1</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;"><strong style="color:#ECEAF2;">Split by time, not by feature.</strong> Everything you do at six o'clock is a checklist; everything you do at eleven is a sheet over the set. The old app bar mixed both into one row of icons.</p></div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">2</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;"><strong style="color:#ECEAF2;">The pre-flight report became the screen.</strong> Event Mode used to be a modal you had to know to open, whose report vanished on close. Here its findings <em>are</em> the checklist, each with the one action that resolves it.</p></div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">3</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;">Adjust opens with the two things anyone actually changes mid-night — blend length and announcement mode — and states the safety rule at the top: <strong style="color:#ECEAF2;">changes land at the next transition.</strong></p></div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">4</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;"><strong style="color:#ECEAF2;">Genuinely-expert controls sit at the bottom, in plain words with the jargon as the value.</strong> “Blend shape · Equal-power — no dip in the middle”. A working DJ finds all six curves behind it; nobody else has to meet the word.</p></div>
+            <div style="margin-top:8px;border-radius:14px;background:#17171E;border:1px solid #3A3648;padding:16px;">
+              <div style="font-size:12px;font-weight:800;letter-spacing:1.2px;color:#B9B4C7;margin-bottom:10px;">WHERE THE SIX ICONS WENT</div>
+              <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;line-height:1.5;">
+                <div style="display:flex;gap:8px;"><span style="flex:0 0 132px;color:#B9B4C7;">casino (Jack &amp; Jill)</span><span style="color:#ECEAF2;">Prepare › Special formats</span></div>
+                <div style="display:flex;gap:8px;"><span style="flex:0 0 132px;color:#B9B4C7;">graphic_eq (soundboard)</span><span style="color:#ECEAF2;">Adjust › Your sounds</span></div>
+                <div style="display:flex;gap:8px;"><span style="flex:0 0 132px;color:#B9B4C7;">timelapse (set shape)</span><span style="color:#ECEAF2;">Prepare › Shape of the night</span></div>
+                <div style="display:flex;gap:8px;"><span style="flex:0 0 132px;color:#B9B4C7;">cloud_download (event mode)</span><span style="color:#ECEAF2;">Prepare › the checklist itself</span></div>
+                <div style="display:flex;gap:8px;"><span style="flex:0 0 132px;color:#B9B4C7;">dns (sources)</span><span style="color:#ECEAF2;">Prepare › Where your music comes from</span></div>
+                <div style="display:flex;gap:8px;"><span style="flex:0 0 132px;color:#B9B4C7;">fullscreen</span><span style="color:#ECEAF2;">“Stage view”, still one tap</span></div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 1h  FAILURE ============ -->
+    <div id="1h" style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:baseline;gap:12px;">
+        <span style="padding:4px 10px;border-radius:8px;background:#C7A9F5;color:#12081F;font-size:13px;font-weight:800;">1h</span>
+        <span style="font-size:20px;font-weight:600;">Failure — the next song can’t play <em style="color:#B9B4C7;font-style:normal;">and</em> its announcement failed</span>
+      </div>
+      <div style="position:relative;display:flex;gap:28px;align-items:flex-start;">
+        <div style="position:relative;width:760px;height:1150px;background:#0E0E12;border:1px solid #3A3648;border-radius:22px;overflow:hidden;display:flex;flex-direction:column;">
+          <div style="height:64px;flex:0 0 64px;background:#17171E;border-bottom:1px solid #3A3648;display:flex;align-items:center;gap:12px;padding:0 12px;">
+            <div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:600;">Friday Social</div><div style="font-size:12px;color:#B9B4C7;">Song 9 of 34 · 2h 41m left</div></div>
+            <span style="height:48px;display:inline-flex;align-items:center;padding:0 16px;border-radius:999px;background:#4C1512;border:1px solid #FF9A94;color:#FF9A94;font-size:14px;font-weight:700;">2 problems</span>
+            <div style="height:48px;display:flex;align-items:center;padding:0 16px;border-radius:999px;background:#2A2A36;border:1px solid #6E6880;font-size:14px;font-weight:600;">Adjust</div>
+          </div>
+          <div style="flex:1;padding:16px;display:flex;flex-direction:column;gap:12px;">
+            <div style="background:#1F1F28;border:2px solid #C7A9F5;border-radius:18px;padding:18px;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;">
+              <div style="min-width:0;"><div style="font-size:12px;font-weight:800;letter-spacing:1.4px;color:#C7A9F5;">ON THE FLOOR NOW</div><div style="margin-top:8px;font-size:32px;font-weight:700;letter-spacing:-0.5px;color:#C7A9F5;line-height:1;">Salsa</div><div style="margin-top:8px;font-size:20px;font-weight:600;">Vivir Mi Vida</div><div style="font-size:15px;color:#B9B4C7;">Marc Anthony · still playing normally</div></div>
+              <div style="text-align:right;"><div style="font-size:48px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-1.5px;">0:38</div><div style="font-size:13px;color:#B9B4C7;">left</div></div>
+            </div>
+
+            <!-- the sentence slot, now carrying the failure — same position, same height -->
+            <div style="background:#2A1210;border:2px solid #FF9A94;border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:14px;">
+              <div style="display:flex;align-items:center;gap:10px;"><span style="width:26px;height:26px;border-radius:13px;background:#FF9A94;color:#3B0906;font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center;">!</span><span style="font-size:12px;font-weight:800;letter-spacing:1.4px;color:#FF9A94;">WHAT HAPPENS NEXT — NEEDS YOU</span></div>
+              <div style="font-size:26px;font-weight:600;line-height:1.35;text-wrap:pretty;">In <span style="font-variant-numeric:tabular-nums;">38 seconds</span> the floor gets silence: <span style="color:#FF9A94;">Obsesión can’t play, and the words “Next dance: Bachata” couldn’t be made.</span></div>
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <div style="display:flex;gap:10px;align-items:flex-start;"><span style="flex:0 0 auto;height:26px;display:inline-flex;align-items:center;padding:0 10px;border-radius:999px;background:#4C1512;color:#FF9A94;font-size:12px;font-weight:700;">SONG</span><span style="font-size:15px;color:#ECEAF2;line-height:1.5;">The file isn’t where it was — the drive it lives on isn’t connected.</span></div>
+                <div style="display:flex;gap:10px;align-items:flex-start;"><span style="flex:0 0 auto;height:26px;display:inline-flex;align-items:center;padding:0 10px;border-radius:999px;background:#4C1512;color:#FF9A94;font-size:12px;font-weight:700;">VOICE</span><span style="font-size:15px;color:#ECEAF2;line-height:1.5;">This announcement was never made before doors, and there’s no internet to make it now.</span></div>
+              </div>
+            </div>
+
+            <div style="background:#1F1F28;border:1px solid #3A3648;border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:14px;">
+              <div style="font-size:16px;font-weight:600;">Pick one — or do nothing and Sayaw takes the first option by itself in 38s.</div>
+              <div style="height:72px;border-radius:18px;background:#C7A9F5;color:#12081F;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;"><span style="font-size:19px;font-weight:700;">Skip to Propuesta Indecente</span><span style="font-size:13px;font-weight:600;color:#2A1747;">Bachata, downloaded, announcement ready</span></div>
+              <div style="display:flex;gap:12px;">
+                <div style="flex:1;min-height:64px;border-radius:16px;background:#2A2A36;border:1px solid #6E6880;padding:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;"><span style="font-size:15px;font-weight:700;">Play Bachata without the words</span><span style="font-size:12px;color:#B9B4C7;">you announce it yourself</span></div>
+                <div style="flex:1;min-height:64px;border-radius:16px;background:#2A2A36;border:1px solid #6E6880;padding:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;"><span style="font-size:15px;font-weight:700;">Stay on Salsa</span><span style="font-size:12px;color:#B9B4C7;">repeat this dance, decide later</span></div>
+              </div>
+            </div>
+
+            <div style="background:#17171E;border:1px solid #3A3648;border-radius:18px;padding:16px;display:flex;align-items:center;gap:14px;"><div style="flex:1;"><div style="font-size:15px;font-weight:600;color:#B9B4C7;">5 more songs in tonight’s set live on that drive</div><div style="font-size:13px;color:#B9B4C7;">Sayaw will skip them the same way unless the drive comes back.</div></div><span style="height:48px;padding:0 18px;border-radius:999px;background:#2A2A36;border:1px solid #6E6880;font-size:14px;font-weight:600;display:flex;align-items:center;">Show them</span></div>
+            <div style="flex:1;"></div>
+            <div style="background:#17171E;border:1px solid #3A3648;border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;letter-spacing:1px;"><span style="color:#C7A9F5;">SALSA OUT</span><span style="color:#B9B4C7;font-weight:600;letter-spacing:0;">nothing loaded to blend into</span><span style="color:#B9B4C7;">— —</span></div>
+              <div style="position:relative;height:44px;border-radius:12px;background:linear-gradient(90deg,#C7A9F5 0%,#C7A9F5 30%,#2A2A36 30%,#2A2A36 100%);"><div style="position:absolute;left:26%;top:-4px;width:28px;height:52px;border-radius:14px;background:#ECEAF2;border:2px solid #0E0E12;"></div></div>
+            </div>
+          </div>
+          <div style="flex:0 0 auto;background:#17171E;border-top:1px solid #3A3648;padding:14px 16px;display:flex;gap:12px;">
+            <div style="width:88px;height:72px;border-radius:18px;background:#2A2A36;border:2px solid #C7A9F5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;"><div style="display:flex;gap:5px;"><span style="width:6px;height:20px;background:#C7A9F5;border-radius:2px;"></span><span style="width:6px;height:20px;background:#C7A9F5;border-radius:2px;"></span></div><span style="font-size:12px;font-weight:700;">Pause</span></div>
+            <div style="flex:1;height:72px;border-radius:18px;background:#2A2A36;border:1px solid #6E6880;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;"><span style="font-size:19px;font-weight:700;color:#B9B4C7;">Start Bachata now</span><span style="font-size:13px;font-weight:600;color:#B9B4C7;">nothing playable is cued</span></div>
+            <div style="width:88px;height:72px;border-radius:18px;background:#3D3116;border:2px solid #F2C46B;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;"><span style="width:22px;height:22px;border-radius:11px;border:3px solid #F2C46B;"></span><span style="font-size:12px;font-weight:700;color:#F2C46B;">Say it</span></div>
+          </div>
+
+        </div>
+        <sc-if value="{{ showPins }}" hint-placeholder-val="{{ true }}">
+            <div style="position:absolute;left:-40px;top:0;bottom:0;width:30px;pointer-events:none;">
+              <span style="position:absolute;left:2px;top:74px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">1</span>
+              <span style="position:absolute;left:2px;top:250px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">2</span>
+              <span style="position:absolute;left:2px;top:500px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">3</span>
+              <span style="position:absolute;left:2px;top:1064px;width:26px;height:26px;border-radius:13px;background:#F2C46B;color:#12081F;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;">4</span>
+            </div>
+          </sc-if>
+        <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+          <div style="width:340px;display:flex;flex-direction:column;gap:14px;">
+            <div style="font-size:12px;font-weight:800;letter-spacing:1.4px;color:#B9B4C7;">WHAT CHANGED, AND WHY</div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">1</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;"><strong style="color:#ECEAF2;">Failures are counted and visible before they are audible.</strong> A silent announcement used to look identical to a working one; a missing file only announced itself as a greyed row someone had to notice. Now: a red count in the ribbon, and the sentence slot goes red.</p></div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">2</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;"><strong style="color:#ECEAF2;">The failure occupies the exact slot the good news occupied</strong> — same position, same height, same 26px sentence. Nothing under a reaching hand moves, which was a hard constraint. The two causes are labelled SONG and VOICE so a compound failure doesn’t read as one vague problem.</p></div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">3</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;"><strong style="color:#ECEAF2;">Three ways out, and a default that fires by itself.</strong> The volunteer who freezes still gets music: doing nothing performs the safe option at zero. A dialog would have blocked the transport instead.</p></div>
+            <div style="display:flex;gap:12px;"><span style="flex:0 0 24px;width:24px;height:24px;border-radius:12px;background:#F2C46B;color:#12081F;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">4</span><p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;">The primary action is <strong style="color:#ECEAF2;">visibly disabled and says why</strong> — “nothing playable is cued”. The old bar disabled buttons by dropping opacity to 38% with no reason given.</p></div>
+            <p style="margin:8px 0 0;font-size:13px;line-height:1.6;color:#B9B4C7;">Scope is stated once, not per row: “5 more songs live on that drive” replaces the forty-toast failure mode the existing network banner was built to avoid.</p>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 1i  MEDIUM ============ -->
+    <div id="1i" style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:baseline;gap:12px;">
+        <span style="padding:4px 10px;border-radius:8px;background:#C7A9F5;color:#12081F;font-size:13px;font-weight:800;">1i</span>
+        <span style="font-size:20px;font-weight:600;">Main screen — medium, 980dp (rail + two panes)</span>
+      </div>
+      <div style="position:relative;display:flex;gap:28px;align-items:flex-start;">
+        <div style="position:relative;width:980px;height:760px;background:#0E0E12;border:1px solid #3A3648;border-radius:22px;overflow:hidden;display:flex;flex-direction:column;">
+          <div style="height:64px;flex:0 0 64px;background:#17171E;border-bottom:1px solid #3A3648;display:flex;align-items:center;gap:12px;padding:0 16px;"><div style="flex:1;"><div style="font-size:15px;font-weight:600;">Friday Social</div><div style="font-size:12px;color:#B9B4C7;">Song 9 of 34 · 2h 41m left</div></div><div style="height:48px;display:flex;align-items:center;padding:0 18px;border-radius:999px;background:#2A2A36;border:1px solid #6E6880;font-size:14px;font-weight:600;">Adjust</div><div style="height:48px;display:flex;align-items:center;padding:0 18px;border-radius:999px;background:#2A2A36;border:1px solid #6E6880;font-size:14px;font-weight:600;">Stage view</div></div>
+          <div style="flex:1;display:flex;min-height:0;">
+            <div style="flex:0 0 88px;width:88px;background:#1F1F28;border-right:1px solid #3A3648;display:flex;flex-direction:column;padding-top:12px;">
+              <div style="height:72px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:#3A2A55;"><span style="width:22px;height:22px;border-radius:7px;background:#C7A9F5;"></span><span style="font-size:12px;font-weight:700;">Now</span></div>
+              <div style="height:72px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;"><span style="width:22px;height:22px;border-radius:7px;background:#6E6880;"></span><span style="font-size:12px;font-weight:600;color:#B9B4C7;">Set list</span></div>
+              <div style="height:72px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;"><span style="width:22px;height:22px;border-radius:7px;background:#6E6880;"></span><span style="font-size:12px;font-weight:600;color:#B9B4C7;">Music</span></div>
+            </div>
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+              <div style="flex:1;padding:16px;display:flex;flex-direction:column;gap:12px;min-height:0;">
+                <div style="background:#1F1F28;border:2px solid #C7A9F5;border-radius:18px;padding:18px;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;"><div style="min-width:0;"><div style="font-size:12px;font-weight:800;letter-spacing:1.4px;color:#C7A9F5;">ON THE FLOOR NOW</div><div style="margin-top:8px;font-size:34px;font-weight:700;color:#C7A9F5;line-height:1;letter-spacing:-1px;">Salsa</div><div style="margin-top:8px;font-size:20px;font-weight:600;">Vivir Mi Vida</div><div style="font-size:15px;color:#B9B4C7;">Marc Anthony</div></div><div style="text-align:right;"><div style="font-size:52px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-2px;">1:12</div><div style="font-size:13px;color:#B9B4C7;">left</div></div></div>
+                <div style="background:#241D0F;border:2px solid #F2C46B;border-radius:18px;padding:18px;"><div style="font-size:12px;font-weight:800;letter-spacing:1.4px;color:#F2C46B;margin-bottom:10px;">WHAT HAPPENS NEXT</div><div style="font-size:24px;font-weight:600;line-height:1.35;text-wrap:pretty;">In <span style="font-variant-numeric:tabular-nums;">40 seconds</span>, the music blends into <span style="color:#7FD1C1;">Bachata</span> and the room hears “Next dance: Bachata”.</div></div>
+                <div style="background:#17171E;border:1px solid #3A3648;border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;"><div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;letter-spacing:1px;"><span style="color:#C7A9F5;">SALSA OUT</span><span style="color:#7FD1C1;">BACHATA IN</span></div><div style="position:relative;height:44px;border-radius:12px;background:linear-gradient(90deg,#C7A9F5 0%,#C7A9F5 30%,#2A2A36 30%,#2A2A36 70%,#7FD1C1 70%,#7FD1C1 100%);"><div style="position:absolute;left:26%;top:-4px;width:28px;height:52px;border-radius:14px;background:#ECEAF2;border:2px solid #0E0E12;"></div></div></div>
+                <div style="flex:1;"></div>
+              </div>
+              <div style="flex:0 0 auto;background:#17171E;border-top:1px solid #3A3648;padding:14px 16px;display:flex;gap:12px;"><div style="width:88px;height:72px;border-radius:18px;background:#2A2A36;border:2px solid #C7A9F5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;"><div style="display:flex;gap:5px;"><span style="width:6px;height:20px;background:#C7A9F5;border-radius:2px;"></span><span style="width:6px;height:20px;background:#C7A9F5;border-radius:2px;"></span></div><span style="font-size:12px;font-weight:700;">Pause</span></div><div style="flex:1;height:72px;border-radius:18px;background:#C7A9F5;display:flex;flex-direction:column;align-items:center;justify-content:center;"><span style="font-size:19px;font-weight:700;color:#12081F;">Start Bachata now</span><span style="font-size:13px;font-weight:600;color:#2A1747;">blend + announce, right away</span></div><div style="width:88px;height:72px;border-radius:18px;background:#3D3116;border:2px solid #F2C46B;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;"><span style="width:22px;height:22px;border-radius:11px;border:3px solid #F2C46B;"></span><span style="font-size:12px;font-weight:700;color:#F2C46B;">Say it</span></div></div>
+            </div>
+            <div style="flex:0 0 300px;width:300px;border-left:1px solid #3A3648;display:flex;flex-direction:column;">
+              <div style="padding:14px 16px 8px;font-size:12px;font-weight:800;letter-spacing:1.2px;color:#B9B4C7;">TONIGHT’S SET LIST</div>
+              <div style="min-height:64px;display:flex;align-items:center;gap:10px;padding:8px 12px;background:#1E1830;border-left:3px solid #C7A9F5;"><span style="width:22px;font-size:12px;color:#B9B4C7;text-align:center;">9</span><div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:700;">Vivir Mi Vida</div><div style="font-size:12px;color:#C7A9F5;">on the floor now</div></div></div>
+              <div style="min-height:64px;display:flex;align-items:center;gap:10px;padding:8px 12px;background:#141C1B;border-left:3px solid #7FD1C1;"><span style="width:22px;font-size:12px;color:#B9B4C7;text-align:center;">10</span><div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:600;">Obsesión</div><div style="font-size:12px;color:#7FD1C1;">coming in next</div></div></div>
+              <div style="min-height:64px;display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #262330;"><span style="width:22px;font-size:12px;color:#B9B4C7;text-align:center;">11</span><div style="flex:1;min-width:0;"><div style="font-size:15px;">Propuesta Indecente</div><div style="font-size:12px;color:#B9B4C7;">Bachata</div></div><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;color:#B9B4C7;">≡</span></div>
+              <div style="min-height:64px;display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #262330;"><span style="width:22px;font-size:12px;color:#B9B4C7;text-align:center;">12</span><div style="flex:1;min-width:0;"><div style="font-size:15px;">Bailando</div><div style="font-size:12px;color:#B9B4C7;">Bachata</div></div><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;color:#B9B4C7;">≡</span></div>
+            </div>
+          </div>
+        </div>
+        <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+          <div style="width:340px;display:flex;flex-direction:column;gap:14px;">
+            <div style="font-size:12px;font-weight:800;letter-spacing:1.4px;color:#B9B4C7;">WHAT CHANGED, AND WHY</div>
+            <p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;">The middle width is the one that gets dragged through, so it is deliberately the compact screen plus a set list: <strong style="color:#ECEAF2;">rail replaces bottom nav, the Now column does not move, the action bar keeps its coordinates.</strong> Only two things drop out relative to compact — the sounds strip and the Coming-in card, both of which are restated inside the sentence and the set list.</p>
+            <p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;">Rail destinations stay Now / Set list / Music in that order at every width, so a resize never re-teaches navigation.</p>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 1j  JACK & JILL ============ -->
+    <div id="1j" style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:baseline;gap:12px;">
+        <span style="padding:4px 10px;border-radius:8px;background:#C7A9F5;color:#12081F;font-size:13px;font-weight:800;">1j</span>
+        <span style="font-size:20px;font-weight:600;">Jack &amp; Jill — the partner draw</span>
+      </div>
+      <div style="position:relative;display:flex;gap:28px;align-items:flex-start;">
+        <div style="width:820px;height:760px;background:#0E0E12;border:1px solid #3A3648;border-radius:22px;overflow:hidden;display:flex;flex-direction:column;">
+          <div style="flex:0 0 auto;padding:20px;background:#17171E;border-bottom:1px solid #3A3648;display:flex;align-items:center;gap:16px;"><div style="flex:1;"><div style="font-size:22px;font-weight:600;">Partner draw</div><div style="margin-top:4px;font-size:14px;color:#B9B4C7;">Round 2 of 4 · nobody dances with the same partner twice</div></div><span style="height:48px;padding:0 18px;border-radius:999px;background:#2A2A36;border:1px solid #6E6880;font-size:14px;font-weight:600;display:flex;align-items:center;">Who’s dancing</span></div>
+          <div style="flex:1;padding:20px;display:flex;flex-direction:column;gap:16px;">
+            <div style="display:flex;gap:16px;">
+              <div style="flex:1;border-radius:18px;background:#1F1F28;border:1px solid #3A3648;padding:16px;"><div style="font-size:12px;font-weight:800;letter-spacing:1.2px;color:#C7A9F5;">LEADS · 8</div><div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;"><span style="height:36px;display:inline-flex;align-items:center;padding:0 14px;border-radius:999px;background:#2A2A36;font-size:14px;">#101</span><span style="height:36px;display:inline-flex;align-items:center;padding:0 14px;border-radius:999px;background:#2A2A36;font-size:14px;">#104</span><span style="height:36px;display:inline-flex;align-items:center;padding:0 14px;border-radius:999px;background:#2A2A36;font-size:14px;">#107</span><span style="height:36px;display:inline-flex;align-items:center;padding:0 14px;border-radius:999px;background:#2A2A36;font-size:14px;">#112</span><span style="height:36px;display:inline-flex;align-items:center;padding:0 14px;border-radius:999px;background:#2A2A36;font-size:14px;color:#B9B4C7;">+4</span></div></div>
+              <div style="flex:1;border-radius:18px;background:#1F1F28;border:1px solid #3A3648;padding:16px;"><div style="font-size:12px;font-weight:800;letter-spacing:1.2px;color:#7FD1C1;">FOLLOWS · 8</div><div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;"><span style="height:36px;display:inline-flex;align-items:center;padding:0 14px;border-radius:999px;background:#2A2A36;font-size:14px;">#203</span><span style="height:36px;display:inline-flex;align-items:center;padding:0 14px;border-radius:999px;background:#2A2A36;font-size:14px;">#205</span><span style="height:36px;display:inline-flex;align-items:center;padding:0 14px;border-radius:999px;background:#2A2A36;font-size:14px;">#209</span><span style="height:36px;display:inline-flex;align-items:center;padding:0 14px;border-radius:999px;background:#2A2A36;font-size:14px;">#214</span><span style="height:36px;display:inline-flex;align-items:center;padding:0 14px;border-radius:999px;background:#2A2A36;font-size:14px;color:#B9B4C7;">+4</span></div></div>
+            </div>
+            <div style="border-radius:18px;background:#17171E;border:1px solid #3A3648;padding:18px;display:flex;flex-direction:column;gap:12px;">
+              <div style="font-size:12px;font-weight:800;letter-spacing:1.2px;color:#B9B4C7;">THIS ROUND’S PAIRS</div>
+              <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
+                <div style="min-height:64px;border-radius:14px;background:#1F1F28;border:1px solid #3A3648;display:flex;align-items:center;justify-content:center;gap:14px;font-size:20px;font-weight:700;"><span style="color:#C7A9F5;">#104</span><span style="color:#B9B4C7;font-size:15px;">with</span><span style="color:#7FD1C1;">#209</span></div>
+                <div style="min-height:64px;border-radius:14px;background:#1F1F28;border:1px solid #3A3648;display:flex;align-items:center;justify-content:center;gap:14px;font-size:20px;font-weight:700;"><span style="color:#C7A9F5;">#101</span><span style="color:#B9B4C7;font-size:15px;">with</span><span style="color:#7FD1C1;">#214</span></div>
+                <div style="min-height:64px;border-radius:14px;background:#1F1F28;border:1px solid #3A3648;display:flex;align-items:center;justify-content:center;gap:14px;font-size:20px;font-weight:700;"><span style="color:#C7A9F5;">#112</span><span style="color:#B9B4C7;font-size:15px;">with</span><span style="color:#7FD1C1;">#203</span></div>
+                <div style="min-height:64px;border-radius:14px;background:#1F1F28;border:1px solid #3A3648;display:flex;align-items:center;justify-content:center;gap:14px;font-size:20px;font-weight:700;"><span style="color:#C7A9F5;">#107</span><span style="color:#B9B4C7;font-size:15px;">with</span><span style="color:#7FD1C1;">#205</span></div>
+              </div>
+            </div>
+            <div style="flex:1;"></div>
+            <div style="display:flex;gap:12px;"><div style="flex:1;height:72px;border-radius:18px;background:#C7A9F5;color:#12081F;display:flex;flex-direction:column;align-items:center;justify-content:center;"><span style="font-size:19px;font-weight:700;">Draw round 3</span><span style="font-size:13px;font-weight:600;color:#2A1747;">then read the pairs to the floor</span></div><div style="width:200px;height:72px;border-radius:18px;background:#3D3116;border:2px solid #F2C46B;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;"><span style="font-size:16px;font-weight:700;color:#F2C46B;">Announce these</span><span style="font-size:12px;color:#F2C46B;">spoken, over the music</span></div></div>
+          </div>
+        </div>
+        <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+          <div style="width:340px;display:flex;flex-direction:column;gap:14px;">
+            <div style="font-size:12px;font-weight:800;letter-spacing:1.4px;color:#B9B4C7;">WHAT CHANGED, AND WHY</div>
+            <p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;">Behind <em>Prepare › Special formats</em> rather than a dice icon in the app bar — this is a format decision, made before the round, not a transport control.</p>
+            <p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;"><strong style="color:#ECEAF2;">The pairs are the screen.</strong> Numbers at 20px in the two lane hues so a caller reads them out without leaning in, and the draw button says what happens after the draw.</p>
+            <p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;">“Announce these” reuses the amber voice affordance from every other screen, so the operator has learned it once.</p>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- ============ 1k  SOUNDS ============ -->
+    <div id="1k" style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:baseline;gap:12px;">
+        <span style="padding:4px 10px;border-radius:8px;background:#C7A9F5;color:#12081F;font-size:13px;font-weight:800;">1k</span>
+        <span style="font-size:20px;font-weight:600;">Your sounds (was: soundboard)</span>
+      </div>
+      <div style="position:relative;display:flex;gap:28px;align-items:flex-start;">
+        <div style="width:700px;height:970px;background:#0E0E12;border:1px solid #3A3648;border-radius:22px;overflow:hidden;display:flex;flex-direction:column;">
+          <div style="flex:0 0 auto;padding:20px;background:#17171E;border-bottom:1px solid #3A3648;"><div style="font-size:22px;font-weight:600;">Your sounds</div><div style="margin-top:4px;font-size:14px;color:#B9B4C7;">Buttons you can press mid-dance, and clips that announce a dance.</div></div>
+          <div style="flex:1;padding:20px;display:flex;flex-direction:column;gap:16px;">
+            <div style="border-radius:18px;background:#1F1F28;border:1px solid #3A3648;padding:16px;display:flex;flex-direction:column;gap:12px;">
+              <div style="font-size:16px;font-weight:600;">Add a sound</div>
+              <div style="display:flex;gap:12px;align-items:center;"><span style="height:56px;padding:0 20px;border-radius:14px;background:#2A2A36;border:1px solid #6E6880;font-size:15px;font-weight:600;display:flex;align-items:center;">Choose a file</span><span style="flex:1;font-size:14px;color:#B9B4C7;">wav, mp3, flac, m4a, aiff, ogg</span></div>
+              <div style="height:56px;border-radius:14px;background:#17171E;border:1px solid #3A3648;display:flex;align-items:center;padding:0 16px;font-size:15px;color:#B9B4C7;">Name it — this is what the button says</div>
+              <div style="display:flex;align-items:center;gap:14px;"><span style="width:64px;height:36px;border-radius:18px;background:#2A2A36;border:1px solid #6E6880;position:relative;flex:0 0 auto;"><span style="position:absolute;left:3px;top:2px;width:30px;height:30px;border-radius:15px;background:#6E6880;"></span></span><div style="flex:1;font-size:14px;color:#B9B4C7;">Dip the music under it — for anything spoken. A whistle cuts through on its own.</div><span style="height:56px;padding:0 26px;border-radius:999px;background:#C7A9F5;color:#12081F;font-size:16px;font-weight:700;display:flex;align-items:center;">Add</span></div>
+            </div>
+            <div style="font-size:12px;font-weight:800;letter-spacing:1.2px;color:#B9B4C7;">3 ON THE BAR</div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <div style="min-height:72px;border-radius:14px;background:#1F1F28;border:1px solid #3A3648;padding:12px 14px;display:flex;align-items:center;gap:14px;"><span style="width:48px;height:48px;border-radius:24px;background:#2C2340;color:#C7A9F5;display:flex;align-items:center;justify-content:center;font-size:16px;">▶</span><div style="flex:1;"><div style="font-size:16px;font-weight:600;">Whistle</div><div style="font-size:13px;color:#B9B4C7;">Plays over the music · key 1</div></div><span style="height:48px;padding:0 16px;border-radius:999px;background:#2A2A36;border:1px solid #6E6880;font-size:14px;font-weight:600;display:flex;align-items:center;">Rename</span><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;color:#FF9A94;font-size:18px;">✕</span></div>
+              <div style="min-height:72px;border-radius:14px;background:#1F1F28;border:1px solid #3A3648;padding:12px 14px;display:flex;align-items:center;gap:14px;"><span style="width:48px;height:48px;border-radius:24px;background:#2C2340;color:#C7A9F5;display:flex;align-items:center;justify-content:center;font-size:16px;">▶</span><div style="flex:1;"><div style="font-size:16px;font-weight:600;">Rotate partners</div><div style="font-size:13px;color:#F2C46B;">Music dips under it · key 2</div></div><span style="height:48px;padding:0 16px;border-radius:999px;background:#2A2A36;border:1px solid #6E6880;font-size:14px;font-weight:600;display:flex;align-items:center;">Rename</span><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;color:#FF9A94;font-size:18px;">✕</span></div>
+              <div style="min-height:72px;border-radius:14px;background:#1F1F28;border:1px solid #3A3648;padding:12px 14px;display:flex;align-items:center;gap:14px;"><span style="width:48px;height:48px;border-radius:24px;background:#2C2340;color:#C7A9F5;display:flex;align-items:center;justify-content:center;font-size:16px;">▶</span><div style="flex:1;"><div style="font-size:16px;font-weight:600;">Applause</div><div style="font-size:13px;color:#B9B4C7;">Plays over the music · key 3</div></div><span style="height:48px;padding:0 16px;border-radius:999px;background:#2A2A36;border:1px solid #6E6880;font-size:14px;font-weight:600;display:flex;align-items:center;">Rename</span><span style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;color:#FF9A94;font-size:18px;">✕</span></div>
+            </div>
+            <div style="border-radius:14px;background:#241D0F;border:1px solid #F2C46B;padding:14px 16px;font-size:14px;color:#ECEAF2;line-height:1.5;">Trying a sound here plays it in your headphones only. Pressing it on the main screen plays it to the room.</div>
+            <div style="flex:1;"></div>
+            <div style="height:64px;border-radius:16px;background:#2A2A36;border:1px solid #6E6880;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;">Done</div>
+          </div>
+        </div>
+        <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+          <div style="width:340px;display:flex;flex-direction:column;gap:14px;">
+            <div style="font-size:12px;font-weight:800;letter-spacing:1.4px;color:#B9B4C7;">WHAT CHANGED, AND WHY</div>
+            <p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;"><strong style="color:#ECEAF2;">“Soundboard” and “cue” are gone.</strong> These are “your sounds”, and the thing that decides whether one is usable over vocals is stated as an outcome — <em>music dips under it</em> — not as a duck level.</p>
+            <p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;">The keyboard shortcut is printed on every row, because a working DJ wants keys 1–9 and a first-timer needs to know the number under the button means something.</p>
+            <p style="margin:0;font-size:14px;line-height:1.6;color:#B9B4C7;"><strong style="color:#ECEAF2;">Where the sound goes is stated once, plainly.</strong> The old picker refused a preview rather than risk a whistle over a full floor; naming the destination is the smaller, kinder fix.</p>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="max-width:1100px;border-top:1px solid #262330;padding-top:28px;display:flex;flex-direction:column;gap:12px;">
+    <div style="font-size:12px;font-weight:800;letter-spacing:1.4px;color:#B9B4C7;">VOCABULARY, END TO END</div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:14px;">
+      <span style="padding:10px 14px;border-radius:12px;background:#17171E;border:1px solid #3A3648;"><span style="color:#B9B4C7;text-decoration:line-through;">crossfade</span> → <strong style="font-weight:600;">blend</strong></span>
+      <span style="padding:10px 14px;border-radius:12px;background:#17171E;border:1px solid #3A3648;"><span style="color:#B9B4C7;text-decoration:line-through;">deck A / deck B</span> → <strong style="font-weight:600;">on the floor / coming in</strong></span>
+      <span style="padding:10px 14px;border-radius:12px;background:#17171E;border:1px solid #3A3648;"><span style="color:#B9B4C7;text-decoration:line-through;">crossfader</span> → <strong style="font-weight:600;">the handover lane</strong></span>
+      <span style="padding:10px 14px;border-radius:12px;background:#17171E;border:1px solid #3A3648;"><span style="color:#B9B4C7;text-decoration:line-through;">cue / cue tag</span> → <strong style="font-weight:600;">sound / what the room hears</strong></span>
+      <span style="padding:10px 14px;border-radius:12px;background:#17171E;border:1px solid #3A3648;"><span style="color:#B9B4C7;text-decoration:line-through;">duck</span> → <strong style="font-weight:600;">dip the music under it</strong></span>
+      <span style="padding:10px 14px;border-radius:12px;background:#17171E;border:1px solid #3A3648;"><span style="color:#B9B4C7;text-decoration:line-through;">transport</span> → <strong style="font-weight:600;">the two buttons at the bottom</strong></span>
+      <span style="padding:10px 14px;border-radius:12px;background:#17171E;border:1px solid #3A3648;"><span style="color:#B9B4C7;text-decoration:line-through;">queue</span> → <strong style="font-weight:600;">set list</strong></span>
+      <span style="padding:10px 14px;border-radius:12px;background:#17171E;border:1px solid #3A3648;"><span style="color:#B9B4C7;text-decoration:line-through;">library</span> → <strong style="font-weight:600;">music</strong></span>
+      <span style="padding:10px 14px;border-radius:12px;background:#17171E;border:1px solid #3A3648;"><span style="color:#B9B4C7;text-decoration:line-through;">event mode / pre-flight</span> → <strong style="font-weight:600;">prepare for tonight</strong></span>
+      <span style="padding:10px 14px;border-radius:12px;background:#17171E;border:1px solid #3A3648;"><span style="color:#B9B4C7;text-decoration:line-through;">performance mode</span> → <strong style="font-weight:600;">stage view</strong></span>
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showNotes&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Annotations&quot;},&quot;showPins&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Annotations&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      showNotes: this.props.showNotes ?? true,
+      showPins: this.props.showPins ?? true,
+    };
+  }
+}
+</script>
+</body>
+</html>
