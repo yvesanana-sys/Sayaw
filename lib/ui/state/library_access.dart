@@ -61,6 +61,17 @@ abstract class CueTagAccess {
   Future<void> tagSoundCue({required String itemId, required String? cueId});
 }
 
+/// Joining rows of the open set into one dance.
+///
+/// Narrow for the same reason [CueTagAccess] is.
+abstract class MergeAccess {
+  /// Runs [itemId] into whatever follows it as one dance, or separates them.
+  ///
+  /// Takes effect on the transition it changes, not on the next time the set
+  /// is opened — see [PlaybackSession.setMergeIntoNext].
+  Future<void> setMergeIntoNext({required String itemId, required bool merge});
+}
+
 /// How the night is shaped: how many songs, and how much of each.
 ///
 /// Its own interface, like the two above, so the dialog that edits it can be

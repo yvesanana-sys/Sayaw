@@ -484,6 +484,49 @@ void main() {
     });
   });
 
+  group('running a row into the next', () {
+    setUp(() async {
+      await _addTracks(db, set, music, ['a', 'b', 'c']);
+      await session.openPlaylist(set);
+    });
+
+    test('the row on screen shows the join, and the strip says merge',
+        () async {
+      await session.setMergeIntoNext(itemId: 'item-a', merge: true);
+      await _settle();
+
+      final state = container.read(playbackProvider);
+      expect(state.queue[0].mergeIntoNext, isTrue);
+      expect(state.queue[1].mergeIntoNext, isFalse);
+      expect(state.nextMerges, isTrue);
+      expect(state.announcement, isNull);
+    });
+
+    test('the deck already cued takes the merge without being reloaded',
+        () async {
+      await session.play();
+      await _settle();
+      expect(engine.standbyEntry?.spec.merge, isFalse, reason: 'precondition');
+
+      await session.setMergeIntoNext(itemId: 'item-a', merge: true);
+      await _settle();
+
+      expect(engine.standbyEntry?.title, 'Track b');
+      expect(engine.standbyEntry?.spec.merge, isTrue);
+      expect(container.read(playbackProvider).deckA.isPlaying, isTrue);
+    });
+
+    test('separating them puts the transition back', () async {
+      await session.setMergeIntoNext(itemId: 'item-a', merge: true);
+      await _settle();
+      await session.setMergeIntoNext(itemId: 'item-a', merge: false);
+      await _settle();
+
+      expect(engine.standbyEntry?.spec.merge, isFalse);
+      expect(container.read(playbackProvider).nextMerges, isFalse);
+    });
+  });
+
   group('the library', () {
     test('search finds what a scan imported', () async {
       _touch(music, 'library/kiss-of-fire.flac');

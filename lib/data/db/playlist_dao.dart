@@ -227,6 +227,18 @@ class PlaylistDao extends DatabaseAccessor<SayawDatabase> with _$PlaylistDaoMixi
     return ids;
   }
 
+  /// Joins a row to whatever follows it as one dance, or separates them.
+  Future<int> setMergeIntoNext({
+    required String itemId,
+    required bool merge,
+  }) =>
+      (update(playlistItems)..where((i) => i.id.equals(itemId))).write(
+        PlaylistItemsCompanion(
+          mergeIntoNext: Value(merge),
+          updatedAt: Value(clock.now()),
+        ),
+      );
+
   /// Tags a row with one of the operator's soundboard cues, or clears it.
   ///
   /// The cue itself is untouched: it stays on the bar, still fires by hand,

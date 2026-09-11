@@ -35,7 +35,35 @@ class TransitionSpec {
     this.duckRestoreFade = const Duration(milliseconds: 900),
     this.rotationGap = Duration.zero,
     this.pauseAfter = false,
+    this.merge = false,
   });
+
+  /// How long two merged songs overlap.
+  ///
+  /// Short enough that the floor hears one song become another rather than
+  /// two songs at once, long enough that it is a blend and not a splice.
+  /// Equal-power, so the level never dips through it: a dip is what a fade
+  /// sounds like, and a merge is the transition that is not one.
+  static const mergeBlend = Duration(milliseconds: 2500);
+
+  /// The transition into a song that continues the dance before it.
+  ///
+  /// What a mixer is made of: two or three songs of one dance, run together
+  /// as one. The overlap is [mergeBlend], nothing is announced — the dance
+  /// has not changed, so there is nothing to say — and no rotation gap is
+  /// held, because the floor is mid-dance and not changing partners.
+  const TransitionSpec.merge({
+    this.duckLevel = 0.20,
+    this.duckFade = const Duration(milliseconds: 600),
+    this.duckHold = const Duration(milliseconds: 250),
+    this.duckRestoreFade = const Duration(milliseconds: 900),
+    this.pauseAfter = false,
+  })  : crossfade = mergeBlend,
+        fadeInCurve = FadeCurve.equalPower,
+        fadeOutCurve = FadeCurve.equalPower,
+        announceMode = AnnounceMode.off,
+        rotationGap = Duration.zero,
+        merge = true;
 
   final Duration crossfade;
   final FadeCurve fadeInCurve;
@@ -54,6 +82,9 @@ class TransitionSpec {
 
   /// Stop after this item and wait for the operator (applause, MC handover).
   final bool pauseAfter;
+
+  /// This song continues the dance before it. See [TransitionSpec.merge].
+  final bool merge;
 
   bool get isGapless => crossfade <= Duration.zero;
 
@@ -665,13 +696,19 @@ class CrossfadeEngine {
     final remaining = _remainingOnActive(entry);
     if (remaining == null) return;
 
+    // The transition belongs to the row coming in: its spec decides the
+    // shape, so its spec decides when to start. Scheduling from the row going
+    // out — which is what happened before — started a short merge as early
+    // as a long crossfade and cut the outgoing song off by the difference.
+    final into = _standbyEntry?.spec ?? entry.spec;
+
     // Gapless: no overlap, so hand off exactly at the boundary.
-    if (entry.spec.isGapless) {
+    if (into.isGapless) {
       if (remaining <= tick) unawaited(_beginTransition());
       return;
     }
 
-    if (remaining <= entry.spec.crossfade) unawaited(_beginTransition());
+    if (remaining <= into.crossfade) unawaited(_beginTransition());
   }
 
   /// Time left before this item must hand over. Honours `cueOut` and a
