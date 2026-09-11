@@ -33,6 +33,22 @@ void main() {
       expect(clip.filePath, '/clips/partners.wav');
     });
 
+    test('a length of zero is a length not yet known, not a clip of nothing',
+        () async {
+      // libmpv reports zero on open, before it has parsed the file. Timed at
+      // zero, an announcement is played and stopped in the same instant.
+      final deck = FakeDeck('voice', trackDuration: Duration.zero);
+      final factory = PlatformClipFactory(
+        deck: deck,
+        cacheDirectory: '/tmp/sayaw-test',
+        settings: const TtsVoiceSettings(),
+      );
+
+      final clip = await factory.probe('/clips/partners.wav', text: 'Waltz');
+
+      expect(clip!.duration, PlatformClipFactory.assumedLength);
+    });
+
     test('a length the backend does report is used as is', () async {
       final deck = FakeDeck('voice', trackDuration: const Duration(seconds: 4));
       final factory = PlatformClipFactory(
