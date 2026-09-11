@@ -44,6 +44,22 @@ class FakeLibrary implements LibraryAccess {
   Future<void> addToSet(String trackId) async => added.add(trackId);
 
   @override
+  Future<List<String>> everyTrackMatching(String query) async => [
+        for (final track in await searchLibrary(query, limit: 1 << 30))
+          track.id,
+      ];
+
+  /// Every batch passed to [addAllToSet], so a test can tell one press from
+  /// many.
+  final List<List<String>> addedAll = [];
+
+  @override
+  Future<void> addAllToSet(List<String> trackIds) async {
+    addedAll.add(List.of(trackIds));
+    added.addAll(trackIds);
+  }
+
+  @override
   Future<ScanReport> scanFolders(
     Iterable<Directory> folders, {
     void Function(int filesSeen, String path)? onProgress,

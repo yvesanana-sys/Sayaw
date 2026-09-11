@@ -446,6 +446,44 @@ void main() {
     });
   });
 
+  group('adding a whole folder at once', () {
+    test('every row lands on screen and in the engine, in order', () async {
+      await _addTracks(db, set, music, ['a']);
+      await session.openPlaylist(set);
+      for (final id in ['b', 'c', 'd']) {
+        File('${music.path}/$id.flac').writeAsStringSync('not really audio');
+        await db.trackDao.upsert(TracksCompanion.insert(
+          id: id,
+          sourceType: SourceType.local,
+          localPath: Value('${music.path}/$id.flac'),
+          title: 'Track $id',
+          addedAt: clock.now(),
+          updatedAt: clock.now(),
+        ));
+      }
+
+      await session.addAllToSet(['d', 'b', 'c']);
+      await _settle();
+
+      expect(
+        [for (final item in container.read(playbackProvider).queue) item.title],
+        ['Track a', 'Track d', 'Track b', 'Track c'],
+      );
+      // Cued behind the one on deck, and the rest reachable by a tap.
+      expect(engine.standbyEntry?.title, 'Track d');
+      expect(session.willPlay('item-a'), isTrue);
+    });
+
+    test('the whole library, in the order a set should play', () async {
+      await _addTracks(db, set, music, ['02_second', '01_first']);
+      await session.openPlaylist(set);
+
+      final ids = await session.everyTrackMatching('');
+
+      expect(ids, ['01_first', '02_second']);
+    });
+  });
+
   group('the library', () {
     test('search finds what a scan imported', () async {
       _touch(music, 'library/kiss-of-fire.flac');

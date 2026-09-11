@@ -360,43 +360,60 @@ class PlaybackSession
       repository.db.trackDao.recentlyAdded(limit: limit);
 
   /// Adds a track to the end of the open set.
-  ///
-  /// Written to the database first, then handed to the engine, which appends
-  /// without disturbing whatever is already loaded and prerolled.
   @override
-  Future<void> addToSet(String trackId) async {
+  Future<void> addToSet(String trackId) => addAllToSet([trackId]);
+
+  @override
+  Future<List<String>> everyTrackMatching(String query) =>
+      repository.db.trackDao.idsMatching(query);
+
+  /// Adds tracks to the end of the open set, in the order given.
+  ///
+  /// Written to the database first, in one transaction, then drawn once, then
+  /// handed to the engine row by row — which appends without disturbing
+  /// whatever is already loaded and prerolled. A folder is hundreds of songs;
+  /// one write and one redraw is the difference between a button and a
+  /// progress bar.
+  @override
+  Future<void> addAllToSet(List<String> trackIds) async {
     final playlistId = _playlistId;
-    if (playlistId == null) return;
+    if (playlistId == null || trackIds.isEmpty) return;
 
-    final itemId = await repository.db.playlistDao
-        .appendTrack(playlistId: playlistId, trackId: trackId);
+    final itemIds = await repository.db.playlistDao
+        .appendTracks(playlistId: playlistId, trackIds: trackIds);
+    final wanted = itemIds.toSet();
 
-    final rows = await repository.db.playlistDao.itemsOf(playlistId);
-    final row = rows.firstWhere((r) => r.item.id == itemId);
+    final rows = [
+      for (final row in await repository.db.playlistDao.itemsOf(playlistId))
+        if (wanted.contains(row.item.id)) row,
+    ];
     final playlist = (await repository.db.playlistDao.byId(playlistId))!;
 
     controller.setQueue([
       ...controller.queueSnapshot,
-      QueueItemUi(
-        id: row.item.id,
-        title: row.track?.title ?? 'Untitled',
-        artist: row.track?.artist ?? '',
-        danceType: row.danceType?.name,
-        duration: row.track?.durationMs,
-        position: row.item.position,
-        soundCueId: row.soundCue?.id,
-        soundCueLabel: row.soundCue?.label,
-      ),
+      for (final row in rows)
+        QueueItemUi(
+          id: row.item.id,
+          title: row.track?.title ?? 'Untitled',
+          artist: row.track?.artist ?? '',
+          danceType: row.danceType?.name,
+          duration: row.track?.durationMs,
+          position: row.item.position,
+          soundCueId: row.soundCue?.id,
+          soundCueLabel: row.soundCue?.label,
+        ),
     ]);
 
-    try {
-      final entry = await repository.resolveRow(row, playlist: playlist);
-      _engineItemIds = [..._engineItemIds, entry.itemId];
-      await engine.appendToQueue(entry);
-    } on UnavailableOffline {
-      // It is in the set and on screen; the engine will simply never reach it.
-      // Reopening the set is what turns that into a labelled row, and that is
-      // not something to do underneath a running transition.
+    for (final row in rows) {
+      try {
+        final entry = await repository.resolveRow(row, playlist: playlist);
+        _engineItemIds = [..._engineItemIds, entry.itemId];
+        await engine.appendToQueue(entry);
+      } on UnavailableOffline {
+        // It is in the set and on screen; the engine will simply never reach
+        // it. Reopening the set is what turns that into a labelled row, and
+        // that is not something to do underneath a running transition.
+      }
     }
 
     _publish();

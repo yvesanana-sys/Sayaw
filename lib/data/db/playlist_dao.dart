@@ -192,6 +192,41 @@ class PlaylistDao extends DatabaseAccessor<SayawDatabase> with _$PlaylistDaoMixi
     return rowId;
   }
 
+  /// Adds many tracks to the end of the set, in the order given.
+  ///
+  /// One transaction rather than one per row: a folder is hundreds of songs,
+  /// and the write happens while audio may be playing off the same file.
+  /// Returns the new rows' ids in the same order.
+  Future<List<String>> appendTracks({
+    required String playlistId,
+    required List<String> trackIds,
+  }) async {
+    if (trackIds.isEmpty) return const [];
+    final now = clock.now();
+    final ids = <String>[];
+
+    await transaction(() async {
+      var last = await _lastPosition(playlistId);
+      for (final trackId in trackIds) {
+        final rowId = newId();
+        final position = positionBetween(last, null)!;
+        await into(playlistItems).insert(PlaylistItemsCompanion.insert(
+          id: rowId,
+          playlistId: playlistId,
+          position: position,
+          trackId: Value(trackId),
+          itemType: const Value(PlaylistItemType.track),
+          createdAt: now,
+          updatedAt: now,
+        ));
+        ids.add(rowId);
+        last = position;
+      }
+    });
+
+    return ids;
+  }
+
   /// Tags a row with one of the operator's soundboard cues, or clears it.
   ///
   /// The cue itself is untouched: it stays on the bar, still fires by hand,

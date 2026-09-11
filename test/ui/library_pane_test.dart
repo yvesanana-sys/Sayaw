@@ -87,6 +87,69 @@ void main() {
     expect(library.added, ['track-0']);
   });
 
+  group('adding everything', () {
+    testWidgets('asks first, with the real number, then adds them all as one',
+        (tester) async {
+      // Forty in the library; the list on screen would show them all here,
+      // but the number in the question comes from the library, not the list.
+      final library = await pumpLibrary(tester);
+
+      await tester.tap(
+          find.bySemanticsLabel('Add every track in the library to the set'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('all 40 tracks'), findsOneWidget);
+
+      await tester.tap(find.text('Add 40'));
+      await tester.pumpAndSettle();
+
+      expect(library.addedAll, hasLength(1), reason: 'one write, not forty');
+      expect(library.addedAll.single, hasLength(40));
+      expect(library.addedAll.single.first, 'track-0');
+      expect(find.text('40 added to the set'), findsOneWidget);
+    });
+
+    testWidgets('a search narrows what "all" means', (tester) async {
+      final library = await pumpLibrary(tester);
+
+      await tester.enterText(find.byType(TextField), 'Georgia');
+      await tester.pump(_afterDebounce);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.bySemanticsLabel(
+          'Add every track matching Georgia to the set'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('matching "Georgia"'), findsOneWidget);
+
+      await tester.tap(find.text('Add 20'));
+      await tester.pumpAndSettle();
+
+      expect(library.addedAll.single, hasLength(20));
+      expect(library.addedAll.single, everyElement(contains('track-')));
+    });
+
+    testWidgets('cancelling adds nothing', (tester) async {
+      final library = await pumpLibrary(tester);
+
+      await tester.tap(
+          find.bySemanticsLabel('Add every track in the library to the set'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(library.addedAll, isEmpty);
+      expect(library.added, isEmpty);
+    });
+
+    testWidgets('with nothing listed there is nothing to add', (tester) async {
+      await pumpLibrary(tester, library: FakeLibrary(tracks: []));
+
+      expect(
+        find.bySemanticsLabel('Add every track in the library to the set'),
+        findsNothing,
+      );
+    });
+  });
+
   testWidgets('an empty library is explained rather than left blank',
       (tester) async {
     await pumpLibrary(tester, library: FakeLibrary(tracks: []));

@@ -156,6 +156,35 @@ void main() {
     });
   });
 
+  group('every id a search would list', () {
+    late SayawDatabase db;
+
+    setUp(() async {
+      db = openTestDatabase();
+      // Out of order on purpose, and named the way a folder for a night is.
+      await db.trackDao.upsertAll([
+        _local('c').copyWith(title: const Value('03_(Rumba)_Fields of Gold')),
+        _local('a').copyWith(title: const Value('01_(Waltz)_Rilassamento')),
+        _local('b').copyWith(title: const Value('02_(Waltz)_Appassionata')),
+      ]);
+    });
+
+    test('an empty query is the whole library, in title order', () async {
+      // Files numbered to play in order arrive in it — not newest first,
+      // which is the folder backwards.
+      expect(await db.trackDao.idsMatching(''), ['a', 'b', 'c']);
+    });
+
+    test('a query is every match, uncapped, still in title order', () async {
+      expect(await db.trackDao.idsMatching('waltz'), ['a', 'b']);
+    });
+
+    test('a query with nothing to search on is nothing', () async {
+      // What the list on screen shows for it, and this answers the same.
+      expect(await db.trackDao.idsMatching('!!!'), isEmpty);
+    });
+  });
+
   group('ftsQuery', () {
     test('quotes every token and prefixes only the last', () {
       expect(ftsQuery('viennese waltz'), '"viennese" "waltz"*');
