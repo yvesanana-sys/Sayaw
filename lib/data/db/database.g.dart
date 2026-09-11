@@ -5034,6 +5034,21 @@ class $PlaylistItemsTable extends PlaylistItems
       'REFERENCES sound_cues (id) ON DELETE SET NULL',
     ),
   );
+  static const VerificationMeta _mergeIntoNextMeta = const VerificationMeta(
+    'mergeIntoNext',
+  );
+  @override
+  late final GeneratedColumn<bool> mergeIntoNext = GeneratedColumn<bool>(
+    'merge_into_next',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("merge_into_next" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   late final GeneratedColumnWithTypeConverter<Duration?, int> crossfadeMs =
       GeneratedColumn<int>(
@@ -5166,6 +5181,7 @@ class $PlaylistItemsTable extends PlaylistItems
     announcementText,
     announcementClipPath,
     soundCueId,
+    mergeIntoNext,
     crossfadeMs,
     fadeInCurve,
     fadeOutCurve,
@@ -5254,6 +5270,15 @@ class $PlaylistItemsTable extends PlaylistItems
         ),
       );
     }
+    if (data.containsKey('merge_into_next')) {
+      context.handle(
+        _mergeIntoNextMeta,
+        mergeIntoNext.isAcceptableOrUnknown(
+          data['merge_into_next']!,
+          _mergeIntoNextMeta,
+        ),
+      );
+    }
     if (data.containsKey('gain_offset_db')) {
       context.handle(
         _gainOffsetDbMeta,
@@ -5328,6 +5353,10 @@ class $PlaylistItemsTable extends PlaylistItems
         DriftSqlType.string,
         data['${effectivePrefix}sound_cue_id'],
       ),
+      mergeIntoNext: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}merge_into_next'],
+      )!,
       crossfadeMs: $PlaylistItemsTable.$convertercrossfadeMsn.fromSql(
         attachedDatabase.typeMapping.read(
           DriftSqlType.int,
@@ -5471,6 +5500,13 @@ class PlaylistItem extends DataClass implements Insertable<PlaylistItem> {
   /// of the above — and `SET NULL` because deleting a whistle should quiet a
   /// row, not delete it out of the set.
   final String? soundCueId;
+
+  /// This row runs into whatever follows it as one dance: a short overlap at
+  /// full level, no announcement, no rotation gap. Two or three songs of the
+  /// same dance joined this way are a mixer — one dance to the floor, with
+  /// the music changing under it. Kept on the row that leads rather than the
+  /// one that follows, so a reorder moves the join with it.
+  final bool mergeIntoNext;
   final Duration? crossfadeMs;
   final FadeCurve? fadeInCurve;
   final FadeCurve? fadeOutCurve;
@@ -5502,6 +5538,7 @@ class PlaylistItem extends DataClass implements Insertable<PlaylistItem> {
     this.announcementText,
     this.announcementClipPath,
     this.soundCueId,
+    required this.mergeIntoNext,
     this.crossfadeMs,
     this.fadeInCurve,
     this.fadeOutCurve,
@@ -5546,6 +5583,7 @@ class PlaylistItem extends DataClass implements Insertable<PlaylistItem> {
     if (!nullToAbsent || soundCueId != null) {
       map['sound_cue_id'] = Variable<String>(soundCueId);
     }
+    map['merge_into_next'] = Variable<bool>(mergeIntoNext);
     if (!nullToAbsent || crossfadeMs != null) {
       map['crossfade_ms'] = Variable<int>(
         $PlaylistItemsTable.$convertercrossfadeMsn.toSql(crossfadeMs),
@@ -5623,6 +5661,7 @@ class PlaylistItem extends DataClass implements Insertable<PlaylistItem> {
       soundCueId: soundCueId == null && nullToAbsent
           ? const Value.absent()
           : Value(soundCueId),
+      mergeIntoNext: Value(mergeIntoNext),
       crossfadeMs: crossfadeMs == null && nullToAbsent
           ? const Value.absent()
           : Value(crossfadeMs),
@@ -5674,6 +5713,7 @@ class PlaylistItem extends DataClass implements Insertable<PlaylistItem> {
         json['announcementClipPath'],
       ),
       soundCueId: serializer.fromJson<String?>(json['soundCueId']),
+      mergeIntoNext: serializer.fromJson<bool>(json['mergeIntoNext']),
       crossfadeMs: serializer.fromJson<Duration?>(json['crossfadeMs']),
       fadeInCurve: $PlaylistItemsTable.$converterfadeInCurven.fromJson(
         serializer.fromJson<String?>(json['fadeInCurve']),
@@ -5712,6 +5752,7 @@ class PlaylistItem extends DataClass implements Insertable<PlaylistItem> {
       'announcementText': serializer.toJson<String?>(announcementText),
       'announcementClipPath': serializer.toJson<String?>(announcementClipPath),
       'soundCueId': serializer.toJson<String?>(soundCueId),
+      'mergeIntoNext': serializer.toJson<bool>(mergeIntoNext),
       'crossfadeMs': serializer.toJson<Duration?>(crossfadeMs),
       'fadeInCurve': serializer.toJson<String?>(
         $PlaylistItemsTable.$converterfadeInCurven.toJson(fadeInCurve),
@@ -5742,6 +5783,7 @@ class PlaylistItem extends DataClass implements Insertable<PlaylistItem> {
     Value<String?> announcementText = const Value.absent(),
     Value<String?> announcementClipPath = const Value.absent(),
     Value<String?> soundCueId = const Value.absent(),
+    bool? mergeIntoNext,
     Value<Duration?> crossfadeMs = const Value.absent(),
     Value<FadeCurve?> fadeInCurve = const Value.absent(),
     Value<FadeCurve?> fadeOutCurve = const Value.absent(),
@@ -5769,6 +5811,7 @@ class PlaylistItem extends DataClass implements Insertable<PlaylistItem> {
         ? announcementClipPath.value
         : this.announcementClipPath,
     soundCueId: soundCueId.present ? soundCueId.value : this.soundCueId,
+    mergeIntoNext: mergeIntoNext ?? this.mergeIntoNext,
     crossfadeMs: crossfadeMs.present ? crossfadeMs.value : this.crossfadeMs,
     fadeInCurve: fadeInCurve.present ? fadeInCurve.value : this.fadeInCurve,
     fadeOutCurve: fadeOutCurve.present ? fadeOutCurve.value : this.fadeOutCurve,
@@ -5808,6 +5851,9 @@ class PlaylistItem extends DataClass implements Insertable<PlaylistItem> {
       soundCueId: data.soundCueId.present
           ? data.soundCueId.value
           : this.soundCueId,
+      mergeIntoNext: data.mergeIntoNext.present
+          ? data.mergeIntoNext.value
+          : this.mergeIntoNext,
       crossfadeMs: data.crossfadeMs.present
           ? data.crossfadeMs.value
           : this.crossfadeMs,
@@ -5852,6 +5898,7 @@ class PlaylistItem extends DataClass implements Insertable<PlaylistItem> {
           ..write('announcementText: $announcementText, ')
           ..write('announcementClipPath: $announcementClipPath, ')
           ..write('soundCueId: $soundCueId, ')
+          ..write('mergeIntoNext: $mergeIntoNext, ')
           ..write('crossfadeMs: $crossfadeMs, ')
           ..write('fadeInCurve: $fadeInCurve, ')
           ..write('fadeOutCurve: $fadeOutCurve, ')
@@ -5880,6 +5927,7 @@ class PlaylistItem extends DataClass implements Insertable<PlaylistItem> {
     announcementText,
     announcementClipPath,
     soundCueId,
+    mergeIntoNext,
     crossfadeMs,
     fadeInCurve,
     fadeOutCurve,
@@ -5907,6 +5955,7 @@ class PlaylistItem extends DataClass implements Insertable<PlaylistItem> {
           other.announcementText == this.announcementText &&
           other.announcementClipPath == this.announcementClipPath &&
           other.soundCueId == this.soundCueId &&
+          other.mergeIntoNext == this.mergeIntoNext &&
           other.crossfadeMs == this.crossfadeMs &&
           other.fadeInCurve == this.fadeInCurve &&
           other.fadeOutCurve == this.fadeOutCurve &&
@@ -5932,6 +5981,7 @@ class PlaylistItemsCompanion extends UpdateCompanion<PlaylistItem> {
   final Value<String?> announcementText;
   final Value<String?> announcementClipPath;
   final Value<String?> soundCueId;
+  final Value<bool> mergeIntoNext;
   final Value<Duration?> crossfadeMs;
   final Value<FadeCurve?> fadeInCurve;
   final Value<FadeCurve?> fadeOutCurve;
@@ -5956,6 +6006,7 @@ class PlaylistItemsCompanion extends UpdateCompanion<PlaylistItem> {
     this.announcementText = const Value.absent(),
     this.announcementClipPath = const Value.absent(),
     this.soundCueId = const Value.absent(),
+    this.mergeIntoNext = const Value.absent(),
     this.crossfadeMs = const Value.absent(),
     this.fadeInCurve = const Value.absent(),
     this.fadeOutCurve = const Value.absent(),
@@ -5981,6 +6032,7 @@ class PlaylistItemsCompanion extends UpdateCompanion<PlaylistItem> {
     this.announcementText = const Value.absent(),
     this.announcementClipPath = const Value.absent(),
     this.soundCueId = const Value.absent(),
+    this.mergeIntoNext = const Value.absent(),
     this.crossfadeMs = const Value.absent(),
     this.fadeInCurve = const Value.absent(),
     this.fadeOutCurve = const Value.absent(),
@@ -6010,6 +6062,7 @@ class PlaylistItemsCompanion extends UpdateCompanion<PlaylistItem> {
     Expression<String>? announcementText,
     Expression<String>? announcementClipPath,
     Expression<String>? soundCueId,
+    Expression<bool>? mergeIntoNext,
     Expression<int>? crossfadeMs,
     Expression<String>? fadeInCurve,
     Expression<String>? fadeOutCurve,
@@ -6036,6 +6089,7 @@ class PlaylistItemsCompanion extends UpdateCompanion<PlaylistItem> {
       if (announcementClipPath != null)
         'announcement_clip_path': announcementClipPath,
       if (soundCueId != null) 'sound_cue_id': soundCueId,
+      if (mergeIntoNext != null) 'merge_into_next': mergeIntoNext,
       if (crossfadeMs != null) 'crossfade_ms': crossfadeMs,
       if (fadeInCurve != null) 'fade_in_curve': fadeInCurve,
       if (fadeOutCurve != null) 'fade_out_curve': fadeOutCurve,
@@ -6063,6 +6117,7 @@ class PlaylistItemsCompanion extends UpdateCompanion<PlaylistItem> {
     Value<String?>? announcementText,
     Value<String?>? announcementClipPath,
     Value<String?>? soundCueId,
+    Value<bool>? mergeIntoNext,
     Value<Duration?>? crossfadeMs,
     Value<FadeCurve?>? fadeInCurve,
     Value<FadeCurve?>? fadeOutCurve,
@@ -6088,6 +6143,7 @@ class PlaylistItemsCompanion extends UpdateCompanion<PlaylistItem> {
       announcementText: announcementText ?? this.announcementText,
       announcementClipPath: announcementClipPath ?? this.announcementClipPath,
       soundCueId: soundCueId ?? this.soundCueId,
+      mergeIntoNext: mergeIntoNext ?? this.mergeIntoNext,
       crossfadeMs: crossfadeMs ?? this.crossfadeMs,
       fadeInCurve: fadeInCurve ?? this.fadeInCurve,
       fadeOutCurve: fadeOutCurve ?? this.fadeOutCurve,
@@ -6142,6 +6198,9 @@ class PlaylistItemsCompanion extends UpdateCompanion<PlaylistItem> {
     }
     if (soundCueId.present) {
       map['sound_cue_id'] = Variable<String>(soundCueId.value);
+    }
+    if (mergeIntoNext.present) {
+      map['merge_into_next'] = Variable<bool>(mergeIntoNext.value);
     }
     if (crossfadeMs.present) {
       map['crossfade_ms'] = Variable<int>(
@@ -6218,6 +6277,7 @@ class PlaylistItemsCompanion extends UpdateCompanion<PlaylistItem> {
           ..write('announcementText: $announcementText, ')
           ..write('announcementClipPath: $announcementClipPath, ')
           ..write('soundCueId: $soundCueId, ')
+          ..write('mergeIntoNext: $mergeIntoNext, ')
           ..write('crossfadeMs: $crossfadeMs, ')
           ..write('fadeInCurve: $fadeInCurve, ')
           ..write('fadeOutCurve: $fadeOutCurve, ')
@@ -12006,6 +12066,7 @@ typedef $$PlaylistItemsTableCreateCompanionBuilder =
       Value<String?> announcementText,
       Value<String?> announcementClipPath,
       Value<String?> soundCueId,
+      Value<bool> mergeIntoNext,
       Value<Duration?> crossfadeMs,
       Value<FadeCurve?> fadeInCurve,
       Value<FadeCurve?> fadeOutCurve,
@@ -12032,6 +12093,7 @@ typedef $$PlaylistItemsTableUpdateCompanionBuilder =
       Value<String?> announcementText,
       Value<String?> announcementClipPath,
       Value<String?> soundCueId,
+      Value<bool> mergeIntoNext,
       Value<Duration?> crossfadeMs,
       Value<FadeCurve?> fadeInCurve,
       Value<FadeCurve?> fadeOutCurve,
@@ -12162,6 +12224,11 @@ class $$PlaylistItemsTableFilterComposer
 
   ColumnFilters<String> get announcementClipPath => $composableBuilder(
     column: $table.announcementClipPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get mergeIntoNext => $composableBuilder(
+    column: $table.mergeIntoNext,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12366,6 +12433,11 @@ class $$PlaylistItemsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get mergeIntoNext => $composableBuilder(
+    column: $table.mergeIntoNext,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get crossfadeMs => $composableBuilder(
     column: $table.crossfadeMs,
     builder: (column) => ColumnOrderings(column),
@@ -12550,6 +12622,11 @@ class $$PlaylistItemsTableAnnotationComposer
 
   GeneratedColumn<String> get announcementClipPath => $composableBuilder(
     column: $table.announcementClipPath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get mergeIntoNext => $composableBuilder(
+    column: $table.mergeIntoNext,
     builder: (column) => column,
   );
 
@@ -12749,6 +12826,7 @@ class $$PlaylistItemsTableTableManager
                 Value<String?> announcementText = const Value.absent(),
                 Value<String?> announcementClipPath = const Value.absent(),
                 Value<String?> soundCueId = const Value.absent(),
+                Value<bool> mergeIntoNext = const Value.absent(),
                 Value<Duration?> crossfadeMs = const Value.absent(),
                 Value<FadeCurve?> fadeInCurve = const Value.absent(),
                 Value<FadeCurve?> fadeOutCurve = const Value.absent(),
@@ -12773,6 +12851,7 @@ class $$PlaylistItemsTableTableManager
                 announcementText: announcementText,
                 announcementClipPath: announcementClipPath,
                 soundCueId: soundCueId,
+                mergeIntoNext: mergeIntoNext,
                 crossfadeMs: crossfadeMs,
                 fadeInCurve: fadeInCurve,
                 fadeOutCurve: fadeOutCurve,
@@ -12799,6 +12878,7 @@ class $$PlaylistItemsTableTableManager
                 Value<String?> announcementText = const Value.absent(),
                 Value<String?> announcementClipPath = const Value.absent(),
                 Value<String?> soundCueId = const Value.absent(),
+                Value<bool> mergeIntoNext = const Value.absent(),
                 Value<Duration?> crossfadeMs = const Value.absent(),
                 Value<FadeCurve?> fadeInCurve = const Value.absent(),
                 Value<FadeCurve?> fadeOutCurve = const Value.absent(),
@@ -12823,6 +12903,7 @@ class $$PlaylistItemsTableTableManager
                 announcementText: announcementText,
                 announcementClipPath: announcementClipPath,
                 soundCueId: soundCueId,
+                mergeIntoNext: mergeIntoNext,
                 crossfadeMs: crossfadeMs,
                 fadeInCurve: fadeInCurve,
                 fadeOutCurve: fadeOutCurve,

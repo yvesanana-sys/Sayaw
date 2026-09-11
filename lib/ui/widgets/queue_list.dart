@@ -98,6 +98,7 @@ class QueueList extends ConsumerWidget {
                 item: item,
                 index: index,
                 isCurrent: index == currentIndex,
+                isLast: index == queue.length - 1,
                 breakpoint: breakpoint,
               );
             },
@@ -114,12 +115,16 @@ class _QueueRow extends ConsumerWidget {
     required this.item,
     required this.index,
     required this.isCurrent,
+    required this.isLast,
     required this.breakpoint,
   });
 
   final QueueItemUi item;
   final int index;
   final bool isCurrent;
+
+  /// The last row has nothing after it to run into.
+  final bool isLast;
   final SayawBreakpoint breakpoint;
 
   @override
@@ -166,6 +171,7 @@ class _QueueRow extends ConsumerWidget {
           : '$rowTitle by ${item.artist}'
               '${item.danceType == null ? '' : ', ${item.danceType}'}'
               '${item.hasSoundCue ? ', announced by ${item.soundCueLabel}' : ''}'
+              '${item.mergeIntoNext ? ', merges into the next' : ''}'
               '${isCurrent ? ', now playing' : ''}',
       child: Container(
         constraints: const BoxConstraints(minHeight: kMinTouchTarget + 8),
@@ -177,6 +183,15 @@ class _QueueRow extends ConsumerWidget {
             left: BorderSide(
               color: isCurrent ? SayawColors.primary : Colors.transparent,
               width: 3,
+            ),
+            // A joined row is drawn joined: the line runs into the row below,
+            // so two or three songs of one dance read as one block from
+            // across the booth.
+            bottom: BorderSide(
+              color: item.mergeIntoNext
+                  ? SayawColors.tertiary
+                  : Colors.transparent,
+              width: 2,
             ),
           ),
         ),
@@ -221,6 +236,7 @@ class _QueueRow extends ConsumerWidget {
               _DanceChip(item.danceType!),
               const SizedBox(width: 8),
             ],
+            if (!isLast) QueueMergeButton(item: item),
             if (hasCues) QueueCueButton(item: item),
             QueueDragHandle(index: index, breakpoint: breakpoint, item: item),
           ],
@@ -329,6 +345,54 @@ class QueuePlayTarget extends ConsumerWidget {
   }
 }
 
+/// Whether this row runs into the next as one dance, and the way to change it.
+///
+/// The mixer is made here, one join at a time: two or three songs of a dance
+/// linked into one block that the floor hears as a single dance with the
+/// music changing under it. Not on the last row, which has nothing to run
+/// into.
+@visibleForTesting
+class QueueMergeButton extends ConsumerWidget {
+  const QueueMergeButton({super.key, required this.item});
+
+  final QueueItemUi item;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final access = ref.watch(mergeProvider);
+    final joined = item.mergeIntoNext;
+
+    return Semantics(
+      button: true,
+      label: joined
+          ? '${item.title} merges into the next song. Separate them'
+          : 'Merge ${item.title} into the next song',
+      excludeSemantics: true,
+      child: SizedBox(
+        width: kMinTouchTarget,
+        height: kMinTouchTarget,
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            onTap: access == null
+                ? null
+                : () => access.setMergeIntoNext(
+                      itemId: item.id,
+                      merge: !joined,
+                    ),
+            child: Icon(
+              joined ? Icons.link : Icons.link_off,
+              size: 20,
+              color:
+                  joined ? SayawColors.tertiary : SayawColors.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// The cue tagged to this row, and the way to change it.
 ///
 /// An explicit button rather than a long-press: in compact layouts a
@@ -359,19 +423,23 @@ class QueueCueButton extends ConsumerWidget {
       child: SizedBox(
         width: kMinTouchTarget,
         height: kMinTouchTarget,
-        child: InkWell(
-          // Null with no session behind the screen — every widget test, and
-          // the moment before the runtime has finished starting.
-          onTap: access == null
-              ? null
-              : () => showCueTagDialog(context, item: item, access: access),
-          child: Icon(
-            tagged ? Icons.campaign : Icons.campaign_outlined,
-            size: 20,
-            // Tertiary is already the transition colour in this app — it is
-            // what the crossfade button wears — and a tagged row is a row that
-            // says something at the transition.
-            color: tagged ? SayawColors.tertiary : SayawColors.onSurfaceVariant,
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            // Null with no session behind the screen — every widget test, and
+            // the moment before the runtime has finished starting.
+            onTap: access == null
+                ? null
+                : () => showCueTagDialog(context, item: item, access: access),
+            child: Icon(
+              tagged ? Icons.campaign : Icons.campaign_outlined,
+              size: 20,
+              // Tertiary is already the transition colour in this app — it is
+              // what the crossfade button wears — and a tagged row is a row
+              // that says something at the transition.
+              color:
+                  tagged ? SayawColors.tertiary : SayawColors.onSurfaceVariant,
+            ),
           ),
         ),
       ),

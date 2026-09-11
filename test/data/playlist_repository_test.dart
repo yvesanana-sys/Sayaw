@@ -252,6 +252,62 @@ void main() {
     });
   });
 
+  group('a row that runs into the next', () {
+    test('the row after it is a merge: a blend, no voice, no gap', () async {
+      await (db.update(db.playlists)..where((p) => p.id.equals(set)))
+          .write(const PlaylistsCompanion(
+              rotationGapMs: Value(Duration(seconds: 10))));
+      await _appendLocal(db, set, music, 'a', danceTypeId: 'waltz');
+      await _appendLocal(db, set, music, 'b', danceTypeId: 'waltz');
+      await _appendLocal(db, set, music, 'c', danceTypeId: 'tango');
+      await db.playlistDao.setMergeIntoNext(itemId: 'item-a', merge: true);
+
+      final entries = (await repo.buildQueue(set)).entries;
+
+      // b continues a; c is a new dance and gets the night's own shape.
+      expect(entries[1].spec.merge, isTrue);
+      expect(entries[1].spec.crossfade, TransitionSpec.mergeBlend);
+      expect(entries[1].spec.announceMode, AnnounceMode.off);
+      expect(entries[1].spec.rotationGap, Duration.zero);
+      expect(entries[2].spec.merge, isFalse);
+      expect(entries[2].spec.rotationGap, const Duration(seconds: 10));
+    });
+
+    test('the join is on the row that leads, so it moves with it', () async {
+      await _appendLocal(db, set, music, 'a');
+      await _appendLocal(db, set, music, 'b');
+      await _appendLocal(db, set, music, 'c');
+      await db.playlistDao.setMergeIntoNext(itemId: 'item-a', merge: true);
+
+      // Drag a to the end: it now leads into nothing, and b is the first row.
+      await db.playlistDao.move(playlistId: set, oldIndex: 0, newIndex: 2);
+
+      final entries = (await repo.buildQueue(set)).entries;
+      expect([for (final e in entries) e.itemId], ['item-b', 'item-c', 'item-a']);
+      expect(entries.every((e) => !e.spec.merge), isTrue);
+    });
+
+    test('a merge does not speak, even a row with a tagged cue', () async {
+      await _appendLocal(db, set, music, 'a');
+      await _appendLocal(db, set, music, 'b');
+      final cue = await db.soundCueDao
+          .add(label: 'Waltz next', filePath: '/clips/w.wav');
+      await db.playlistDao.tagSoundCue(itemId: 'item-b', cueId: cue);
+      await db.playlistDao.setMergeIntoNext(itemId: 'item-a', merge: true);
+
+      final entry = (await repo.buildQueue(set)).entries[1];
+      expect(entry.spec.announceMode, AnnounceMode.off);
+      // The clip is still on the row for any other way of reaching it.
+      expect(entry.announcementClipPath, '/clips/w.wav');
+    });
+
+    test('the first row has nothing before it to be merged from', () async {
+      await _appendLocal(db, set, music, 'a');
+      final entry = (await repo.buildQueue(set)).entries.single;
+      expect(entry.spec.merge, isFalse);
+    });
+  });
+
   group('rebuilding the source from its columns', () {
     test('a local track keeps its path', () async {
       await _appendLocal(db, set, music, 'a');
@@ -665,6 +721,7 @@ PlaylistItem _item({
       startOffsetMs: Duration.zero,
       gainOffsetDb: 0.0,
       pauseAfter: pauseAfter,
+      mergeIntoNext: false,
       createdAt: DateTime.utc(2026),
       updatedAt: DateTime.utc(2026),
     );

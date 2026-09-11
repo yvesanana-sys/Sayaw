@@ -309,6 +309,21 @@ void main() {
     });
   });
 
+  group('joining a row to the next', () {
+    test('is written to the row that leads, and can be undone', () async {
+      await _appendTracks(db, set, ['a', 'b']);
+
+      await db.playlistDao.setMergeIntoNext(itemId: 'item-a', merge: true);
+      var rows = await db.playlistDao.itemsOf(set);
+      expect(rows[0].item.mergeIntoNext, isTrue);
+      expect(rows[1].item.mergeIntoNext, isFalse);
+
+      await db.playlistDao.setMergeIntoNext(itemId: 'item-a', merge: false);
+      rows = await db.playlistDao.itemsOf(set);
+      expect(rows[0].item.mergeIntoNext, isFalse);
+    });
+  });
+
   group('what will still play with the network gone', () {
     setUp(() async {
       await db.into(db.sourceAccounts).insert(SourceAccountsCompanion.insert(

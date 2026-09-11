@@ -83,6 +83,13 @@ CREATE TABLE participants (
     'ALTER TABLE playlist_items ADD COLUMN sound_cue_id TEXT '
         'REFERENCES sound_cues(id) ON DELETE SET NULL',
   ],
+
+  // A row that runs into the next as one dance. Off, so every set already on
+  // disk keeps its transitions exactly as they were.
+  9: [
+    'ALTER TABLE playlist_items '
+        'ADD COLUMN merge_into_next INTEGER NOT NULL DEFAULT 0',
+  ],
 };
 
 /// Statements run once, in order, when the database file is first created.
