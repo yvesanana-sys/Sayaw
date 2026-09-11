@@ -252,7 +252,14 @@ class MediaKitDeck with VolumeCoalescing implements Deck {
       _status.add(DeckStatus(
           p ? DeckPlaybackState.playing : DeckPlaybackState.paused));
     });
-    _player.stream.duration.listen((d) => _duration = d);
+    _player.stream.duration.listen((d) {
+      // libmpv reports zero the moment a file is opened, before it has parsed
+      // it, and zero again when one is stopped. Neither is a length. Kept as
+      // "unknown" until it says otherwise — a reader handed zero here timed a
+      // whole announcement at nothing: started and stopped in the same
+      // instant, which from the floor is silence.
+      _duration = d > Duration.zero ? d : null;
+    });
     _player.stream.position.listen((p) {
       _position = p;
       _positions.add(p);

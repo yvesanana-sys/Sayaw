@@ -350,10 +350,18 @@ class PlatformClipFactory implements ClipFactory {
       return null;
     }
 
+    // Zero is not a length either: a backend that has not parsed the file yet
+    // reports it, and an announcement timed at zero is started and stopped in
+    // the same instant. The deck guards against this too; this is the last
+    // line, because the cost of being wrong here is a voice nobody hears.
+    final known = _deck.duration;
+    final duration =
+        known == null || known <= Duration.zero ? assumedLength : known;
+
     return AnnouncementClip(
       hash: hash ?? announcementHash(text, settings),
       filePath: path,
-      duration: _deck.duration ?? assumedLength,
+      duration: duration,
       text: text,
     );
   }
