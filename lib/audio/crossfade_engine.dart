@@ -415,6 +415,86 @@ class CrossfadeEngine {
     _manualAnnounced = false;
   }
 
+  /// The transport's stop: silence now, and the set kept exactly where it is.
+  ///
+  /// Not [stop], which tears the decks down for a reload and leaves nothing
+  /// for [play] to start. This is the button on the bar. The music stops, the
+  /// audible deck goes back to its cue point, the deck cued behind it stays
+  /// cued, and the next [play] starts this row from the top. Pause holds the
+  /// position; stop gives it up. A voice mid-word is cut off too, because a
+  /// stop that leaves the announcer talking is not a stop.
+  ///
+  /// A transition under way is abandoned on the same terms as [pause]: the
+  /// deck going out stays the audible one, the deck coming in is re-cued, and
+  /// the crossfade is free to be triggered again.
+  Future<void> stopToCue() async {
+    if (_activeEntry == null) return;
+
+    _ticker?.cancel();
+    _ticker = null;
+    _transitionInFlight = false;
+    _manual = false;
+    _manualAnnounced = false;
+    _fadeStartedAt = null;
+
+    await _active.pause();
+    await _standby.pause();
+    await announcements.silence();
+
+    await _active.seek(_activeEntry?.media.cueIn ?? Duration.zero);
+    await _standby.seek(_standbyEntry?.media.cueIn ?? Duration.zero);
+
+    _activeFade = 1.0;
+    _standbyFade = 0.0;
+    _applyGains();
+    _setPhase(EnginePhase.paused);
+  }
+
+  /// Plays [index] next, now.
+  ///
+  /// With music on the floor it is cued on the standby deck in place of
+  /// whatever was there and the ordinary transition runs into it — through
+  /// the crossfade, with its announcement, never a cut. The operator tapped a
+  /// row, and a row tapped by mistake should cost a blend rather than a
+  /// silence. Stopped or paused, it simply becomes the track on the deck,
+  /// with the row after it cued behind, and the phase is left as it was:
+  /// choosing a song is not the same as starting it.
+  ///
+  /// A row that will not load is answered the way a preload answers it — an
+  /// event, and the set left coherent by re-cueing what would naturally have
+  /// come next — rather than by leaving an empty deck where the cued track
+  /// used to be.
+  Future<void> jumpTo(int index) async {
+    if (index < 0 || index >= _queue.length) return;
+    if (_transitionInFlight) return;
+
+    final running = _activeEntry != null &&
+        _phase != EnginePhase.idle &&
+        _phase != EnginePhase.paused;
+
+    if (!running) {
+      _index = index - 1;
+      await _advanceToNext(immediate: true);
+      return;
+    }
+
+    final next = _takeLookahead(index) ?? _queue[index];
+    try {
+      final loaded = await _loadOnto(_standby, next);
+      await _standby.preroll();
+      await _standby.setVolume(0);
+      _standbyEntry = loaded;
+      _standbyIndex = index;
+      unawaited(announcements.warm(loaded));
+    } catch (e) {
+      _events.add(EngineEvent(_phase, currentIndex: _index, entry: next));
+      await _preloadNext();
+      return;
+    }
+
+    await _beginTransition();
+  }
+
   Future<void> stop() async {
     _ticker?.cancel();
     _ticker = null;

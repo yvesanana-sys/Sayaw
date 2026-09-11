@@ -291,6 +291,21 @@ class PlaybackSession
 
   Future<void> stop() => engine.stop();
 
+  /// The transport's stop: silence now, the set kept where it is, and the
+  /// next play starting this row from the top. See [CrossfadeEngine.stopToCue]
+  /// for why this is not [stop].
+  Future<void> stopToCue() => engine.stopToCue();
+
+  /// Plays the row the operator tapped, through the crossfade. A row the
+  /// engine skipped is not in its queue and cannot be jumped to; it is drawn
+  /// greyed with the reason, and a tap on it does nothing.
+  Future<void> jumpTo(String itemId) async {
+    final index = _engineItemIds.indexOf(itemId);
+    if (index < 0) return;
+    await engine.jumpTo(index);
+    _publish();
+  }
+
   /// The crossfader, with an engine behind it: 0 is deck A alone, 1 is deck B.
   ///
   /// Straight through. Which physical deck is audible, whether a transition is

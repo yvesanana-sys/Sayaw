@@ -197,12 +197,16 @@ class _QueueRow extends ConsumerWidget {
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [title, subtitle],
+              child: QueuePlayTarget(
+                item: item,
+                isCurrent: isCurrent,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [title, subtitle],
+                  ),
                 ),
               ),
             ),
@@ -264,6 +268,64 @@ class QueueDragHandle extends StatelessWidget {
     return breakpoint.isCompact
         ? ReorderableDelayedDragStartListener(index: index, child: handle)
         : ReorderableDragStartListener(index: index, child: handle);
+  }
+}
+
+/// The row's title, and a tap on it plays the row.
+///
+/// Through the crossfade, never a cut — see `CrossfadeEngine.jumpTo`. A tap
+/// is the whole of it: no confirmation, because the crossfade *is* the
+/// confirmation, and a row tapped by mistake costs a blend the operator can
+/// tap back out of rather than a silence. The row already playing has nothing
+/// to do and is not a target; a row that will not play is drawn greyed with
+/// the reason and is not one either.
+///
+/// Separate from the drag handle and the buttons beside it, each of which
+/// keeps its own hit region: the title is the one part of a row that had no
+/// job yet.
+@visibleForTesting
+class QueuePlayTarget extends ConsumerWidget {
+  const QueuePlayTarget({
+    super.key,
+    required this.item,
+    required this.isCurrent,
+    required this.child,
+  });
+
+  final QueueItemUi item;
+  final bool isCurrent;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final canPlay = item.isPlayable && !isCurrent;
+    if (!canPlay) return child;
+
+    final controller = ref.read(playbackProvider.notifier);
+    return Semantics(
+      button: true,
+      label: 'Play ${item.title} now',
+      // The row around this already reads the title and artist out; the
+      // button says only what a press does.
+      excludeSemantics: true,
+      // Its own Material, so the ink has a surface to draw on wherever the
+      // list is put — the screen gives it one, a bare test harness does not.
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: () => controller.playFrom(item),
+          child: SizedBox(
+          width: double.infinity,
+          // Its own floor, so the hit region is a fingertip's even on a row
+          // whose text happens to be short.
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: kMinTouchTarget),
+              child: Align(alignment: Alignment.centerLeft, child: child),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

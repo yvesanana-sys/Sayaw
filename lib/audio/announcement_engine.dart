@@ -228,6 +228,14 @@ class AnnouncementEngine {
     );
   }
 
+  /// Cuts a voice off mid-word.
+  ///
+  /// For the transport's stop, where silence has to mean silence. The duck on
+  /// the music bus is left to the announcement that owns it: its envelope
+  /// still runs to the end and restores the bus on time, and nothing here
+  /// should bring the music back up underneath a stop.
+  Future<void> silence() => _deck.stop();
+
   Future<void> dispose() => _deck.dispose();
 }
 
