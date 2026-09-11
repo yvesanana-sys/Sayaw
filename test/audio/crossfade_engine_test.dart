@@ -21,6 +21,7 @@ QueueEntry _entry(
   Duration? targetDuration,
   String? danceTypeName,
   String? announcementClipPath,
+  bool merge = false,
   DateTime? expiresAt,
   double duckLevel = 0.2,
   Duration duckFade = const Duration(milliseconds: 600),
@@ -36,15 +37,17 @@ QueueEntry _entry(
       cueOut: cueOut,
       expiresAt: expiresAt,
     ),
-    spec: TransitionSpec(
-      crossfade: crossfade,
-      announceMode: mode,
-      duckLevel: duckLevel,
-      duckFade: duckFade,
-      duckHold: duckHold,
-      duckRestoreFade: duckRestoreFade,
-      rotationGap: rotationGap,
-    ),
+    spec: merge
+        ? const TransitionSpec.merge()
+        : TransitionSpec(
+            crossfade: crossfade,
+            announceMode: mode,
+            duckLevel: duckLevel,
+            duckFade: duckFade,
+            duckHold: duckHold,
+            duckRestoreFade: duckRestoreFade,
+            rotationGap: rotationGap,
+          ),
     targetDuration: targetDuration,
     danceTypeName: danceTypeName,
     announcementClipPath: announcementClipPath,
@@ -873,6 +876,127 @@ void main() {
 
         expect(rig.engine.currentEntry?.itemId, 'one');
         expect(rig.engine.phase, EnginePhase.playing);
+      });
+    });
+  });
+
+  group('a merge', () {
+    test('is an overlap at full level, and short', () {
+      const spec = TransitionSpec.merge();
+      expect(spec.crossfade, TransitionSpec.mergeBlend);
+      expect(spec.fadeInCurve, FadeCurve.equalPower);
+      expect(spec.fadeOutCurve, FadeCurve.equalPower);
+      expect(spec.isSequential, isFalse, reason: 'never music-out, music-in');
+      expect(spec.isGapless, isFalse, reason: 'a blend, not a splice');
+      expect(spec.merge, isTrue);
+    });
+
+    test('says nothing, even into a row that has a dance to announce', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(seconds: 8));
+        rig.start([
+          _entry('one'),
+          _entry('two', merge: true, danceTypeName: 'Waltz'),
+        ], async);
+
+        async.elapse(const Duration(seconds: 20));
+        async.flushMicrotasks();
+
+        expect(rig.activeItems, contains('two'));
+        expect(rig.clips.rendered, isEmpty,
+            reason: 'the dance has not changed; there is nothing to say');
+        expect(rig.duckValues, isEmpty, reason: 'nothing to duck under');
+      });
+    });
+
+    test('runs the blend, not the set\'s crossfade, and starts on time', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(seconds: 8));
+        rig.start([_entry('one'), _entry('two', merge: true)], async);
+
+        async.elapse(const Duration(seconds: 20));
+        async.flushMicrotasks();
+
+        // An 8s song and a 2.5s blend: the overlap begins at 5.5s, not at 4s
+        // as the set's 4s crossfade would have it — the outgoing song is not
+        // cut short by the difference.
+        final start = rig.firstAt(EnginePhase.crossfading)!;
+        expect(start.inMilliseconds,
+            closeTo(8000 - TransitionSpec.mergeBlend.inMilliseconds, 100));
+      });
+    });
+
+    test('holds no rotation gap, whatever the night is shaped like', () {
+      // The floor is mid-dance and not changing partners: a merge inside a
+      // rotation set still runs straight through.
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(seconds: 8));
+        rig.start([
+          _entry('one', rotationGap: const Duration(seconds: 10)),
+          _entry('two', merge: true),
+        ], async);
+
+        async.elapse(const Duration(seconds: 20));
+        async.flushMicrotasks();
+
+        expect(rig.phases.map((p) => p.phase), isNot(contains(EnginePhase.rotating)));
+        expect(rig.activeItems, contains('two'));
+      });
+    });
+  });
+
+  group('changing how much of each song plays, mid-set', () {
+    test('the song on the floor takes the new length too', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(minutes: 4));
+        rig.start([_entry('one'), _entry('two')], async);
+        async.elapse(const Duration(seconds: 30));
+        async.flushMicrotasks();
+        expect(rig.engine.currentEntry?.itemId, 'one');
+
+        // Two minutes of each, chosen at 0:30. The transition is due at 2:00
+        // less the crossfade, and comes then rather than at four minutes.
+        rig.engine.setTargetDurations((_) => const Duration(minutes: 2));
+        async.elapse(const Duration(seconds: 100));
+        async.flushMicrotasks();
+
+        expect(rig.engine.currentEntry?.itemId, 'two');
+      });
+    });
+
+    test('chosen after the cap has already passed, it hands over now', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(minutes: 4));
+        rig.start([_entry('one'), _entry('two')], async);
+        async.elapse(const Duration(seconds: 150));
+        async.flushMicrotasks();
+
+        rig.engine.setTargetDurations((_) => const Duration(minutes: 2));
+        async.elapse(const Duration(seconds: 6));
+        async.flushMicrotasks();
+
+        expect(rig.engine.currentEntry?.itemId, 'two',
+            reason: 'two minutes at 2:30 means now');
+      });
+    });
+
+    test('a row with a length of its own keeps it', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(minutes: 4));
+        rig.start([_entry('one'), _entry('two'), _entry('three')], async);
+
+        rig.engine.setTargetDurations(
+          (id) => id == 'one' ? const Duration(seconds: 30) : null,
+        );
+        async.elapse(const Duration(seconds: 40));
+        async.flushMicrotasks();
+        expect(rig.engine.currentEntry?.itemId, 'two');
+
+        // Back to whole songs: the second row runs on past the mark that
+        // ended the first.
+        async.elapse(const Duration(seconds: 40));
+        async.flushMicrotasks();
+        expect(rig.engine.currentEntry?.itemId, 'two');
       });
     });
   });

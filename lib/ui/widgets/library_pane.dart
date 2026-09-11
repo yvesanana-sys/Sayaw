@@ -82,6 +82,61 @@ class _LibraryPaneState extends ConsumerState<LibraryPane> {
     });
   }
 
+  bool _addingAll = false;
+
+  /// Adds everything the list is showing — every match for the current
+  /// search, or the whole library with the field empty — to the set.
+  ///
+  /// Asks first, with the real number. The list on screen is capped and the
+  /// library is not, so "all" can be four hundred rows, and there is no
+  /// taking them back out yet. A confirmation that says "all 412" is the
+  /// difference between building a set and burying one.
+  Future<void> _addAll() async {
+    final library = ref.read(libraryAccessProvider);
+    if (library == null) return;
+    final query = _search.text.trim();
+
+    final ids = await library.everyTrackMatching(query);
+    if (!mounted || ids.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: SayawColors.surfaceContainer,
+        title: const Text('Add to the set'),
+        content: Text(
+          query.isEmpty
+              ? 'Add all ${ids.length} tracks in the library to the set, '
+                  'in title order?'
+              : 'Add all ${ids.length} tracks matching "$query" to the set, '
+                  'in title order?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text('Add ${ids.length}'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    setState(() => _addingAll = true);
+    try {
+      await library.addAllToSet(ids);
+      messenger?.showSnackBar(
+        SnackBar(content: Text('${ids.length} added to the set')),
+      );
+    } finally {
+      if (mounted) setState(() => _addingAll = false);
+    }
+  }
+
   Future<void> _addFolder() async {
     final library = ref.read(libraryAccessProvider);
     if (library == null) return;
@@ -138,6 +193,14 @@ class _LibraryPaneState extends ConsumerState<LibraryPane> {
                   ),
                 ),
               ),
+              if (library != null && _results.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                _AddAllButton(
+                  busy: _addingAll,
+                  query: _shownQuery,
+                  onPressed: _addingAll ? null : _addAll,
+                ),
+              ],
               if (canAddFolder) ...[
                 const SizedBox(width: 8),
                 _AddFolderButton(
@@ -290,6 +353,60 @@ class _AddButton extends StatelessWidget {
               color: enabled
                   ? SayawColors.primary
                   : SayawColors.onSurfaceVariant.withValues(alpha: 0.4),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Adds everything the list is showing to the set.
+///
+/// Beside the folder button rather than at the foot of the list, because the
+/// list is capped and its foot is not the end of the library. Shown only when
+/// there is something to add: with the list empty there is nothing for it to
+/// mean.
+class _AddAllButton extends StatelessWidget {
+  const _AddAllButton({
+    required this.busy,
+    required this.query,
+    required this.onPressed,
+  });
+
+  final bool busy;
+  final String query;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      enabled: !busy,
+      label: busy
+          ? 'Adding to the set'
+          : query.isEmpty
+              ? 'Add every track in the library to the set'
+              : 'Add every track matching $query to the set',
+      excludeSemantics: true,
+      child: SizedBox(
+        width: kMinTouchTarget,
+        height: kMinTouchTarget,
+        child: Material(
+          color: SayawColors.primary.withValues(alpha: busy ? 0.06 : 0.16),
+          shape: const CircleBorder(),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onPressed,
+            child: Center(
+              child: busy
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.playlist_add_check,
+                      color: SayawColors.primary),
             ),
           ),
         ),

@@ -93,6 +93,39 @@ class TrackDao extends DatabaseAccessor<SayawDatabase> with _$TrackDaoMixin {
     ).asyncMap((row) => tracks.mapFromRow(row)).get();
   }
 
+  /// Every track the search would list for [query], without the cap the list
+  /// on screen has, and in title order rather than search rank.
+  ///
+  /// These ids feed a set, and a set has an order the operator reads top to
+  /// bottom. Rank is right for a list being scanned for one song; it is
+  /// meaningless as a running order, and "most recently added first" is the
+  /// folder backwards. Files named to play in order — `01_`, `02_` — arrive
+  /// in it.
+  Future<List<String>> idsMatching(String query) async {
+    if (query.trim().isEmpty) {
+      final rows = await (selectOnly(tracks)
+            ..addColumns([tracks.id])
+            ..orderBy([OrderingTerm.asc(tracks.title)]))
+          .get();
+      return [for (final row in rows) row.read(tracks.id)!];
+    }
+
+    // Typed, but nothing in it to search on: what the list shows for that is
+    // nothing, and this answers the same.
+    final match = ftsQuery(query);
+    if (match == null) return const [];
+
+    final rows = await customSelect(
+      'SELECT t.id AS id FROM tracks_fts '
+      'JOIN tracks t ON t.rowid = tracks_fts.rowid '
+      'WHERE tracks_fts MATCH ?1 '
+      'ORDER BY t.title',
+      variables: [Variable<String>(match)],
+      readsFrom: {tracks},
+    ).get();
+    return [for (final row in rows) row.read<String>('id')];
+  }
+
   /// The same search as a live query, for a results list that updates while a
   /// library scan is still running.
   Stream<List<Track>> watchSearch(String query, {int limit = 50}) {

@@ -106,6 +106,10 @@ class AnnouncementEngine {
   /// Called by the engine as soon as an item is preloaded, so synthesis never
   /// happens on the critical path of a transition.
   Future<void> warm(QueueEntry entry) async {
+    // A row that will not speak has nothing to render. On the desktop this is
+    // a synthesiser process per row, and a merged block of three songs would
+    // otherwise pay for three voices nobody hears.
+    if (entry.spec.announceMode == AnnounceMode.off) return;
     try {
       await clipFor(entry);
     } on Object {

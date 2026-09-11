@@ -13,6 +13,7 @@ import '../widgets/network_banner.dart';
 import '../widgets/pane_header.dart';
 import '../widgets/queue_list.dart';
 import '../widgets/snowball_indicator.dart';
+import '../widgets/song_length_chips.dart';
 import '../widgets/soundboard_bar.dart';
 import '../widgets/transport_bar.dart';
 import '../widgets/up_next_card.dart';
@@ -234,6 +235,11 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                 // once both were loaded, and doubles as the "what do I do
                 // now" hint on a fresh set with nothing queued yet.
                 const UpNextCard(),
+                const SizedBox(height: 12),
+                // Under the decks because it changes between dances, not the
+                // day before: two minutes of each for a class, the whole song
+                // for a social, and the hand is already here.
+                const SongLengthChips(),
               ],
             ),
           ),

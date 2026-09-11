@@ -87,6 +87,7 @@ class PlaylistRepository {
           row,
           playlist: playlist,
           nextDanceTypeName: _nextDanceTypeName(rows, i),
+          mergedFromPrevious: _mergedFromPrevious(rows, i),
           account: accounts[row.track!.accountId],
         ));
       } on UnavailableOffline catch (e) {
@@ -112,6 +113,7 @@ class PlaylistRepository {
     PlaylistRow row, {
     required Playlist playlist,
     String? nextDanceTypeName,
+    bool mergedFromPrevious = false,
     SourceAccount? account,
   }) async {
     final track = row.track;
@@ -125,7 +127,12 @@ class PlaylistRepository {
     return QueueEntry(
       itemId: item.id,
       media: media,
-      spec: specFor(playlist, item, taggedCue: row.soundCue != null),
+      spec: specFor(
+        playlist,
+        item,
+        taggedCue: row.soundCue != null,
+        mergedFromPrevious: mergedFromPrevious,
+      ),
       danceTypeName: row.danceType?.name,
       announcementText: announcementTextFor(row, next: nextDanceTypeName),
       announcementClipPath: announcementClipFor(row),
@@ -193,12 +200,27 @@ class PlaylistRepository {
   /// whatever this says — see `TransitionSpec.isSequential` — so The Mixer
   /// plays the same tagged clip cleanly in its gap rather than over a fade
   /// that is not happening.
+  ///
+  /// [mergedFromPrevious] says the row before this one leads into it as one
+  /// dance, and it settles everything: the overlap, the silence of the
+  /// announcer, the absence of a rotation gap. A tagged cue on a merged row
+  /// is kept for when the row is reached any other way — a tap, a set opened
+  /// on it — but a merge does not speak.
   static TransitionSpec specFor(
     Playlist playlist,
     PlaylistItem item, {
     bool taggedCue = false,
+    bool mergedFromPrevious = false,
   }) =>
-      TransitionSpec(
+      mergedFromPrevious
+          ? TransitionSpec.merge(
+              duckLevel: playlist.duckLevel,
+              duckFade: playlist.duckFadeMs,
+              duckHold: playlist.duckHoldMs,
+              duckRestoreFade: playlist.duckRestoreFadeMs,
+              pauseAfter: item.pauseAfter,
+            )
+          : TransitionSpec(
         crossfade: item.crossfadeMs ?? playlist.crossfadeMs,
         fadeInCurve: item.fadeInCurve ?? playlist.fadeInCurve,
         fadeOutCurve: item.fadeOutCurve ?? playlist.fadeOutCurve,
@@ -264,6 +286,10 @@ class PlaylistRepository {
       row.soundCue?.filePath ??
       row.item.announcementClipPath ??
       row.danceType?.customClipPath;
+
+  /// Whether the row before [index] runs into it as one dance.
+  static bool _mergedFromPrevious(List<PlaylistRow> rows, int index) =>
+      index > 0 && rows[index - 1].item.mergeIntoNext;
 
   /// What the voice will say before this row.
   ///

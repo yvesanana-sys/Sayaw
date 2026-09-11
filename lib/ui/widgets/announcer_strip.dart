@@ -24,31 +24,36 @@ class AnnouncerStrip extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final announcement = ref.watch(nextAnnouncementProvider);
+    final merges = ref.watch(nextMergesProvider);
 
     return Semantics(
       container: true,
-      label: announcement == null
-          ? 'No announcement on the next transition'
-          : 'Next transition announces ${announcement.label}, '
-              '${announcement.timing.description}',
+      label: announcement != null
+          ? 'Next transition announces ${announcement.label}, '
+              '${announcement.timing.description}'
+          : merges
+              ? 'Next transition merges into the next song, as one dance'
+              : 'No announcement on the next transition',
       child: ExcludeSemantics(
         child: Container(
           height: height,
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: announcement == null
+            color: announcement == null && !merges
                 ? Colors.transparent
                 : SayawColors.tertiary.withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: announcement == null
+              color: announcement == null && !merges
                   ? SayawColors.outlineVariant
                   : SayawColors.tertiary.withValues(alpha: 0.45),
             ),
           ),
-          child: announcement == null
-              ? const _Empty()
-              : _Announcement(announcement),
+          child: announcement != null
+              ? _Announcement(announcement)
+              : merges
+                  ? const _Merge()
+                  : const _Empty(),
         ),
       ),
     );
@@ -69,6 +74,40 @@ class _Empty extends StatelessWidget {
           Icons.campaign_outlined,
           size: 18,
           color: SayawColors.onSurfaceVariant.withValues(alpha: 0.35),
+        ),
+      ],
+    );
+  }
+}
+
+/// The next song continues this dance. Said in the announcement's place, so
+/// a transition with no voice reads as the join the operator made and not as
+/// a tag that failed.
+class _Merge extends StatelessWidget {
+  const _Merge();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      children: [
+        Icon(Icons.link, size: 18, color: SayawColors.tertiary),
+        SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            'Merges into the next song',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: SayawColors.onSurface,
+            ),
+          ),
+        ),
+        SizedBox(width: 10),
+        Text(
+          'one dance',
+          style: TextStyle(fontSize: 11, color: SayawColors.onSurfaceVariant),
         ),
       ],
     );

@@ -307,6 +307,14 @@ class PlaylistItems extends Table {
       .nullable()
       .references(SoundCues, #id, onDelete: KeyAction.setNull)();
 
+  /// This row runs into whatever follows it as one dance: a short overlap at
+  /// full level, no announcement, no rotation gap. Two or three songs of the
+  /// same dance joined this way are a mixer — one dance to the floor, with
+  /// the music changing under it. Kept on the row that leads rather than the
+  /// one that follows, so a reorder moves the join with it.
+  BoolColumn get mergeIntoNext =>
+      boolean().withDefault(const Constant(false))();
+
   // per-item transition overrides. Null inherits from the playlist. ---------
   IntColumn get crossfadeMs =>
       integer().nullable().map(const MillisDurationConverter())();

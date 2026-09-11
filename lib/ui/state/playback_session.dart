@@ -23,7 +23,12 @@ import 'playback_ui_state.dart';
 /// stays free of any dependency on the UI, which is what keeps its whole test
 /// suite runnable without a widget tree.
 class PlaybackSession
-    implements LibraryAccess, EventModeAccess, SetShapeAccess, CueTagAccess {
+    implements
+        LibraryAccess,
+        EventModeAccess,
+        SetShapeAccess,
+        CueTagAccess,
+        MergeAccess {
   PlaybackSession({
     required this.engine,
     required this.repository,
@@ -60,6 +65,10 @@ class PlaybackSession
   /// the 100 ms publish does not read the database. Zero is not a Snowball.
   int _snowballStages = 0;
 
+  /// How much of each song the open set plays, for the chips under the decks.
+  /// Null plays each to its end.
+  Duration? _songLength;
+
   /// Which rows the engine actually accepted, in engine order. The queue the
   /// operator sees can contain rows the engine skipped, so the two index
   /// spaces are not the same and this is what maps between them.
@@ -80,6 +89,7 @@ class PlaybackSession
     final rows = await repository.db.playlistDao.itemsOf(playlistId);
     final playlist = await repository.db.playlistDao.byId(playlistId);
     _snowballStages = playlist?.snowballStages ?? 0;
+    _songLength = playlist?.targetDurationMs;
 
     final reasons = {
       for (final item in resolved.unavailable) item.itemId: _reasonFor(item),
@@ -101,6 +111,7 @@ class PlaybackSession
           unavailable: reasons[row.item.id],
           soundCueId: row.soundCue?.id,
           soundCueLabel: row.soundCue?.label,
+          mergeIntoNext: row.item.mergeIntoNext,
         ),
     ]);
 
@@ -212,15 +223,27 @@ class PlaybackSession
 
     engine.setSongLimit(shape.songLimit);
 
-    // Both of these are baked into the queue entries when the set is opened,
-    // so neither can change under a running set.
-    // The stage count is only a readout, so unlike the rest of these it can
-    // change under a running set without anything being rebuilt.
+    // How much of each song plays is read live by the engine's tick, so it
+    // can change under a running set — including under the song on the
+    // floor. A row with a length of its own keeps it.
+    if (shape.songDuration != before.songDuration) {
+      final own = {
+        for (final row in await repository.db.playlistDao.itemsOf(playlistId))
+          row.item.id: row.item.targetDurationMs,
+      };
+      engine.setTargetDurations(
+        (itemId) => own[itemId] ?? shape.songDuration,
+      );
+    }
+    _songLength = shape.songDuration;
+
+    // The rotation gap and continuous flow are baked into each row's
+    // transition when the set is opened, so neither changes under a running
+    // set. The stage count is only a readout and changes freely.
     _snowballStages = shape.snowballStages;
     _publish();
 
-    return shape.songDuration == before.songDuration &&
-        shape.rotationGap == before.rotationGap &&
+    return shape.rotationGap == before.rotationGap &&
         shape.continuousFlow == before.continuousFlow;
   }
 
@@ -360,43 +383,61 @@ class PlaybackSession
       repository.db.trackDao.recentlyAdded(limit: limit);
 
   /// Adds a track to the end of the open set.
-  ///
-  /// Written to the database first, then handed to the engine, which appends
-  /// without disturbing whatever is already loaded and prerolled.
   @override
-  Future<void> addToSet(String trackId) async {
+  Future<void> addToSet(String trackId) => addAllToSet([trackId]);
+
+  @override
+  Future<List<String>> everyTrackMatching(String query) =>
+      repository.db.trackDao.idsMatching(query);
+
+  /// Adds tracks to the end of the open set, in the order given.
+  ///
+  /// Written to the database first, in one transaction, then drawn once, then
+  /// handed to the engine row by row — which appends without disturbing
+  /// whatever is already loaded and prerolled. A folder is hundreds of songs;
+  /// one write and one redraw is the difference between a button and a
+  /// progress bar.
+  @override
+  Future<void> addAllToSet(List<String> trackIds) async {
     final playlistId = _playlistId;
-    if (playlistId == null) return;
+    if (playlistId == null || trackIds.isEmpty) return;
 
-    final itemId = await repository.db.playlistDao
-        .appendTrack(playlistId: playlistId, trackId: trackId);
+    final itemIds = await repository.db.playlistDao
+        .appendTracks(playlistId: playlistId, trackIds: trackIds);
+    final wanted = itemIds.toSet();
 
-    final rows = await repository.db.playlistDao.itemsOf(playlistId);
-    final row = rows.firstWhere((r) => r.item.id == itemId);
+    final rows = [
+      for (final row in await repository.db.playlistDao.itemsOf(playlistId))
+        if (wanted.contains(row.item.id)) row,
+    ];
     final playlist = (await repository.db.playlistDao.byId(playlistId))!;
 
     controller.setQueue([
       ...controller.queueSnapshot,
-      QueueItemUi(
-        id: row.item.id,
-        title: row.track?.title ?? 'Untitled',
-        artist: row.track?.artist ?? '',
-        danceType: row.danceType?.name,
-        duration: row.track?.durationMs,
-        position: row.item.position,
-        soundCueId: row.soundCue?.id,
-        soundCueLabel: row.soundCue?.label,
-      ),
+      for (final row in rows)
+        QueueItemUi(
+          id: row.item.id,
+          title: row.track?.title ?? 'Untitled',
+          artist: row.track?.artist ?? '',
+          danceType: row.danceType?.name,
+          duration: row.track?.durationMs,
+          position: row.item.position,
+          soundCueId: row.soundCue?.id,
+          soundCueLabel: row.soundCue?.label,
+          mergeIntoNext: row.item.mergeIntoNext,
+        ),
     ]);
 
-    try {
-      final entry = await repository.resolveRow(row, playlist: playlist);
-      _engineItemIds = [..._engineItemIds, entry.itemId];
-      await engine.appendToQueue(entry);
-    } on UnavailableOffline {
-      // It is in the set and on screen; the engine will simply never reach it.
-      // Reopening the set is what turns that into a labelled row, and that is
-      // not something to do underneath a running transition.
+    for (final row in rows) {
+      try {
+        final entry = await repository.resolveRow(row, playlist: playlist);
+        _engineItemIds = [..._engineItemIds, entry.itemId];
+        await engine.appendToQueue(entry);
+      } on UnavailableOffline {
+        // It is in the set and on screen; the engine will simply never reach
+        // it. Reopening the set is what turns that into a labelled row, and
+        // that is not something to do underneath a running transition.
+      }
     }
 
     _publish();
@@ -452,6 +493,54 @@ class PlaybackSession
           taggedCue: row.soundCue != null,
         ),
       );
+    }
+
+    _publish();
+  }
+
+  /// Runs one row of the open set into whatever follows it as one dance, or
+  /// separates them.
+  ///
+  /// The row that changes is the one *after* it: the join is stored on the
+  /// row that leads, but it is the following row's transition that becomes a
+  /// merge. Written, drawn, and pushed into the engine's copy of that next
+  /// row, for the reason [tagSoundCue] gives — the operator joined two songs
+  /// for the transition about to happen.
+  @override
+  Future<void> setMergeIntoNext({
+    required String itemId,
+    required bool merge,
+  }) async {
+    final playlistId = _playlistId;
+    if (playlistId == null) return;
+
+    await repository.db.playlistDao
+        .setMergeIntoNext(itemId: itemId, merge: merge);
+
+    final rows = await repository.db.playlistDao.itemsOf(playlistId);
+    final index = rows.indexWhere((row) => row.item.id == itemId);
+    if (index < 0) return;
+
+    controller.setQueue([
+      for (final item in controller.queueSnapshot)
+        if (item.id == itemId) item.withMergeIntoNext(merge) else item,
+    ]);
+
+    if (index + 1 < rows.length) {
+      final next = rows[index + 1];
+      final playlist = await repository.db.playlistDao.byId(playlistId);
+      if (next.track != null && playlist != null) {
+        engine.retag(
+          next.item.id,
+          announcementClipPath: PlaylistRepository.announcementClipFor(next),
+          spec: PlaylistRepository.specFor(
+            playlist,
+            next.item,
+            taggedCue: next.soundCue != null,
+            mergedFromPrevious: merge,
+          ),
+        );
+      }
     }
 
     _publish();
@@ -590,6 +679,8 @@ class PlaybackSession
       crossfader: _crossfaderPosition(),
       snowball: _snowballProgress(),
       announcement: _nextAnnouncement(next),
+      nextMerges: next?.spec.merge ?? false,
+      songLength: _songLength,
       active: DeckUiState(
         title: entry?.title ?? '',
         artist: entry?.artist ?? '',

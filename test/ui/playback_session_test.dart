@@ -446,6 +446,135 @@ void main() {
     });
   });
 
+  group('adding a whole folder at once', () {
+    test('every row lands on screen and in the engine, in order', () async {
+      await _addTracks(db, set, music, ['a']);
+      await session.openPlaylist(set);
+      for (final id in ['b', 'c', 'd']) {
+        File('${music.path}/$id.flac').writeAsStringSync('not really audio');
+        await db.trackDao.upsert(TracksCompanion.insert(
+          id: id,
+          sourceType: SourceType.local,
+          localPath: Value('${music.path}/$id.flac'),
+          title: 'Track $id',
+          addedAt: clock.now(),
+          updatedAt: clock.now(),
+        ));
+      }
+
+      await session.addAllToSet(['d', 'b', 'c']);
+      await _settle();
+
+      expect(
+        [for (final item in container.read(playbackProvider).queue) item.title],
+        ['Track a', 'Track d', 'Track b', 'Track c'],
+      );
+      // Cued behind the one on deck, and the rest reachable by a tap.
+      expect(engine.standbyEntry?.title, 'Track d');
+      expect(session.willPlay('item-a'), isTrue);
+    });
+
+    test('the whole library, in the order a set should play', () async {
+      await _addTracks(db, set, music, ['02_second', '01_first']);
+      await session.openPlaylist(set);
+
+      final ids = await session.everyTrackMatching('');
+
+      expect(ids, ['01_first', '02_second']);
+    });
+  });
+
+  group('running a row into the next', () {
+    setUp(() async {
+      await _addTracks(db, set, music, ['a', 'b', 'c']);
+      await session.openPlaylist(set);
+    });
+
+    test('the row on screen shows the join, and the strip says merge',
+        () async {
+      await session.setMergeIntoNext(itemId: 'item-a', merge: true);
+      await _settle();
+
+      final state = container.read(playbackProvider);
+      expect(state.queue[0].mergeIntoNext, isTrue);
+      expect(state.queue[1].mergeIntoNext, isFalse);
+      expect(state.nextMerges, isTrue);
+      expect(state.announcement, isNull);
+    });
+
+    test('the deck already cued takes the merge without being reloaded',
+        () async {
+      await session.play();
+      await _settle();
+      expect(engine.standbyEntry?.spec.merge, isFalse, reason: 'precondition');
+
+      await session.setMergeIntoNext(itemId: 'item-a', merge: true);
+      await _settle();
+
+      expect(engine.standbyEntry?.title, 'Track b');
+      expect(engine.standbyEntry?.spec.merge, isTrue);
+      expect(container.read(playbackProvider).deckA.isPlaying, isTrue);
+    });
+
+    test('separating them puts the transition back', () async {
+      await session.setMergeIntoNext(itemId: 'item-a', merge: true);
+      await _settle();
+      await session.setMergeIntoNext(itemId: 'item-a', merge: false);
+      await _settle();
+
+      expect(engine.standbyEntry?.spec.merge, isFalse);
+      expect(container.read(playbackProvider).nextMerges, isFalse);
+    });
+  });
+
+  group('how much of each song plays', () {
+    setUp(() async {
+      await _addTracks(db, set, music, ['a', 'b']);
+      await session.openPlaylist(set);
+    });
+
+    test('is on screen for the chips, and changes under a running set',
+        () async {
+      expect(container.read(playbackProvider).songLength, isNull);
+      await session.play();
+      await _settle();
+
+      final before = await session.readSetShape();
+      final full = await session.writeSetShape(SetShape(
+        songLimit: before.songLimit,
+        songDuration: const Duration(minutes: 2),
+        rotationGap: before.rotationGap,
+        continuousFlow: before.continuousFlow,
+        snowballStages: before.snowballStages,
+      ));
+      await _settle();
+
+      expect(full, isTrue, reason: 'a length change applies live');
+      expect(container.read(playbackProvider).songLength,
+          const Duration(minutes: 2));
+      expect(engine.currentEntry?.targetDuration, const Duration(minutes: 2));
+      expect(engine.standbyEntry?.targetDuration, const Duration(minutes: 2));
+      expect(container.read(playbackProvider).deckA.isPlaying, isTrue,
+          reason: 'nothing was reloaded');
+    });
+
+    test('a row with a length of its own keeps it', () async {
+      await (db.update(db.playlistItems)..where((i) => i.id.equals('item-b')))
+          .write(const PlaylistItemsCompanion(
+              targetDurationMs: Value(Duration(seconds: 45))));
+      await session.openPlaylist(set);
+      await session.play();
+      await _settle();
+
+      await session.writeSetShape(
+          const SetShape(songDuration: Duration(minutes: 2)));
+      await _settle();
+
+      expect(engine.currentEntry?.targetDuration, const Duration(minutes: 2));
+      expect(engine.standbyEntry?.targetDuration, const Duration(seconds: 45));
+    });
+  });
+
   group('the library', () {
     test('search finds what a scan imported', () async {
       _touch(music, 'library/kiss-of-fire.flac');
@@ -765,10 +894,11 @@ void main() {
       expect(deckB.media, same(cued), reason: 'the cued deck is untouched');
     });
 
-    test('mid-set, a new song length waits for the next set and says so',
+    test('mid-set, a new song length takes effect on the row playing',
         () async {
-      // It is resolved into every entry when the set is opened, so honouring
-      // it now would mean rebuilding the queue underneath a running set.
+      // Read live by the engine's tick rather than baked into each entry at
+      // open, so it no longer waits for the next set. The row playing takes
+      // it too: two minutes chosen at 2:10 means now.
       await _addTracks(db, set, music, ['a', 'b']);
       await session.openPlaylist(set);
       await session.play();
@@ -777,11 +907,12 @@ void main() {
       final full = await session.writeSetShape(
           const SetShape(songLimit: null, songDuration: Duration(seconds: 30)));
 
-      expect(full, isFalse);
-      expect(engine.currentEntry!.targetDuration, isNull,
-          reason: 'the row playing keeps the length it started with');
+      expect(full, isTrue);
+      expect(engine.currentEntry!.targetDuration, const Duration(seconds: 30));
+      expect(container.read(playbackProvider).deckA.isPlaying, isTrue,
+          reason: 'and nothing was reloaded to do it');
 
-      // But it is on disk, so the next open picks it up.
+      // And on disk, so the next open agrees.
       expect((await db.playlistDao.byId(set))!.targetDurationMs,
           const Duration(seconds: 30));
     });

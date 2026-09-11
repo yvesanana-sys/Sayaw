@@ -67,6 +67,36 @@ void main() {
     });
   });
 
+  group('adding many at once', () {
+    test('they land in the order given, after what was there', () async {
+      await _appendTracks(db, set, ['a']);
+      for (final id in ['b', 'c', 'd']) {
+        await db.trackDao.upsert(TracksCompanion.insert(
+          id: id,
+          sourceType: SourceType.local,
+          localPath: Value('/music/$id.flac'),
+          title: 'Track $id',
+          addedAt: clock.now(),
+          updatedAt: clock.now(),
+        ));
+      }
+
+      final ids = await db.playlistDao
+          .appendTracks(playlistId: set, trackIds: ['d', 'b', 'c']);
+
+      expect(ids, hasLength(3));
+      expect(await _titles(db, set),
+          ['Track a', 'Track d', 'Track b', 'Track c']);
+      final positions = await _positions(db, set);
+      expect(positions, [1.0, 2.0, 3.0, 4.0]);
+    });
+
+    test('nothing to add is nothing', () async {
+      expect(await db.playlistDao.appendTracks(playlistId: set, trackIds: []),
+          isEmpty);
+    });
+  });
+
   group('one row on its own', () {
     test('it comes back with its track and dance type joined', () async {
       await db.into(db.danceTypes).insert(DanceTypesCompanion.insert(
@@ -276,6 +306,21 @@ void main() {
       final row = (await db.playlistDao.itemsOf(set)).single;
       expect(row.item.soundCueId, isNull);
       expect(row.track!.title, 'Track a');
+    });
+  });
+
+  group('joining a row to the next', () {
+    test('is written to the row that leads, and can be undone', () async {
+      await _appendTracks(db, set, ['a', 'b']);
+
+      await db.playlistDao.setMergeIntoNext(itemId: 'item-a', merge: true);
+      var rows = await db.playlistDao.itemsOf(set);
+      expect(rows[0].item.mergeIntoNext, isTrue);
+      expect(rows[1].item.mergeIntoNext, isFalse);
+
+      await db.playlistDao.setMergeIntoNext(itemId: 'item-a', merge: false);
+      rows = await db.playlistDao.itemsOf(set);
+      expect(rows[0].item.mergeIntoNext, isFalse);
     });
   });
 

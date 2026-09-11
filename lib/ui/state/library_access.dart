@@ -21,6 +21,13 @@ abstract class LibraryAccess {
   /// Appends to the set that is open.
   Future<void> addToSet(String trackId);
 
+  /// Every track the library would list for [query], without the cap the
+  /// list on screen has, in the order a set built from them should play.
+  Future<List<String>> everyTrackMatching(String query);
+
+  /// Appends them all to the open set, in that order, as one write.
+  Future<void> addAllToSet(List<String> trackIds);
+
   Future<ScanReport> scanFolders(
     Iterable<Directory> folders, {
     void Function(int filesSeen, String path)? onProgress,
@@ -52,6 +59,17 @@ abstract class CueTagAccess {
   /// Takes effect on the transition it was made for, not on the next time the
   /// set is opened — see [PlaybackSession.tagSoundCue].
   Future<void> tagSoundCue({required String itemId, required String? cueId});
+}
+
+/// Joining rows of the open set into one dance.
+///
+/// Narrow for the same reason [CueTagAccess] is.
+abstract class MergeAccess {
+  /// Runs [itemId] into whatever follows it as one dance, or separates them.
+  ///
+  /// Takes effect on the transition it changes, not on the next time the set
+  /// is opened — see [PlaybackSession.setMergeIntoNext].
+  Future<void> setMergeIntoNext({required String itemId, required bool merge});
 }
 
 /// How the night is shaped: how many songs, and how much of each.

@@ -197,6 +197,11 @@ CREATE TABLE playlist_items (
   -- the three announcement sources, so it wins over both of the above.
   sound_cue_id           TEXT REFERENCES sound_cues(id) ON DELETE SET NULL,
 
+  -- This row runs into whatever follows it as one dance: a short overlap at
+  -- full level, no announcement, no rotation gap. Kept on the row that leads
+  -- rather than the one that follows, so a reorder moves the join with it.
+  merge_into_next        INTEGER NOT NULL DEFAULT 0,
+
   -- per-item transition overrides (NULL = inherit from playlist)
   crossfade_ms           INTEGER,
   fade_in_curve          TEXT,
