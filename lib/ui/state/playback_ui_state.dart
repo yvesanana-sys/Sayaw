@@ -266,6 +266,7 @@ class PlaybackUiState {
     this.snowball,
     this.announcement,
     this.nextMerges = false,
+    this.songLength,
   });
 
   final DeckUiState deckA;
@@ -298,6 +299,10 @@ class PlaybackUiState {
   /// silent join reads as intended rather than as a tag that failed.
   final bool nextMerges;
 
+  /// How much of each song the set plays before it hands over. Null plays
+  /// each to its end.
+  final Duration? songLength;
+
   DeckUiState deck(DeckSlot slot) =>
       slot == DeckSlot.a ? deckA : deckB;
 
@@ -316,6 +321,7 @@ class PlaybackUiState {
     NetworkMode? networkMode,
     List<String>? offlineServices,
     bool? nextMerges,
+    Duration? songLength,
   }) {
     return PlaybackUiState(
       deckA: deckA ?? this.deckA,
@@ -330,6 +336,7 @@ class PlaybackUiState {
       snowball: snowball,
       announcement: announcement,
       nextMerges: nextMerges ?? this.nextMerges,
+      songLength: songLength ?? this.songLength,
     );
   }
 
@@ -350,6 +357,25 @@ class PlaybackUiState {
         snowball: snowball,
         announcement: announcement,
         nextMerges: nextMerges,
+        songLength: songLength,
+      );
+
+  /// Its own method for the reason [withSnowball] is: null means "each song
+  /// to its end", which a `copyWith` argument could not tell from "leave it".
+  PlaybackUiState withSongLength(Duration? songLength) => PlaybackUiState(
+        deckA: deckA,
+        deckB: deckB,
+        crossfader: crossfader,
+        queue: queue,
+        currentIndex: currentIndex,
+        phase: phase,
+        performanceMode: performanceMode,
+        networkMode: networkMode,
+        offlineServices: offlineServices,
+        snowball: snowball,
+        announcement: announcement,
+        nextMerges: nextMerges,
+        songLength: songLength,
       );
 
   /// Its own method for the same reason [withSnowball] is: null means "the
@@ -369,6 +395,7 @@ class PlaybackUiState {
         snowball: snowball,
         announcement: announcement,
         nextMerges: nextMerges,
+        songLength: songLength,
       );
 }
 
@@ -414,6 +441,7 @@ class PlaybackController extends Notifier<PlaybackUiState> {
     SnowballProgress? snowball,
     NextAnnouncementUi? announcement,
     bool nextMerges = false,
+    Duration? songLength,
   }) {
     state = state.copyWith(
       deckA: activeSlot == DeckSlot.a ? active : standby,
@@ -424,7 +452,10 @@ class PlaybackController extends Notifier<PlaybackUiState> {
       // them rather than the other way round.
       crossfader: crossfader,
       nextMerges: nextMerges,
-    ).withSnowball(snowball).withAnnouncement(announcement);
+    )
+        .withSnowball(snowball)
+        .withAnnouncement(announcement)
+        .withSongLength(songLength);
   }
 
   // -- transport -------------------------------------------------------------
@@ -677,6 +708,11 @@ final cueTagProvider = Provider<CueTagAccess?>(
 /// Joining rows of the open set into one dance.
 final mergeProvider = Provider<MergeAccess?>(
   (ref) => ref.watch(playbackSessionProvider),
+);
+
+/// How much of each song plays, for the chips under the decks.
+final songLengthProvider = Provider<Duration?>(
+  (ref) => ref.watch(playbackProvider.select((s) => s.songLength)),
 );
 
 /// Whether the next transition is a merge. Narrow, like the announcement.

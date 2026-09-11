@@ -133,6 +133,19 @@ class QueueEntry {
   /// before it expired. Nothing else about the row changes: the spec, the
   /// announcement and the titles were merged when the set was built and do
   /// not go stale just because a URL did.
+  /// The same row playing for a different length. Null plays it to its end.
+  QueueEntry withTargetDuration(Duration? targetDuration) => QueueEntry(
+        itemId: itemId,
+        media: media,
+        spec: spec,
+        danceTypeName: danceTypeName,
+        announcementText: announcementText,
+        announcementClipPath: announcementClipPath,
+        targetDuration: targetDuration,
+        title: title,
+        artist: artist,
+      );
+
   QueueEntry withMedia(PlayableMedia media) => QueueEntry(
         itemId: itemId,
         media: media,
@@ -424,6 +437,22 @@ class CrossfadeEngine {
       // now, for the same reason: a transition must not wait on synthesis.
       unawaited(announcements.warm(entry));
     }
+  }
+
+  /// Changes how much of each song plays, for every row at once.
+  ///
+  /// [targetFor] answers per row, so a row with a length of its own keeps it
+  /// while the rest follow the set. Read live by the tick, so the song on the
+  /// floor takes the new length too: an operator who chooses two minutes at
+  /// 2:10 gets the transition now, which is what they asked for.
+  void setTargetDurations(Duration? Function(String itemId) targetFor) {
+    QueueEntry retarget(QueueEntry entry) =>
+        entry.withTargetDuration(targetFor(entry.itemId));
+
+    _queue = List.unmodifiable([for (final entry in _queue) retarget(entry)]);
+    if (_activeEntry case final entry?) _activeEntry = retarget(entry);
+    if (_standbyEntry case final entry?) _standbyEntry = retarget(entry);
+    if (_lookahead case final entry?) _lookahead = retarget(entry);
   }
 
   Future<void> play() async {

@@ -65,6 +65,10 @@ class PlaybackSession
   /// the 100 ms publish does not read the database. Zero is not a Snowball.
   int _snowballStages = 0;
 
+  /// How much of each song the open set plays, for the chips under the decks.
+  /// Null plays each to its end.
+  Duration? _songLength;
+
   /// Which rows the engine actually accepted, in engine order. The queue the
   /// operator sees can contain rows the engine skipped, so the two index
   /// spaces are not the same and this is what maps between them.
@@ -85,6 +89,7 @@ class PlaybackSession
     final rows = await repository.db.playlistDao.itemsOf(playlistId);
     final playlist = await repository.db.playlistDao.byId(playlistId);
     _snowballStages = playlist?.snowballStages ?? 0;
+    _songLength = playlist?.targetDurationMs;
 
     final reasons = {
       for (final item in resolved.unavailable) item.itemId: _reasonFor(item),
@@ -218,15 +223,27 @@ class PlaybackSession
 
     engine.setSongLimit(shape.songLimit);
 
-    // Both of these are baked into the queue entries when the set is opened,
-    // so neither can change under a running set.
-    // The stage count is only a readout, so unlike the rest of these it can
-    // change under a running set without anything being rebuilt.
+    // How much of each song plays is read live by the engine's tick, so it
+    // can change under a running set — including under the song on the
+    // floor. A row with a length of its own keeps it.
+    if (shape.songDuration != before.songDuration) {
+      final own = {
+        for (final row in await repository.db.playlistDao.itemsOf(playlistId))
+          row.item.id: row.item.targetDurationMs,
+      };
+      engine.setTargetDurations(
+        (itemId) => own[itemId] ?? shape.songDuration,
+      );
+    }
+    _songLength = shape.songDuration;
+
+    // The rotation gap and continuous flow are baked into each row's
+    // transition when the set is opened, so neither changes under a running
+    // set. The stage count is only a readout and changes freely.
     _snowballStages = shape.snowballStages;
     _publish();
 
-    return shape.songDuration == before.songDuration &&
-        shape.rotationGap == before.rotationGap &&
+    return shape.rotationGap == before.rotationGap &&
         shape.continuousFlow == before.continuousFlow;
   }
 
@@ -663,6 +680,7 @@ class PlaybackSession
       snowball: _snowballProgress(),
       announcement: _nextAnnouncement(next),
       nextMerges: next?.spec.merge ?? false,
+      songLength: _songLength,
       active: DeckUiState(
         title: entry?.title ?? '',
         artist: entry?.artist ?? '',

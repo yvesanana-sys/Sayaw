@@ -945,6 +945,62 @@ void main() {
     });
   });
 
+  group('changing how much of each song plays, mid-set', () {
+    test('the song on the floor takes the new length too', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(minutes: 4));
+        rig.start([_entry('one'), _entry('two')], async);
+        async.elapse(const Duration(seconds: 30));
+        async.flushMicrotasks();
+        expect(rig.engine.currentEntry?.itemId, 'one');
+
+        // Two minutes of each, chosen at 0:30. The transition is due at 2:00
+        // less the crossfade, and comes then rather than at four minutes.
+        rig.engine.setTargetDurations((_) => const Duration(minutes: 2));
+        async.elapse(const Duration(seconds: 100));
+        async.flushMicrotasks();
+
+        expect(rig.engine.currentEntry?.itemId, 'two');
+      });
+    });
+
+    test('chosen after the cap has already passed, it hands over now', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(minutes: 4));
+        rig.start([_entry('one'), _entry('two')], async);
+        async.elapse(const Duration(seconds: 150));
+        async.flushMicrotasks();
+
+        rig.engine.setTargetDurations((_) => const Duration(minutes: 2));
+        async.elapse(const Duration(seconds: 6));
+        async.flushMicrotasks();
+
+        expect(rig.engine.currentEntry?.itemId, 'two',
+            reason: 'two minutes at 2:30 means now');
+      });
+    });
+
+    test('a row with a length of its own keeps it', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(minutes: 4));
+        rig.start([_entry('one'), _entry('two'), _entry('three')], async);
+
+        rig.engine.setTargetDurations(
+          (id) => id == 'one' ? const Duration(seconds: 30) : null,
+        );
+        async.elapse(const Duration(seconds: 40));
+        async.flushMicrotasks();
+        expect(rig.engine.currentEntry?.itemId, 'two');
+
+        // Back to whole songs: the second row runs on past the mark that
+        // ended the first.
+        async.elapse(const Duration(seconds: 40));
+        async.flushMicrotasks();
+        expect(rig.engine.currentEntry?.itemId, 'two');
+      });
+    });
+  });
+
   group('gain composition', () {
     test('per-track trim scales the deck volume', () {
       fakeAsync((async) {
