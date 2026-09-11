@@ -390,6 +390,62 @@ void main() {
     });
   });
 
+  group('playing a row the operator tapped', () {
+    setUp(() async {
+      await _addTracks(db, set, music, ['a', 'b', 'c']);
+      await session.openPlaylist(set);
+      await session.play();
+      await _settle();
+    });
+
+    test('it crossfades into that row and the set carries on from there',
+        () async {
+      await session.jumpTo('item-c');
+      await _settle(const Duration(milliseconds: 600));
+
+      final state = container.read(playbackProvider);
+      expect(state.currentIndex, 2);
+      expect(engine.currentEntry?.itemId, 'item-c');
+    });
+
+    test('a row the engine could not load is not a destination', () async {
+      await _addTracks(db, set, music, ['gone']);
+      File('${music.path}/gone.flac').deleteSync();
+      await session.openPlaylist(set);
+      await session.play();
+      await _settle();
+      expect(session.willPlay('item-gone'), isFalse, reason: 'precondition');
+
+      await session.jumpTo('item-gone');
+      await _settle(const Duration(milliseconds: 600));
+
+      expect(engine.currentEntry?.itemId, 'item-a',
+          reason: 'still on the first row; nothing happened');
+    });
+  });
+
+  group('stop', () {
+    test('silence now, and the track back at its start', () async {
+      await _addTracks(db, set, music, ['a', 'b']);
+      await session.openPlaylist(set);
+      await session.play();
+      await _settle(const Duration(milliseconds: 300));
+      expect(container.read(playbackProvider).deckA.position,
+          greaterThan(Duration.zero),
+          reason: 'precondition: some way in');
+
+      await session.stopToCue();
+      await _settle();
+
+      final state = container.read(playbackProvider);
+      expect(state.anyDeckPlaying, isFalse);
+      expect(state.deckA.position, Duration.zero);
+      // Still the same set, still the same row: not a reload.
+      expect(state.deckA.title, 'Track a');
+      expect(state.deckB.title, 'Track b');
+    });
+  });
+
   group('the library', () {
     test('search finds what a scan imported', () async {
       _touch(music, 'library/kiss-of-fire.flac');

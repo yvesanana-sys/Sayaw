@@ -418,6 +418,43 @@ class PlaybackController extends Notifier<PlaybackUiState> {
     );
   }
 
+  /// Stop, as distinct from pause: silence now, and the current track back at
+  /// its start for the next play. The set is not unloaded.
+  void stop() {
+    if (_session case final session?) {
+      session.stopToCue();
+      return;
+    }
+    state = state.copyWith(
+      deckA: state.deckA.copyWith(isPlaying: false, position: Duration.zero),
+      deckB: state.deckB.copyWith(isPlaying: false, position: Duration.zero),
+      phase: EnginePhase.paused,
+    );
+  }
+
+  /// Plays [item] now, through the crossfade. The engine decides what that
+  /// means for a set that is stopped or paused; here it is the intent.
+  void playFrom(QueueItemUi item) {
+    if (!item.isPlayable) return;
+    if (_session case final session?) {
+      session.jumpTo(item.id);
+      return;
+    }
+    final index = state.queue.indexWhere((q) => q.id == item.id);
+    if (index < 0) return;
+    _setDeck(
+      DeckSlot.a,
+      DeckUiState(
+        title: item.title,
+        artist: item.artist,
+        duration: item.duration,
+        isPlaying: true,
+        gain: 1.0,
+      ),
+    );
+    state = state.copyWith(currentIndex: index, phase: EnginePhase.playing);
+  }
+
   /// Return the deck to its cue point without changing what is loaded.
   void cue(DeckSlot slot) {
     // No engine equivalent yet: the standby deck is already sitting at its cue

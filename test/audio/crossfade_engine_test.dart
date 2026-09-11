@@ -639,6 +639,244 @@ void main() {
     });
   });
 
+  group('stop', () {
+    test('silence now, and the track back at its start for the next play', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(seconds: 30));
+        rig.start([_entry('one'), _entry('two')], async);
+
+        async.elapse(const Duration(seconds: 5));
+        async.flushMicrotasks();
+        expect(rig.a.position, greaterThan(const Duration(seconds: 4)),
+            reason: 'precondition: five seconds in');
+
+        rig.engine.stopToCue();
+        async.flushMicrotasks();
+
+        expect(rig.engine.phase, EnginePhase.paused);
+        expect(rig.a.isPlaying, isFalse);
+        expect(rig.a.position, Duration.zero,
+            reason: 'stop gives the position up; pause would hold it');
+        // The set is still here: not torn down the way a reload does it.
+        expect(rig.engine.currentEntry?.itemId, 'one');
+        expect(rig.engine.standbyEntry?.itemId, 'two');
+      });
+    });
+
+    test('play after stop starts the same track from the top', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(seconds: 30));
+        rig.start([_entry('one'), _entry('two')], async);
+        async.elapse(const Duration(seconds: 5));
+        async.flushMicrotasks();
+
+        rig.engine.stopToCue();
+        async.flushMicrotasks();
+        rig.engine.play();
+        async.flushMicrotasks();
+        async.elapse(const Duration(seconds: 2));
+        async.flushMicrotasks();
+
+        expect(rig.engine.currentEntry?.itemId, 'one');
+        expect(rig.a.position.inMilliseconds, closeTo(2000, 100));
+        expect(rig.engine.phase, EnginePhase.playing);
+      });
+    });
+
+    test('a stop mid-crossfade re-cues the deck that was coming in', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(seconds: 10));
+        rig.start([_entry('one'), _entry('two'), _entry('three')], async);
+
+        // 1s into the 4s crossfade, which begins at 6s.
+        async.elapse(const Duration(milliseconds: 7000));
+        async.flushMicrotasks();
+        expect(rig.engine.phase, EnginePhase.crossfading);
+
+        rig.engine.stopToCue();
+        async.flushMicrotasks();
+        async.elapse(const Duration(seconds: 10));
+        async.flushMicrotasks();
+
+        // The transition did not quietly complete while stopped, and the deck
+        // that was coming in is back at its start with its volume down.
+        expect(rig.engine.phase, EnginePhase.paused);
+        expect(rig.engine.currentIndex, 0);
+        expect(rig.b.position, Duration.zero);
+        expect(rig.b.lastVolume, 0.0);
+        expect(rig.a.lastVolume, 1.0);
+      });
+    });
+
+    test('a voice mid-word is cut off', () {
+      fakeAsync((async) {
+        final rig = _Rig(
+          track: const Duration(seconds: 8),
+          clip: const Duration(seconds: 4),
+        );
+        rig.start([
+          _entry('one'),
+          _entry('two', mode: AnnounceMode.duckOver, danceTypeName: 'Waltz'),
+        ], async);
+
+        // The crossfade begins at 4s; the voice is speaking by 5s.
+        async.elapse(const Duration(milliseconds: 5000));
+        async.flushMicrotasks();
+        expect(rig.voice.isPlaying, isTrue, reason: 'precondition: speaking');
+
+        rig.engine.stopToCue();
+        async.flushMicrotasks();
+
+        expect(rig.voice.isPlaying, isFalse,
+            reason: 'a stop that leaves the announcer talking is not a stop');
+      });
+    });
+
+    test('with nothing loaded it is nothing', () {
+      fakeAsync((async) {
+        final rig = _Rig();
+        rig.engine.stopToCue();
+        async.flushMicrotasks();
+
+        expect(rig.engine.phase, EnginePhase.idle);
+      });
+    });
+  });
+
+  group('jumping to a row', () {
+    test('with music on the floor it crossfades into the chosen row', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(minutes: 5));
+        rig.start([
+          _entry('one'),
+          _entry('two'),
+          _entry('three'),
+          _entry('four'),
+        ], async);
+
+        rig.engine.jumpTo(3);
+        async.flushMicrotasks();
+        expect(rig.engine.phase, EnginePhase.crossfading,
+            reason: 'through the crossfade, never a cut');
+
+        async.elapse(const Duration(seconds: 6));
+        async.flushMicrotasks();
+
+        expect(rig.engine.currentEntry?.itemId, 'four');
+        expect(rig.engine.currentIndex, 3);
+        // And the set carries on from there, not from where it was.
+        expect(rig.engine.standbyEntry, isNull,
+            reason: 'nothing after the last row');
+      });
+    });
+
+    test('the row after the jump is cued behind it', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(minutes: 5));
+        rig.start([
+          _entry('one'),
+          _entry('two'),
+          _entry('three'),
+          _entry('four'),
+        ], async);
+
+        rig.engine.jumpTo(2);
+        async.elapse(const Duration(seconds: 6));
+        async.flushMicrotasks();
+
+        expect(rig.engine.currentEntry?.itemId, 'three');
+        expect(rig.engine.standbyEntry?.itemId, 'four');
+      });
+    });
+
+    test('a jump carries the announcement of the row it lands on', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(minutes: 5));
+        rig.start([
+          _entry('one'),
+          _entry('two'),
+          _entry('three', mode: AnnounceMode.duckOver, danceTypeName: 'Samba'),
+        ], async);
+
+        rig.engine.jumpTo(2);
+        async.elapse(const Duration(seconds: 6));
+        async.flushMicrotasks();
+
+        expect(rig.clips.rendered, contains('Next dance: Samba'));
+      });
+    });
+
+    test('stopped, it becomes the track on the deck without starting', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(minutes: 5));
+        rig.engine.loadQueue([_entry('one'), _entry('two'), _entry('three')]);
+        async.flushMicrotasks();
+
+        rig.engine.jumpTo(2);
+        async.flushMicrotasks();
+
+        expect(rig.engine.currentEntry?.itemId, 'three');
+        expect(rig.engine.phase, EnginePhase.idle,
+            reason: 'choosing a song is not the same as starting it');
+        expect(rig.a.isPlaying, isFalse);
+      });
+    });
+
+    test('paused, likewise', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(minutes: 5));
+        rig.start([_entry('one'), _entry('two'), _entry('three')], async);
+        rig.engine.pause();
+        async.flushMicrotasks();
+
+        rig.engine.jumpTo(1);
+        async.flushMicrotasks();
+
+        expect(rig.engine.currentEntry?.itemId, 'two');
+        expect(rig.engine.standbyEntry?.itemId, 'three');
+        expect(rig.engine.phase, EnginePhase.paused);
+      });
+    });
+
+    test('a row that will not load leaves the set as it was', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(minutes: 5));
+        rig.b.failUris.add('fake://three');
+        rig.start([
+          _entry('one'),
+          _entry('two'),
+          _entry('three'),
+          _entry('four'),
+        ], async);
+        expect(rig.engine.standbyEntry?.itemId, 'two');
+
+        rig.engine.jumpTo(2);
+        async.elapse(const Duration(seconds: 6));
+        async.flushMicrotasks();
+
+        // Still playing the first row, with the natural next re-cued rather
+        // than an empty deck where the cued track used to be.
+        expect(rig.engine.currentEntry?.itemId, 'one');
+        expect(rig.engine.standbyEntry?.itemId, 'two');
+        expect(rig.engine.phase, EnginePhase.playing);
+      });
+    });
+
+    test('an index off the end is ignored', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(minutes: 5));
+        rig.start([_entry('one'), _entry('two')], async);
+
+        rig.engine.jumpTo(7);
+        async.elapse(const Duration(seconds: 6));
+        async.flushMicrotasks();
+
+        expect(rig.engine.currentEntry?.itemId, 'one');
+        expect(rig.engine.phase, EnginePhase.playing);
+      });
+    });
+  });
+
   group('gain composition', () {
     test('per-track trim scales the deck volume', () {
       fakeAsync((async) {

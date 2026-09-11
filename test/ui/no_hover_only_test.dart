@@ -86,13 +86,23 @@ void main() {
     );
 
     // Drive the whole transport with taps only — no mouse, no hover, no
-    // long-press-for-hidden-options.
-    await tester.tap(find.bySemanticsLabel('Load selected track to deck A'));
+    // long-press-for-hidden-options. A track reaches a deck by tapping its
+    // row in the queue, which in this layout is a pane away.
+    await tester.tap(find.text('Queue'));
     await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel('Play Kiss of Fire now'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Decks'));
+    await tester.pumpAndSettle();
+
+    expect(find.bySemanticsLabel('Pause deck A'), findsOneWidget);
+
+    await tester.tap(find.bySemanticsLabel('Stop'));
+    await tester.pumpAndSettle();
+    expect(find.bySemanticsLabel('Play deck A'), findsOneWidget);
 
     await tester.tap(find.bySemanticsLabel('Play deck A'));
     await tester.pumpAndSettle();
-
     expect(find.bySemanticsLabel('Pause deck A'), findsOneWidget);
 
     await tester.tap(find.bySemanticsLabel('Crossfade now'));

@@ -16,8 +16,9 @@ import 'transport_button.dart';
 class TransportBar extends ConsumerWidget {
   const TransportBar({super.key, this.compact = false});
 
-  /// Forces the reduced layout — drops the per-deck cue buttons. Load and
-  /// play/pause never drop; they are the two controls a set cannot run without.
+  /// Forces the reduced layout — drops the per-deck cue buttons. Play/pause,
+  /// stop and crossfade never drop; they are the controls a set cannot run
+  /// without.
   ///
   /// The bar also drops to this form on its own when it does not fit, so
   /// passing false is a preference, not a guarantee.
@@ -25,16 +26,17 @@ class TransportBar extends ConsumerWidget {
 
   static const double _horizontalPadding = 12.0;
 
-  /// Width of one deck's control group.
+  /// Width of one deck's control group: play/pause alone, or cue beside it.
   static double _groupWidth(bool compact) => compact
-      ? kTransportTouchTarget * 2 + kTransportSpacing
-      : kTransportTouchTarget * 3 + kTransportSpacing * 2;
+      ? kTransportTouchTarget
+      : kTransportTouchTarget * 2 + kTransportSpacing;
 
-  /// Width the whole bar needs before anything would have to shrink.
+  /// Width the whole bar needs before anything would have to shrink: two deck
+  /// groups, and stop and crossfade in the middle.
   static double _barWidth(bool compact) =>
       _groupWidth(compact) * 2 +
-      kTransportTouchTarget +
-      kTransportSpacing * 2 +
+      kTransportTouchTarget * 2 +
+      kTransportSpacing * 3 +
       _horizontalPadding * 2;
 
   @override
@@ -47,7 +49,6 @@ class TransportBar extends ConsumerWidget {
       final deck = state.deck(slot);
       final accent =
           slot == DeckSlot.a ? SayawColors.primary : SayawColors.secondary;
-      final selected = state.queue.isEmpty ? null : state.queue.first;
 
       return Row(
         mainAxisSize: MainAxisSize.min,
@@ -63,27 +64,20 @@ class TransportBar extends ConsumerWidget {
             ),
             const SizedBox(width: kTransportSpacing),
           ],
+          // Getting a track *onto* a deck is not a job for this bar any more:
+          // a tap on a queue row plays it, through the crossfade, which is
+          // what the load-to-deck buttons that used to sit here pretended to
+          // do and never did with an engine behind them. Their width is what
+          // stop needed.
           TransportButton(
             icon: deck.isPlaying ? Icons.pause : Icons.play_arrow,
             label: deck.isPlaying
                 ? 'Pause deck ${slot.label}'
                 : 'Play deck ${slot.label}',
+            caption: slot.label,
             onPressed:
                 deck.isLoaded ? () => controller.togglePlay(slot) : null,
             isActive: deck.isPlaying,
-            background: accent,
-            color: accent,
-          ),
-          const SizedBox(width: kTransportSpacing),
-          TransportButton(
-            icon: slot == DeckSlot.a
-                ? Icons.keyboard_double_arrow_left
-                : Icons.keyboard_double_arrow_right,
-            label: 'Load selected track to deck ${slot.label}',
-            caption: slot.label,
-            onPressed: selected != null && selected.isPlayable
-                ? () => controller.loadToDeck(slot, selected)
-                : null,
             background: accent,
             color: accent,
           ),
@@ -100,6 +94,19 @@ class TransportBar extends ConsumerWidget {
           : null,
       background: scheme.tertiary,
       color: scheme.tertiary,
+    );
+
+    // Stop, as distinct from pause: silence now, and the track back at its
+    // start for the next play. In the middle with the crossfade, because it
+    // belongs to the set rather than to either deck — and in the error colour,
+    // because it is the one control here that empties a floor.
+    final stop = TransportButton(
+      icon: Icons.stop,
+      label: 'Stop',
+      caption: 'STOP',
+      onPressed: state.anyDeckPlaying ? controller.stop : null,
+      background: scheme.error,
+      color: scheme.error,
     );
 
     return Semantics(
@@ -122,6 +129,8 @@ class TransportBar extends ConsumerWidget {
             // is exactly how it ended up at 37dp — narrower than a fingertip,
             // on the one control that ends a track in front of a room.
             if (fits) const Spacer() else const SizedBox(width: kTransportSpacing),
+            stop,
+            const SizedBox(width: kTransportSpacing),
             crossfadeNow,
             if (fits) const Spacer() else const SizedBox(width: kTransportSpacing),
             deckGroup(DeckSlot.b, useCompact),
