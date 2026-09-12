@@ -80,6 +80,10 @@ abstract class MergeAccess {
   /// Takes effect on the transition it changes, not on the next time the set
   /// is opened — see [PlaybackSession.setMergeIntoNext].
   Future<void> setMergeIntoNext({required String itemId, required bool merge});
+
+  /// Runs every row of the open set into the next as one dance — a mixer of
+  /// the whole set — or separates them all.
+  Future<void> setMergeAll(bool merge);
 }
 
 /// The sets the operator keeps, and which one is open.

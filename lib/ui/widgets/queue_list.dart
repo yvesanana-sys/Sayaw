@@ -38,11 +38,9 @@ class QueueList extends ConsumerWidget {
     final header = PaneHeader(
       icon: Icons.queue_music,
       title: setName.isEmpty ? 'Queue' : setName,
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (queue.isNotEmpty)
-            Text(
+      trailing: queue.isEmpty
+          ? null
+          : Text(
               '${queue.length}',
               style: const TextStyle(
                 color: SayawColors.onSurfaceVariant,
@@ -50,6 +48,19 @@ class QueueList extends ConsumerWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
+    );
+
+    // Across the top of the table, as words: the mixer and saving were the
+    // two things an operator could not find when they were an icon on a row
+    // and an icon in a corner.
+    final toolbar = Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          if (queue.length > 1) QueueMixerButton(queue: queue),
+          const SaveSetButton(),
           const SetsButton(),
         ],
       ),
@@ -59,6 +70,7 @@ class QueueList extends ConsumerWidget {
       return Column(
         children: [
           header,
+          toolbar,
           const Expanded(
             child: Center(
               child: Padding(
@@ -78,6 +90,7 @@ class QueueList extends ConsumerWidget {
     return Column(
       children: [
         header,
+        toolbar,
         Expanded(
           child: ReorderableListView.builder(
             // A stable storage key, not just a retained ScrollController.
@@ -350,6 +363,37 @@ class QueuePlayTarget extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The whole set as one mixer: every row joined to the next, or none.
+///
+/// The word the operator was looking for, across the top of the table. The
+/// links on the rows remain for the exceptions — the one place in a mixer
+/// where the dance changes and a voice should say so.
+@visibleForTesting
+class QueueMixerButton extends ConsumerWidget {
+  const QueueMixerButton({super.key, required this.queue});
+
+  final List<QueueItemUi> queue;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final access = ref.watch(mergeProvider);
+    // Every row but the last leads into something; the last has nothing to.
+    final leading = queue.take(queue.length - 1);
+    final on = leading.isNotEmpty && leading.every((i) => i.mergeIntoNext);
+
+    return QueueToolbarButton(
+      icon: Icons.link,
+      text: on ? 'Mixer on' : 'Mixer',
+      label: on
+          ? 'Mixer is on: every song runs into the next. Turn it off'
+          : 'Mixer: run every song into the next as one dance',
+      active: on,
+      color: SayawColors.tertiary,
+      onPressed: access == null ? null : () => access.setMergeAll(!on),
     );
   }
 }

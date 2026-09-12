@@ -25,6 +25,29 @@ void main() {
     return fake;
   }
 
+  testWidgets('the save button asks for a name and saves a copy',
+      (tester) async {
+    final fake = FakeSets();
+    addTearDown(fake.close);
+    await pumpSayaw(
+      tester,
+      const Scaffold(body: Center(child: SaveSetButton())),
+      overrides: [setsProvider.overrideWithValue(fake)],
+    );
+
+    await tester.tap(find.byType(SaveSetButton));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Friday class');
+    await tester.tap(find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.widgetWithText(FilledButton, 'Save'),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(fake.savedAs, ['Friday class']);
+    expect(find.text('Saved a copy as "Friday class"'), findsOneWidget);
+  });
+
   testWidgets('lists the sets, with the open one marked', (tester) async {
     final handle = tester.ensureSemantics();
     await pumpSheet(tester);

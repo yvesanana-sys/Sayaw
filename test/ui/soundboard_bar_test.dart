@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sayaw/audio/soundboard.dart';
 import 'package:sayaw/ui/state/soundboard_provider.dart';
+import 'package:sayaw/ui/touch/touch_targets.dart';
 import 'package:sayaw/ui/widgets/soundboard_bar.dart';
 
 import '../fakes/fake_soundboard.dart';
@@ -46,6 +47,28 @@ void main() {
 
     expect(find.text('Whistle'), findsOneWidget);
     expect(find.text('Bell'), findsOneWidget);
+  });
+
+  testWidgets('more cues than fit in a row are all still on screen',
+      (tester) async {
+    // Twelve whistles on a 600dp-wide compact window. A strip that scrolled
+    // sideways showed five and hid the rest; every one has to be reachable
+    // without a scroll, because a cut-in is a thing that happens now.
+    final many = [
+      for (var i = 0; i < 12; i++)
+        SoundCue(id: 'c$i', label: 'Cue $i', filePath: '/fx/$i.wav'),
+    ];
+    await pumpBar(tester, many);
+
+    final bar = tester.getRect(find.byType(SoundboardBar));
+    for (var i = 0; i < 12; i++) {
+      final button = tester.getRect(
+          find.bySemanticsLabel(RegExp('^Play Cue $i(, shortcut \\d)?\$')));
+      expect(bar.contains(button.center), isTrue,
+          reason: 'Cue $i is off the visible bar');
+    }
+    expect(bar.height, greaterThan(kMinTouchTarget * 2),
+        reason: 'grew to a second row rather than hiding cues');
   });
 
   testWidgets('pressing one fires it', (tester) async {

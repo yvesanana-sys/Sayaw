@@ -640,6 +640,46 @@ class PlaybackSession
     _publish();
   }
 
+  /// The whole set as one mixer, or none of it.
+  ///
+  /// One write, one redraw, and every row's transition re-said to the
+  /// engine — the same as [setMergeIntoNext] on every row at once, and for
+  /// the same reason it reaches the engine: the operator pressed it for the
+  /// set that is playing.
+  @override
+  Future<void> setMergeAll(bool merge) async {
+    final playlistId = _playlistId;
+    if (playlistId == null) return;
+
+    await repository.db.playlistDao
+        .setMergeAll(playlistId: playlistId, merge: merge);
+
+    controller.setQueue([
+      for (final item in controller.queueSnapshot) item.withMergeIntoNext(merge),
+    ]);
+
+    final playlist = await repository.db.playlistDao.byId(playlistId);
+    if (playlist != null) {
+      final rows = await repository.db.playlistDao.itemsOf(playlistId);
+      for (var i = 1; i < rows.length; i++) {
+        final row = rows[i];
+        if (row.track == null) continue;
+        engine.retag(
+          row.item.id,
+          announcementClipPath: PlaylistRepository.announcementClipFor(row),
+          spec: PlaylistRepository.specFor(
+            playlist,
+            row.item,
+            taggedCue: row.soundCue != null,
+            mergedFromPrevious: merge,
+          ),
+        );
+      }
+    }
+
+    _publish();
+  }
+
   /// Imports folders of music into the library.
   ///
   /// Only meaningful where `dart:io` paths are: on Android a folder picker

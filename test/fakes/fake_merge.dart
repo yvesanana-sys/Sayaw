@@ -11,4 +11,10 @@ class FakeMerge implements MergeAccess {
     required bool merge,
   }) async =>
       joins.add((itemId, merge));
+
+  /// Every set-wide press, in order.
+  final List<bool> mergedAll = [];
+
+  @override
+  Future<void> setMergeAll(bool merge) async => mergedAll.add(merge);
 }

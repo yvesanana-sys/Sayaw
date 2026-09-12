@@ -303,6 +303,14 @@ class PlaylistDao extends DatabaseAccessor<SayawDatabase> with _$PlaylistDaoMixi
         ),
       );
 
+  /// Joins every row of a set to the next, or separates them all.
+  Future<int> setMergeAll({required String playlistId, required bool merge}) =>
+      (update(playlistItems)..where((i) => i.playlistId.equals(playlistId)))
+          .write(PlaylistItemsCompanion(
+        mergeIntoNext: Value(merge),
+        updatedAt: Value(clock.now()),
+      ));
+
   /// Tags a row with one of the operator's soundboard cues, or clears it.
   ///
   /// The cue itself is untouched: it stays on the bar, still fires by hand,

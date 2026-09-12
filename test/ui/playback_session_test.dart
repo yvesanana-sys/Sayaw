@@ -516,6 +516,26 @@ void main() {
       expect(container.read(playbackProvider).deckA.isPlaying, isTrue);
     });
 
+    test('the whole set at once, and back', () async {
+      await session.play();
+      await _settle();
+
+      await session.setMergeAll(true);
+      await _settle();
+
+      final rows = await db.playlistDao.itemsOf(set);
+      expect(rows.every((r) => r.item.mergeIntoNext), isTrue);
+      expect(container.read(playbackProvider).queue.every((i) => i.mergeIntoNext),
+          isTrue);
+      expect(engine.standbyEntry?.spec.merge, isTrue,
+          reason: 'the deck already cued took it without a reload');
+      expect(container.read(playbackProvider).deckA.isPlaying, isTrue);
+
+      await session.setMergeAll(false);
+      await _settle();
+      expect(engine.standbyEntry?.spec.merge, isFalse);
+    });
+
     test('separating them puts the transition back', () async {
       await session.setMergeIntoNext(itemId: 'item-a', merge: true);
       await _settle();

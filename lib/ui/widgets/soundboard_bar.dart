@@ -33,24 +33,29 @@ class SoundboardBar extends ConsumerWidget {
 
     final soundboard = ref.watch(soundboardProvider);
 
+    // Every cue on screen at once, in as many rows as it takes. A strip that
+    // scrolled sideways hid the sixth cue and every one after it, and a
+    // cut-in that has to be scrolled to has already missed its moment.
     return Container(
-      height: kMinTouchTarget + 12,
+      width: double.infinity,
       color: SayawColors.surface,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: cues.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
-        itemBuilder: (context, index) => _CueButton(
-          cue: cues[index],
-          // The shortcut the operator can actually press. Only the first nine
-          // get one — there is no tenth digit, and a two-key chord in the dark
-          // is not a cut-in.
-          shortcut: index < 9 ? '${index + 1}' : null,
-          onPressed: soundboard == null
-              ? null
-              : () => soundboard.fire(cues[index]),
-        ),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (var index = 0; index < cues.length; index++)
+            _CueButton(
+              cue: cues[index],
+              // The shortcut the operator can actually press. Only the first
+              // nine get one — there is no tenth digit, and a two-key chord
+              // in the dark is not a cut-in.
+              shortcut: index < 9 ? '${index + 1}' : null,
+              onPressed: soundboard == null
+                  ? null
+                  : () => soundboard.fire(cues[index]),
+            ),
+        ],
       ),
     );
   }

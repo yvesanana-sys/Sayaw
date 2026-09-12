@@ -88,7 +88,12 @@ class _SetsSheetState extends ConsumerState<SetsSheet> {
   Future<void> _rename(Playlist set) async {
     final name = await showDialog<String>(
       context: context,
-      builder: (_) => _RenameDialog(initial: set.name),
+      builder: (_) => _NameDialog(
+        title: 'Rename set',
+        hint: set.name,
+        action: 'Rename',
+        initial: set.name,
+      ),
     );
     final trimmed = name?.trim();
     if (trimmed == null || trimmed.isEmpty || trimmed == set.name) return;
@@ -229,51 +234,6 @@ class _SetsSheetState extends ConsumerState<SetsSheet> {
   }
 }
 
-/// Owns its controller, so it is disposed when the dialog is and not a
-/// frame before — a dialog animating out still draws its field.
-class _RenameDialog extends StatefulWidget {
-  const _RenameDialog({required this.initial});
-
-  final String initial;
-
-  @override
-  State<_RenameDialog> createState() => _RenameDialogState();
-}
-
-class _RenameDialogState extends State<_RenameDialog> {
-  late final _controller = TextEditingController(text: widget.initial);
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: SayawColors.surfaceContainer,
-      title: const Text('Rename set'),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        textInputAction: TextInputAction.done,
-        onSubmitted: (v) => Navigator.of(context).pop(v),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(_controller.text),
-          child: const Text('Rename'),
-        ),
-      ],
-    );
-  }
-}
-
 final _setsListProvider = StreamProvider<List<Playlist>>((ref) {
   final access = ref.watch(setsProvider);
   return access?.watchSets() ?? const Stream.empty();
@@ -394,26 +354,168 @@ class _IconAction extends StatelessWidget {
   }
 }
 
-/// Opens the sets sheet from the queue's header.
+/// Asks for a name and saves a copy of the open set under it.
+///
+/// The one thing an operator does most, on its own button rather than inside
+/// the sheet: at the end of a night that went well, "save this" should be
+/// one tap and a name.
+Future<void> showSaveSetDialog(BuildContext context, SetsAccess access) async {
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  final name = await showDialog<String>(
+    context: context,
+    builder: (_) => const _NameDialog(
+      title: 'Save a copy of this set as',
+      hint: 'Saturday social',
+      action: 'Save',
+    ),
+  );
+  final trimmed = name?.trim();
+  if (trimmed == null || trimmed.isEmpty) return;
+  final id = await access.saveSetAs(trimmed);
+  messenger?.showSnackBar(SnackBar(
+    content: Text(id == null
+        ? 'No set is open to save.'
+        : 'Saved a copy as "$trimmed"'),
+  ));
+}
+
+/// A name, and nothing else.
+class _NameDialog extends StatefulWidget {
+  const _NameDialog({
+    required this.title,
+    required this.hint,
+    required this.action,
+    this.initial = '',
+  });
+
+  final String title;
+  final String hint;
+  final String action;
+  final String initial;
+
+  @override
+  State<_NameDialog> createState() => _NameDialogState();
+}
+
+class _NameDialogState extends State<_NameDialog> {
+  late final _controller = TextEditingController(text: widget.initial);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: SayawColors.surfaceContainer,
+      title: Text(widget.title),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        textInputAction: TextInputAction.done,
+        decoration: InputDecoration(hintText: widget.hint),
+        onSubmitted: (v) => Navigator.of(context).pop(v),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text),
+          child: Text(widget.action),
+        ),
+      ],
+    );
+  }
+}
+
+/// Opens the sets sheet from the queue's toolbar.
 class SetsButton extends ConsumerWidget {
   const SetsButton({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final access = ref.watch(setsProvider);
+    return QueueToolbarButton(
+      icon: Icons.folder_special_outlined,
+      text: 'Sets',
+      label: 'Sets: open, rename or remove one',
+      onPressed: access == null ? null : () => showSetsSheet(context, access),
+    );
+  }
+}
+
+/// Saves a copy of the open set, from the queue's toolbar.
+class SaveSetButton extends ConsumerWidget {
+  const SaveSetButton({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final access = ref.watch(setsProvider);
+    return QueueToolbarButton(
+      icon: Icons.save_outlined,
+      text: 'Save',
+      label: 'Save a copy of this set',
+      onPressed:
+          access == null ? null : () => showSaveSetDialog(context, access),
+    );
+  }
+}
+
+/// One of the buttons across the top of the queue: an icon and a word, a
+/// fingertip tall, and its own label because a word on a button is not the
+/// whole of what it does.
+class QueueToolbarButton extends StatelessWidget {
+  const QueueToolbarButton({
+    super.key,
+    required this.icon,
+    required this.text,
+    required this.label,
+    required this.onPressed,
+    this.active = false,
+    this.color,
+  });
+
+  final IconData icon;
+  final String text;
+  final String label;
+  final VoidCallback? onPressed;
+
+  /// Drawn as "on": the mixer with every row joined.
+  final bool active;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = color ?? SayawColors.primary;
     return Semantics(
       button: true,
-      label: 'Sets: save, open or start one',
+      enabled: onPressed != null,
+      selected: active,
+      label: label,
       excludeSemantics: true,
       child: SizedBox(
-        width: kMinTouchTarget,
         height: kMinTouchTarget,
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            onTap:
-                access == null ? null : () => showSetsSheet(context, access),
-            child: const Icon(Icons.folder_special_outlined, size: 20),
+        child: FilledButton.tonal(
+          onPressed: onPressed,
+          style: FilledButton.styleFrom(
+            backgroundColor: active
+                ? accent.withValues(alpha: 0.24)
+                : SayawColors.surfaceContainerHigh,
+            foregroundColor: active ? accent : SayawColors.onSurface,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            side: active ? BorderSide(color: accent, width: 1.5) : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 18, color: accent),
+              const SizedBox(width: 8),
+              Text(text),
+            ],
           ),
         ),
       ),
