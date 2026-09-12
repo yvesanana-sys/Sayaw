@@ -122,6 +122,20 @@ void main() {
     expect(sets.renamed, [('p2', 'Beginners')]);
   });
 
+  testWidgets('every set offers to be saved to a folder', (tester) async {
+    // The picker itself is the platform's; what the test can see is that the
+    // offer is there, by name, on every set.
+    final handle = tester.ensureSemantics();
+    await pumpSheet(tester);
+
+    expect(find.bySemanticsLabel('Save Tonight to a folder or USB stick'),
+        findsOneWidget);
+    expect(find.bySemanticsLabel('Save Class to a folder or USB stick'),
+        findsOneWidget);
+    expect(find.text('Open a .sayawset file'), findsOneWidget);
+    handle.dispose();
+  });
+
   testWidgets('a new empty set', (tester) async {
     final sets = await pumpSheet(tester);
 

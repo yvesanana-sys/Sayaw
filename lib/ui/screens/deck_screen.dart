@@ -65,8 +65,9 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final performanceMode =
-        ref.watch(playbackProvider.select((s) => s.performanceMode));
+    final performanceMode = ref.watch(
+      playbackProvider.select((s) => s.performanceMode),
+    );
 
     return SayawLayout(
       builder: (context, breakpoint) {
@@ -109,8 +110,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
               ],
             ),
           ),
-          bottomNavigationBar:
-              breakpoint.isCompact ? _buildBottomNav() : null,
+          bottomNavigationBar: breakpoint.isCompact ? _buildBottomNav() : null,
         );
       },
     );
@@ -129,8 +129,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
   Widget _buildBottomNav() {
     return NavigationBar(
       selectedIndex: _pane.index,
-      onDestinationSelected: (i) =>
-          setState(() => _pane = SayawPane.values[i]),
+      onDestinationSelected: (i) => setState(() => _pane = SayawPane.values[i]),
       destinations: [
         for (final pane in SayawPane.values)
           NavigationDestination(
@@ -153,8 +152,8 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
     // to show them would be a downgrade from the compact layout.
     final secondary = switch (_pane) {
       SayawPane.library => LibraryPane(scrollController: _libraryScroll),
-      SayawPane.queue || SayawPane.decks =>
-        QueueList(scrollController: _queueScroll),
+      SayawPane.queue ||
+      SayawPane.decks => QueueList(scrollController: _queueScroll),
     };
 
     return Row(
@@ -171,8 +170,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
   Widget _buildRail() {
     return NavigationRail(
       selectedIndex: _pane.index,
-      onDestinationSelected: (i) =>
-          setState(() => _pane = SayawPane.values[i]),
+      onDestinationSelected: (i) => setState(() => _pane = SayawPane.values[i]),
       labelType: NavigationRailLabelType.all,
       destinations: [
         for (final pane in SayawPane.values)
@@ -191,17 +189,11 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
       children: [
         _buildRail(),
         const VerticalDivider(width: 1),
-        Expanded(
-          flex: 3,
-          child: LibraryPane(scrollController: _libraryScroll),
-        ),
+        Expanded(flex: 3, child: LibraryPane(scrollController: _libraryScroll)),
         const VerticalDivider(width: 1),
         Expanded(flex: 4, child: _decksColumn(compactTransport: false)),
         const VerticalDivider(width: 1),
-        Expanded(
-          flex: 3,
-          child: QueueList(scrollController: _queueScroll),
-        ),
+        Expanded(flex: 3, child: QueueList(scrollController: _queueScroll)),
       ],
     );
   }
@@ -212,44 +204,50 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
   /// bottom. Identical in every breakpoint — muscle memory is worth more than
   /// a layout that makes clever use of a wide window.
   Widget _decksColumn({required bool compactTransport}) {
-    return Column(
-      children: [
-        const PaneHeader(icon: Icons.album, title: 'Decks'),
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-            child: Column(
-              children: [
-                DeckPanel(slot: DeckSlot.a),
-                const SizedBox(height: 8),
-                const Crossfader(),
-                const SizedBox(height: 8),
-                // Between the decks because that is where it is heard: the
-                // voice rides the crossfade from A into B. Blank when the row
-                // coming up has nothing to say.
-                const AnnouncerStrip(),
-                const SizedBox(height: 8),
-                DeckPanel(slot: DeckSlot.b),
-                const SizedBox(height: 8),
-                // Fills the space that otherwise sat empty below the decks
-                // once both were loaded, and doubles as the "what do I do
-                // now" hint on a fresh set with nothing queued yet.
-                const UpNextCard(),
-                const SizedBox(height: 12),
-                // Under the decks because it changes between dances, not the
-                // day before: two minutes of each for a class, the whole song
-                // for a social, and the hand is already here.
-                const SongLengthChips(),
-              ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Column(
+          children: [
+            const PaneHeader(icon: Icons.album, title: 'Decks'),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                child: Column(
+                  children: [
+                    DeckPanel(slot: DeckSlot.a),
+                    const SizedBox(height: 8),
+                    const Crossfader(),
+                    const SizedBox(height: 8),
+                    // Between the decks because that is where it is heard: the
+                    // voice rides the crossfade from A into B. Blank when the row
+                    // coming up has nothing to say.
+                    const AnnouncerStrip(),
+                    const SizedBox(height: 8),
+                    DeckPanel(slot: DeckSlot.b),
+                    const SizedBox(height: 8),
+                    // Fills the space that otherwise sat empty below the decks
+                    // once both were loaded, and doubles as the "what do I do
+                    // now" hint on a fresh set with nothing queued yet.
+                    const UpNextCard(),
+                    const SizedBox(height: 12),
+                    // Under the decks because it changes between dances, not the
+                    // day before: two minutes of each for a class, the whole song
+                    // for a social, and the hand is already here.
+                    const SongLengthChips(),
+                  ],
+                ),
+              ),
             ),
-          ),
-        ),
-        const Divider(height: 1),
-        // Directly above the transport, where a hand already is. A tag call
-        // happens now; anything needing a pane change has missed it.
-        const SoundboardBar(),
-        TransportBar(compact: compactTransport),
-      ],
+            const Divider(height: 1),
+            // Directly above the transport, where a hand already is. A tag call
+            // happens now; anything needing a pane change has missed it. Up to
+            // half the column tall, then it scrolls: the decks above and the
+            // transport below are not for it to push off the screen.
+            SoundboardBar(maxHeight: constraints.maxHeight * 0.5),
+            TransportBar(compact: compactTransport),
+          ],
+        );
+      },
     );
   }
 }
@@ -301,10 +299,9 @@ class _PerformanceModeButton extends ConsumerWidget {
         width: kMinTouchTarget,
         height: kMinTouchTarget,
         child: InkWell(
-          onTap: () => ref.read(windowControllerProvider).setPerformanceMode(
-                !on,
-                ref.read(playbackProvider.notifier),
-              ),
+          onTap: () => ref
+              .read(windowControllerProvider)
+              .setPerformanceMode(!on, ref.read(playbackProvider.notifier)),
           child: Icon(on ? Icons.fullscreen_exit : Icons.fullscreen),
         ),
       ),

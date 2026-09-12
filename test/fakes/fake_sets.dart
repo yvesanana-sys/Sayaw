@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:sayaw/audio/crossfade_engine.dart' show AnnounceMode;
 import 'package:sayaw/audio/fade_curves.dart' show FadeCurve;
 import 'package:sayaw/data/db/database.dart';
+import 'package:sayaw/data/set_bundle.dart';
 import 'package:sayaw/ui/state/library_access.dart';
 
 /// The operator's sets, with no database under them.
@@ -57,6 +59,37 @@ class FakeSets implements SetsAccess {
 
   @override
   Future<void> deleteSet(String id) async => deleted.add(id);
+
+  /// Every export, as (id, folder, copyMedia).
+  final List<(String, String, bool)> exported = [];
+  final List<String> imported = [];
+
+  @override
+  Future<ExportReport> exportSet(
+    String id, {
+    required Directory into,
+    bool copyMedia = true,
+  }) async {
+    exported.add((id, into.path, copyMedia));
+    return ExportReport(
+      file: File('${into.path}/Tonight.sayawset'),
+      rows: 3,
+      skippedRemote: 0,
+      copied: copyMedia ? 4 : 0,
+    );
+  }
+
+  @override
+  Future<ImportReport> importSet(File file) async {
+    imported.add(file.path);
+    return const ImportReport(
+      playlistId: 'imported',
+      name: 'Saturday social',
+      rows: 3,
+      missing: ['Lost song'],
+      soundsAdded: 1,
+    );
+  }
 
   Future<void> close() => _updates.close();
 

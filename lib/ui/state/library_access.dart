@@ -3,6 +3,7 @@ import 'dart:io';
 import '../../data/db/database.dart';
 import '../../data/event_mode.dart';
 import '../../data/library/library_scanner.dart';
+import '../../data/set_bundle.dart';
 import '../../data/set_ordering.dart';
 
 /// What the library pane needs, and nothing else.
@@ -117,6 +118,19 @@ abstract class SetsAccess {
   /// Removes a set. Removing the open one opens whatever was used last, or
   /// a fresh empty one.
   Future<void> deleteSet(String id);
+
+  /// Writes a set as a `.sayawset` file [into] a folder — a stick, a cloud
+  /// folder — with its music and announcer recordings copied beside it when
+  /// [copyMedia]. See `SetBundle`.
+  Future<ExportReport> exportSet(
+    String id, {
+    required Directory into,
+    bool copyMedia = true,
+  });
+
+  /// Reads a `.sayawset` file in, music from beside it or from the library,
+  /// and opens the set it describes when nothing is playing.
+  Future<ImportReport> importSet(File file);
 }
 
 /// How the night is shaped: how many songs, and how much of each.

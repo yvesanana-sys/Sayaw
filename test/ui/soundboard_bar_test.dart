@@ -71,6 +71,35 @@ void main() {
         reason: 'grew to a second row rather than hiding cues');
   });
 
+  testWidgets('past its ceiling it scrolls rather than pushing past the window',
+      (tester) async {
+    // Forty cues at a 200dp ceiling. A bar that grew without limit took the
+    // transport under it off the screen; this one stops at the ceiling and
+    // every cue is still reachable by scrolling within it.
+    final many = [
+      for (var i = 0; i < 40; i++)
+        SoundCue(id: 'c$i', label: 'Cue $i', filePath: '/fx/$i.wav'),
+    ];
+    final soundboard = FakeSoundboard(many);
+    addTearDown(soundboard.close);
+    await pumpSayaw(
+      tester,
+      const Scaffold(body: SoundboardBar(maxHeight: 200)),
+      overrides: [soundboardProvider.overrideWithValue(soundboard)],
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.getSize(find.byType(SoundboardBar)).height,
+        lessThanOrEqualTo(200));
+
+    final last = find.bySemanticsLabel(RegExp(r'^Play Cue 39$'));
+    await tester.scrollUntilVisible(last, 100,
+        scrollable: find.byType(Scrollable));
+    await tester.tap(last);
+    await tester.pumpAndSettle();
+    expect(soundboard.fired, ['c39']);
+  });
+
   testWidgets('pressing one fires it', (tester) async {
     final soundboard = await pumpBar(tester, const [_whistle, _bell]);
 

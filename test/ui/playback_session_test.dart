@@ -685,6 +685,29 @@ void main() {
       expect(await db.playlistDao.byId(set), isNull);
     });
 
+    test('a set saved to a folder comes back as the open set', () async {
+      final stick = Directory.systemTemp.createTempSync('sayaw-stick');
+      addTearDown(() => stick.deleteSync(recursive: true));
+      await db.playlistDao.setMergeIntoNext(itemId: 'item-a', merge: true);
+
+      final exported = await session.exportSet(set, into: stick);
+      expect(exported.rows, 2);
+      expect(File('${stick.path}/Saturday Social music/a.flac').existsSync(),
+          isTrue);
+
+      final report = await session.importSet(exported.file);
+      await _settle();
+
+      expect(report.rows, 2);
+      expect(report.missing, isEmpty);
+      final state = container.read(playbackProvider);
+      expect(state.setName, 'Saturday Social');
+      expect(state.queue, hasLength(2));
+      expect(state.queue[0].mergeIntoNext, isTrue);
+      expect(session.openPlaylistId, report.playlistId,
+          reason: 'the imported copy is what is on the decks now');
+    });
+
     test('renaming the open set renames the header', () async {
       await session.renameSet(set, 'Friday');
       expect(container.read(playbackProvider).setName, 'Friday');

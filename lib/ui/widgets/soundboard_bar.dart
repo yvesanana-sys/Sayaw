@@ -12,7 +12,15 @@ import '../touch/touch_targets.dart';
 /// call is a thing that happens *now*, and anything that takes two taps to
 /// reach has already missed the moment.
 class SoundboardBar extends ConsumerWidget {
-  const SoundboardBar({super.key});
+  const SoundboardBar({super.key, this.maxHeight});
+
+  /// The most of the column this may take before it scrolls within itself.
+  ///
+  /// A bar that grew without limit ate the transport under it: with enough
+  /// cues the column overflowed the window and everything below the first
+  /// rows was clipped — which read as the bar stopping at two. Null is
+  /// unbounded, for a test that only wants to see it grow.
+  final double? maxHeight;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -36,26 +44,33 @@ class SoundboardBar extends ConsumerWidget {
     // Every cue on screen at once, in as many rows as it takes. A strip that
     // scrolled sideways hid the sixth cue and every one after it, and a
     // cut-in that has to be scrolled to has already missed its moment.
+    final wrap = Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (var index = 0; index < cues.length; index++)
+          _CueButton(
+            cue: cues[index],
+            // The shortcut the operator can actually press. Only the first
+            // nine get one — there is no tenth digit, and a two-key chord
+            // in the dark is not a cut-in.
+            shortcut: index < 9 ? '${index + 1}' : null,
+            onPressed: soundboard == null
+                ? null
+                : () => soundboard.fire(cues[index]),
+          ),
+      ],
+    );
+
     return Container(
       width: double.infinity,
       color: SayawColors.surface,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          for (var index = 0; index < cues.length; index++)
-            _CueButton(
-              cue: cues[index],
-              // The shortcut the operator can actually press. Only the first
-              // nine get one — there is no tenth digit, and a two-key chord
-              // in the dark is not a cut-in.
-              shortcut: index < 9 ? '${index + 1}' : null,
-              onPressed: soundboard == null
-                  ? null
-                  : () => soundboard.fire(cues[index]),
-            ),
-        ],
+      constraints: BoxConstraints(maxHeight: maxHeight ?? double.infinity),
+      child: SingleChildScrollView(
+        // Vertical, and only once the ceiling is reached: below it the bar
+        // simply is as tall as its rows.
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: wrap,
       ),
     );
   }

@@ -8,6 +8,7 @@ import '../../data/event_mode.dart';
 import '../../data/library/library_scanner.dart';
 import '../../data/media_resolver.dart' show NetworkMode, UnavailableOffline;
 import '../../data/playlist_repository.dart';
+import '../../data/set_bundle.dart';
 import '../../data/set_ordering.dart';
 import 'library_access.dart';
 import 'playback_ui_state.dart';
@@ -506,6 +507,29 @@ class PlaybackSession
     final nextId = next?.id ??
         await repository.db.playlistDao.createPlaylist(name: 'Tonight');
     await openPlaylist(nextId);
+  }
+
+  SetBundler get _bundler => SetBundler(
+        db: repository.db,
+        scanner: LibraryScanner(
+          db: repository.db,
+          bookmarks: repository.resolver.bookmarks,
+        ),
+      );
+
+  @override
+  Future<ExportReport> exportSet(
+    String id, {
+    required Directory into,
+    bool copyMedia = true,
+  }) =>
+      _bundler.export(id, into: into, copyMedia: copyMedia);
+
+  @override
+  Future<ImportReport> importSet(File file) async {
+    final report = await _bundler.import(file);
+    if (!isRunning) await openPlaylist(report.playlistId);
+    return report;
   }
 
   @override
