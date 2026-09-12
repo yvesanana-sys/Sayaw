@@ -28,6 +28,16 @@ abstract class LibraryAccess {
   /// Appends them all to the open set, in that order, as one write.
   Future<void> addAllToSet(List<String> trackIds);
 
+  /// How many tracks the library holds.
+  Future<int> libraryCount();
+
+  /// Empties the library, and with it the set. Returns how many went.
+  ///
+  /// A clean start before a different folder is imported. The music files
+  /// are never touched. Refused while music is playing — see
+  /// [PlaybackSession.clearLibrary].
+  Future<int> clearLibrary();
+
   Future<ScanReport> scanFolders(
     Iterable<Directory> folders, {
     void Function(int filesSeen, String path)? onProgress,
@@ -70,6 +80,43 @@ abstract class MergeAccess {
   /// Takes effect on the transition it changes, not on the next time the set
   /// is opened — see [PlaybackSession.setMergeIntoNext].
   Future<void> setMergeIntoNext({required String itemId, required bool merge});
+
+  /// Runs every row of the open set into the next as one dance — a mixer of
+  /// the whole set — or separates them all.
+  Future<void> setMergeAll(bool merge);
+}
+
+/// The sets the operator keeps, and which one is open.
+///
+/// The set being played is already a playlist — every edit lands in it as
+/// it is made. What this adds is a name on it, a copy of it, and a way to
+/// put a different one on the decks.
+abstract class SetsAccess {
+  /// Every set, most recently used first.
+  Stream<List<Playlist>> watchSets();
+
+  /// Null when no set is open.
+  String? get openPlaylistId;
+
+  /// Whether music is playing, which is what decides whether another set can
+  /// be put on the decks.
+  bool get isRunning;
+
+  /// A copy of the open set under [name] — its rows, their order, their
+  /// announcers, their joins, and the set's own shape. Returns the new id.
+  Future<String?> saveSetAs(String name);
+
+  /// An empty set under [name], opened. Returns its id.
+  Future<String> newSet(String name);
+
+  /// Puts a set on the decks. Refused while music plays.
+  Future<bool> openSet(String id);
+
+  Future<void> renameSet(String id, String name);
+
+  /// Removes a set. Removing the open one opens whatever was used last, or
+  /// a fresh empty one.
+  Future<void> deleteSet(String id);
 }
 
 /// How the night is shaped: how many songs, and how much of each.

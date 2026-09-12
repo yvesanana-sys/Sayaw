@@ -53,6 +53,70 @@ class PlaylistDao extends DatabaseAccessor<SayawDatabase> with _$PlaylistDaoMixi
   Future<Playlist?> byId(String id) =>
       (select(playlists)..where((p) => p.id.equals(id))).getSingleOrNull();
 
+  /// The set that was open most recently, or null with none at all.
+  ///
+  /// By when it was last touched, not by name: the set the app opens with
+  /// has to be the one the operator was working on, and "Saturday" sorting
+  /// ahead of "Tonight" is not that.
+  Future<Playlist?> mostRecentlyUsed() => (select(playlists)
+        ..where((p) => p.isArchived.equals(false))
+        ..orderBy([(p) => OrderingTerm.desc(p.updatedAt)])
+        ..limit(1))
+      .getSingleOrNull();
+
+  /// Marks a set as the one in use now.
+  Future<int> touch(String id) =>
+      (update(playlists)..where((p) => p.id.equals(id)))
+          .write(PlaylistsCompanion(updatedAt: Value(clock.now())));
+
+  Future<int> rename(String id, String name) =>
+      (update(playlists)..where((p) => p.id.equals(id))).write(
+        PlaylistsCompanion(name: Value(name), updatedAt: Value(clock.now())),
+      );
+
+  /// Removes a set. Its rows go with it; the tracks they pointed at do not —
+  /// they belong to the library.
+  Future<int> deletePlaylist(String id) =>
+      (delete(playlists)..where((p) => p.id.equals(id))).go();
+
+  /// A copy of a whole set under a new name: every row in its order, with
+  /// its dance, its announcer, its join to the next and every override, and
+  /// the set's own shape and transition defaults. Returns the new id.
+  ///
+  /// What "save the set" means here. The set being played is already a
+  /// playlist — every edit lands in it as it is made — so saving it is
+  /// keeping a copy that the next night's edits will not touch.
+  Future<String> duplicate(String id, {required String name}) async {
+    final source = await byId(id);
+    if (source == null) {
+      throw ArgumentError.value(id, 'id', 'no such playlist');
+    }
+    final now = clock.now();
+    final copyId = newId();
+
+    await transaction(() async {
+      await into(playlists).insert(source
+          .toCompanion(false)
+          .copyWith(
+            id: Value(copyId),
+            name: Value(name),
+            createdAt: Value(now),
+            updatedAt: Value(now),
+          ));
+
+      for (final item in await _itemsOf(id).get()) {
+        await into(playlistItems).insert(item.toCompanion(false).copyWith(
+              id: Value(newId()),
+              playlistId: Value(copyId),
+              createdAt: Value(now),
+              updatedAt: Value(now),
+            ));
+      }
+    });
+
+    return copyId;
+  }
+
   Future<String> createPlaylist({
     required String name,
     String? description,
@@ -238,6 +302,14 @@ class PlaylistDao extends DatabaseAccessor<SayawDatabase> with _$PlaylistDaoMixi
           updatedAt: Value(clock.now()),
         ),
       );
+
+  /// Joins every row of a set to the next, or separates them all.
+  Future<int> setMergeAll({required String playlistId, required bool merge}) =>
+      (update(playlistItems)..where((i) => i.playlistId.equals(playlistId)))
+          .write(PlaylistItemsCompanion(
+        mergeIntoNext: Value(merge),
+        updatedAt: Value(clock.now()),
+      ));
 
   /// Tags a row with one of the operator's soundboard cues, or clears it.
   ///

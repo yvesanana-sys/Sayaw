@@ -20,6 +20,10 @@ class CacheDao extends DatabaseAccessor<SayawDatabase> with _$CacheDaoMixin {
       (select(cacheEntries)..where((c) => c.trackId.equals(trackId)))
           .getSingleOrNull();
 
+  /// Every entry, pinned or not. For clearing the library, where the files
+  /// have to go before the rows cascade away and forget where they were.
+  Future<List<CacheEntry>> all() => select(cacheEntries).get();
+
   Future<List<CacheEntry>> byTracks(Iterable<String> trackIds) =>
       (select(cacheEntries)..where((c) => c.trackId.isIn(trackIds))).get();
 

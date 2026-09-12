@@ -516,6 +516,26 @@ void main() {
       expect(container.read(playbackProvider).deckA.isPlaying, isTrue);
     });
 
+    test('the whole set at once, and back', () async {
+      await session.play();
+      await _settle();
+
+      await session.setMergeAll(true);
+      await _settle();
+
+      final rows = await db.playlistDao.itemsOf(set);
+      expect(rows.every((r) => r.item.mergeIntoNext), isTrue);
+      expect(container.read(playbackProvider).queue.every((i) => i.mergeIntoNext),
+          isTrue);
+      expect(engine.standbyEntry?.spec.merge, isTrue,
+          reason: 'the deck already cued took it without a reload');
+      expect(container.read(playbackProvider).deckA.isPlaying, isTrue);
+
+      await session.setMergeAll(false);
+      await _settle();
+      expect(engine.standbyEntry?.spec.merge, isFalse);
+    });
+
     test('separating them puts the transition back', () async {
       await session.setMergeIntoNext(itemId: 'item-a', merge: true);
       await _settle();
@@ -572,6 +592,102 @@ void main() {
 
       expect(engine.currentEntry?.targetDuration, const Duration(minutes: 2));
       expect(engine.standbyEntry?.targetDuration, const Duration(seconds: 45));
+    });
+  });
+
+  group('clearing the library', () {
+    setUp(() async {
+      await _addTracks(db, set, music, ['a', 'b']);
+      await session.openPlaylist(set);
+    });
+
+    test('empties the library, the set on screen and the decks', () async {
+      final removed = await session.clearLibrary();
+      await _settle();
+
+      expect(removed, 2);
+      expect(await session.libraryCount(), 0);
+      final state = container.read(playbackProvider);
+      expect(state.queue, isEmpty);
+      expect(state.deckA.isLoaded, isFalse);
+      expect(state.deckB.isLoaded, isFalse);
+      expect(engine.currentEntry, isNull);
+    });
+
+    test('is refused while music plays', () async {
+      await session.play();
+      await _settle();
+
+      final removed = await session.clearLibrary();
+      await _settle();
+
+      expect(removed, 0);
+      expect(await session.libraryCount(), 2);
+      expect(container.read(playbackProvider).deckA.isPlaying, isTrue,
+          reason: 'nothing was disturbed');
+    });
+
+    test('and the music files are not touched', () async {
+      await session.clearLibrary();
+
+      expect(File('${music.path}/a.flac').existsSync(), isTrue);
+    });
+  });
+
+  group('the sets the operator keeps', () {
+    setUp(() async {
+      await _addTracks(db, set, music, ['a', 'b']);
+      await session.openPlaylist(set);
+    });
+
+    test('the open set has its name on screen', () async {
+      expect(container.read(playbackProvider).setName, 'Saturday Social');
+    });
+
+    test('saving a copy keeps the open set open', () async {
+      final copyId = await session.saveSetAs('Keepsake');
+
+      expect(copyId, isNotNull);
+      expect(session.openPlaylistId, set);
+      expect(await db.playlistDao.itemsOf(copyId!), hasLength(2));
+      final names = [for (final p in await session.watchSets().first) p.name];
+      expect(names, containsAll(['Saturday Social', 'Keepsake']));
+    });
+
+    test('opening another set puts it on the decks', () async {
+      final other = await db.playlistDao.createPlaylist(name: 'Class');
+
+      expect(await session.openSet(other), isTrue);
+
+      final state = container.read(playbackProvider);
+      expect(state.setName, 'Class');
+      expect(state.queue, isEmpty);
+    });
+
+    test('but not while music plays', () async {
+      final other = await db.playlistDao.createPlaylist(name: 'Class');
+      await session.play();
+      await _settle();
+
+      expect(await session.openSet(other), isFalse);
+      expect(container.read(playbackProvider).setName, 'Saturday Social');
+      expect(container.read(playbackProvider).deckA.isPlaying, isTrue);
+    });
+
+    test('removing the open set opens the one used last', () async {
+      final other = await db.playlistDao.createPlaylist(name: 'Class');
+      await session.openSet(other);
+      await session.openSet(set);
+
+      await session.deleteSet(set);
+
+      expect(container.read(playbackProvider).setName, 'Class');
+      expect(await db.playlistDao.byId(set), isNull);
+    });
+
+    test('renaming the open set renames the header', () async {
+      await session.renameSet(set, 'Friday');
+      expect(container.read(playbackProvider).setName, 'Friday');
     });
   });
 

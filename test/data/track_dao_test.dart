@@ -1,5 +1,5 @@
 import 'package:clock/clock.dart';
-import 'package:drift/drift.dart' hide isNull;
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sayaw/data/db/database.dart';
 import 'package:sayaw/data/db/track_dao.dart';
@@ -182,6 +182,27 @@ void main() {
     test('a query with nothing to search on is nothing', () async {
       // What the list on screen shows for it, and this answers the same.
       expect(await db.trackDao.idsMatching('!!!'), isEmpty);
+    });
+  });
+
+  group('emptying the library', () {
+    test('every row that pointed at a track goes with it', () async {
+      final db = openTestDatabase();
+      await db.trackDao.upsertAll([_local('a'), _local('b')]);
+      final set = await db.playlistDao.createPlaylist(name: 'Social');
+      await db.playlistDao.appendTracks(playlistId: set, trackIds: ['a', 'b']);
+      expect(await db.trackDao.count(), 2);
+
+      final removed = await db.trackDao.deleteAll();
+
+      expect(removed, 2);
+      expect(await db.trackDao.count(), 0);
+      expect(await db.playlistDao.itemsOf(set), isEmpty,
+          reason: 'the set empties with the library');
+      expect(await db.playlistDao.byId(set), isNotNull,
+          reason: 'the set itself is kept, empty');
+      // And the search index went with the rows.
+      expect(await db.trackDao.search('Track'), isEmpty);
     });
   });
 

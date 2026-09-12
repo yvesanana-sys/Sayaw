@@ -28,7 +28,8 @@ class PlaybackSession
         EventModeAccess,
         SetShapeAccess,
         CueTagAccess,
-        MergeAccess {
+        MergeAccess,
+        SetsAccess {
   PlaybackSession({
     required this.engine,
     required this.repository,
@@ -69,6 +70,9 @@ class PlaybackSession
   /// Null plays each to its end.
   Duration? _songLength;
 
+  /// What the open set is called, for the queue's header.
+  String _setName = '';
+
   /// Which rows the engine actually accepted, in engine order. The queue the
   /// operator sees can contain rows the engine skipped, so the two index
   /// spaces are not the same and this is what maps between them.
@@ -90,6 +94,9 @@ class PlaybackSession
     final playlist = await repository.db.playlistDao.byId(playlistId);
     _snowballStages = playlist?.snowballStages ?? 0;
     _songLength = playlist?.targetDurationMs;
+    _setName = playlist?.name ?? '';
+    // The set in use now, so the next launch opens this one.
+    await repository.db.playlistDao.touch(playlistId);
 
     final reasons = {
       for (final item in resolved.unavailable) item.itemId: _reasonFor(item),
@@ -443,6 +450,93 @@ class PlaybackSession
     _publish();
   }
 
+  // -------------------------------------------------------------------------
+  // Sets
+  // -------------------------------------------------------------------------
+
+  @override
+  Stream<List<Playlist>> watchSets() =>
+      repository.db.playlistDao.watchAll().map((sets) => [...sets]
+        ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt)));
+
+  @override
+  Future<String?> saveSetAs(String name) async {
+    final playlistId = _playlistId;
+    if (playlistId == null) return null;
+    final id = await repository.db.playlistDao.duplicate(playlistId, name: name);
+    // The copy is the keepsake; the open set stays open, and stays in use.
+    await repository.db.playlistDao.touch(playlistId);
+    return id;
+  }
+
+  @override
+  Future<String> newSet(String name) async {
+    final id = await repository.db.playlistDao.createPlaylist(name: name);
+    if (!isRunning) await openPlaylist(id);
+    return id;
+  }
+
+  /// Refused while music plays: opening a set reloads the decks, and that is
+  /// not something to do underneath a floor.
+  @override
+  Future<bool> openSet(String id) async {
+    if (isRunning) return false;
+    await openPlaylist(id);
+    return true;
+  }
+
+  @override
+  Future<void> renameSet(String id, String name) async {
+    await repository.db.playlistDao.rename(id, name);
+    if (id == _playlistId) {
+      _setName = name;
+      _publish();
+    }
+  }
+
+  @override
+  Future<void> deleteSet(String id) async {
+    if (id == _playlistId && isRunning) return;
+    await repository.db.playlistDao.deletePlaylist(id);
+    if (id != _playlistId) return;
+
+    // The open set is gone. Whatever was used last takes its place, or a
+    // fresh one, so there is always somewhere to drop a track.
+    final next = await repository.db.playlistDao.mostRecentlyUsed();
+    final nextId = next?.id ??
+        await repository.db.playlistDao.createPlaylist(name: 'Tonight');
+    await openPlaylist(nextId);
+  }
+
+  @override
+  Future<int> libraryCount() => repository.db.trackDao.count();
+
+  /// Empties the library, and with it the set.
+  ///
+  /// Refused while music is playing: every row of the set cascades away with
+  /// its track, and the only honest thing to do with a set that has just
+  /// vanished is reopen it — which tears the decks down, and that is not
+  /// something to do underneath a floor. The pane keeps the button off while
+  /// anything plays, and this is the same rule from the other side.
+  ///
+  /// Downloaded copies of remote tracks are removed from disk first; the
+  /// cascade would otherwise forget the rows and leave the bytes.
+  @override
+  Future<int> clearLibrary() async {
+    if (isRunning) return 0;
+
+    if (downloader case final downloader?) {
+      for (final entry in await repository.db.cacheDao.all()) {
+        await downloader.remove(entry.trackId);
+      }
+    }
+
+    final removed = await repository.db.trackDao.deleteAll();
+
+    if (_playlistId case final playlistId?) await openPlaylist(playlistId);
+    return removed;
+  }
+
   /// Points one row of the open set at one of the operator's soundboard cues,
   /// or clears the tag.
   ///
@@ -537,6 +631,46 @@ class PlaybackSession
             playlist,
             next.item,
             taggedCue: next.soundCue != null,
+            mergedFromPrevious: merge,
+          ),
+        );
+      }
+    }
+
+    _publish();
+  }
+
+  /// The whole set as one mixer, or none of it.
+  ///
+  /// One write, one redraw, and every row's transition re-said to the
+  /// engine — the same as [setMergeIntoNext] on every row at once, and for
+  /// the same reason it reaches the engine: the operator pressed it for the
+  /// set that is playing.
+  @override
+  Future<void> setMergeAll(bool merge) async {
+    final playlistId = _playlistId;
+    if (playlistId == null) return;
+
+    await repository.db.playlistDao
+        .setMergeAll(playlistId: playlistId, merge: merge);
+
+    controller.setQueue([
+      for (final item in controller.queueSnapshot) item.withMergeIntoNext(merge),
+    ]);
+
+    final playlist = await repository.db.playlistDao.byId(playlistId);
+    if (playlist != null) {
+      final rows = await repository.db.playlistDao.itemsOf(playlistId);
+      for (var i = 1; i < rows.length; i++) {
+        final row = rows[i];
+        if (row.track == null) continue;
+        engine.retag(
+          row.item.id,
+          announcementClipPath: PlaylistRepository.announcementClipFor(row),
+          spec: PlaylistRepository.specFor(
+            playlist,
+            row.item,
+            taggedCue: row.soundCue != null,
             mergedFromPrevious: merge,
           ),
         );
@@ -681,6 +815,7 @@ class PlaybackSession
       announcement: _nextAnnouncement(next),
       nextMerges: next?.spec.merge ?? false,
       songLength: _songLength,
+      setName: _setName,
       active: DeckUiState(
         title: entry?.title ?? '',
         artist: entry?.artist ?? '',

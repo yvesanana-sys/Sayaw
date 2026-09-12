@@ -1,5 +1,5 @@
 import 'package:clock/clock.dart';
-import 'package:drift/drift.dart' hide isNull;
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sayaw/data/db/database.dart';
 
@@ -321,6 +321,77 @@ void main() {
       await db.playlistDao.setMergeIntoNext(itemId: 'item-a', merge: false);
       rows = await db.playlistDao.itemsOf(set);
       expect(rows[0].item.mergeIntoNext, isFalse);
+    });
+  });
+
+  group('keeping a copy of a set', () {
+    test('every row, in order, with everything on it', () async {
+      await db.into(db.danceTypes).insert(DanceTypesCompanion.insert(
+          id: 'waltz', name: 'Waltz', slug: 'waltz'));
+      await _appendTracks(db, set, ['a', 'b', 'c'], danceTypeId: 'waltz');
+      final cue = await db.soundCueDao
+          .add(label: 'Take your partners', filePath: '/clips/p.wav');
+      await db.playlistDao.tagSoundCue(itemId: 'item-b', cueId: cue);
+      await db.playlistDao.setMergeIntoNext(itemId: 'item-a', merge: true);
+      await (db.update(db.playlistItems)..where((i) => i.id.equals('item-c')))
+          .write(const PlaylistItemsCompanion(
+              targetDurationMs: Value(Duration(seconds: 90))));
+      await db.playlistDao.move(playlistId: set, oldIndex: 2, newIndex: 0);
+      await db.playlistDao.setShape(set,
+          songLimit: 5,
+          targetDuration: const Duration(minutes: 2),
+          rotationGap: const Duration(seconds: 10));
+
+      final copyId =
+          await db.playlistDao.duplicate(set, name: 'Saturday social');
+
+      final copy = (await db.playlistDao.byId(copyId))!;
+      expect(copy.name, 'Saturday social');
+      expect(copy.songLimit, 5, reason: 'the shape comes too');
+      expect(copy.targetDurationMs, const Duration(minutes: 2));
+      expect(copy.rotationGapMs, const Duration(seconds: 10));
+
+      final rows = await db.playlistDao.itemsOf(copyId);
+      expect([for (final r in rows) r.track!.title],
+          ['Track c', 'Track a', 'Track b'],
+          reason: 'the arrangement, as dragged');
+      expect(rows[0].item.targetDurationMs, const Duration(seconds: 90));
+      expect(rows[1].item.mergeIntoNext, isTrue);
+      expect(rows[2].soundCue!.label, 'Take your partners');
+      expect(rows.every((r) => r.danceType!.name == 'Waltz'), isTrue);
+      // New rows, not the same rows under a second parent.
+      expect(rows.map((r) => r.item.id), isNot(contains('item-a')));
+    });
+
+    test('the copy and the original go their own ways', () async {
+      await _appendTracks(db, set, ['a', 'b']);
+      final copyId = await db.playlistDao.duplicate(set, name: 'Copy');
+
+      await db.playlistDao.removeItem('item-a');
+
+      expect(await _titles(db, set), ['Track b']);
+      expect(await db.playlistDao.itemsOf(copyId), hasLength(2));
+    });
+
+    test('removing a set keeps the music', () async {
+      await _appendTracks(db, set, ['a']);
+      await db.playlistDao.deletePlaylist(set);
+
+      expect(await db.playlistDao.byId(set), isNull);
+      expect(await db.trackDao.byId('a'), isNotNull);
+    });
+
+    test('the set used last is the one the app opens with', () async {
+      final earlier = await db.playlistDao.createPlaylist(name: 'Zebra');
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+      await db.playlistDao.touch(set);
+
+      expect((await db.playlistDao.mostRecentlyUsed())!.id, set);
+
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+      await db.playlistDao.touch(earlier);
+      expect((await db.playlistDao.mostRecentlyUsed())!.id, earlier,
+          reason: 'by use, not by name');
     });
   });
 

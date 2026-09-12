@@ -137,6 +137,65 @@ class _LibraryPaneState extends ConsumerState<LibraryPane> {
     }
   }
 
+  bool _clearing = false;
+
+  /// Empties the library for a clean start before a different folder.
+  ///
+  /// Asks first, with the number and what else goes: every row of the set
+  /// points at a track, so the set empties with it. The files do not — Sayaw
+  /// only ever reads them — and the question says so, because "clear" next
+  /// to a folder of music is a word that has to be explained before it is
+  /// pressed.
+  Future<void> _clearAll() async {
+    final library = ref.read(libraryAccessProvider);
+    if (library == null) return;
+
+    final count = await library.libraryCount();
+    if (!mounted || count == 0) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: SayawColors.surfaceContainer,
+        title: const Text('Clear the library'),
+        content: Text(
+          'Remove all $count tracks from the library? The set empties with '
+          'them. Your music files are not touched — add a folder again to '
+          'bring them back.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: SayawColors.error,
+              foregroundColor: SayawColors.onError,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text('Remove $count'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    setState(() => _clearing = true);
+    try {
+      final removed = await library.clearLibrary();
+      messenger?.showSnackBar(SnackBar(
+        content: Text(removed == 0
+            ? 'Nothing was removed — stop the music first.'
+            : 'Library cleared: $removed tracks removed'),
+      ));
+      await _runSearch();
+    } finally {
+      if (mounted) setState(() => _clearing = false);
+    }
+  }
+
   Future<void> _addFolder() async {
     final library = ref.read(libraryAccessProvider);
     if (library == null) return;
@@ -165,6 +224,10 @@ class _LibraryPaneState extends ConsumerState<LibraryPane> {
   Widget build(BuildContext context) {
     final library = ref.watch(libraryAccessProvider);
     final canAddFolder = library != null && _isDesktop;
+    // Clearing the library empties the set, and a set cannot be emptied
+    // underneath a floor. Off, with the reason in its label, rather than
+    // offered and then refused.
+    final playing = ref.watch(anyDeckPlayingProvider);
 
     return Column(
       children: [
@@ -199,6 +262,14 @@ class _LibraryPaneState extends ConsumerState<LibraryPane> {
                   busy: _addingAll,
                   query: _shownQuery,
                   onPressed: _addingAll ? null : _addAll,
+                ),
+              ],
+              if (library != null && _results.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                _ClearAllButton(
+                  busy: _clearing,
+                  playing: playing,
+                  onPressed: _clearing || playing ? null : _clearAll,
                 ),
               ],
               if (canAddFolder) ...[
@@ -407,6 +478,62 @@ class _AddAllButton extends StatelessWidget {
                     )
                   : const Icon(Icons.playlist_add_check,
                       color: SayawColors.primary),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Empties the library.
+///
+/// In the error colour, because it is the one control on this pane that takes
+/// something away. Off while music plays, and its label says why.
+class _ClearAllButton extends StatelessWidget {
+  const _ClearAllButton({
+    required this.busy,
+    required this.playing,
+    required this.onPressed,
+  });
+
+  final bool busy;
+  final bool playing;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onPressed != null;
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: busy
+          ? 'Clearing the library'
+          : playing
+              ? 'Clear the library — stop the music first'
+              : 'Clear the library',
+      excludeSemantics: true,
+      child: SizedBox(
+        width: kMinTouchTarget,
+        height: kMinTouchTarget,
+        child: Material(
+          color: SayawColors.error.withValues(alpha: enabled ? 0.16 : 0.06),
+          shape: const CircleBorder(),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onPressed,
+            child: Center(
+              child: busy
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(
+                      Icons.delete_sweep_outlined,
+                      color: SayawColors.error
+                          .withValues(alpha: enabled ? 1.0 : 0.38),
+                    ),
             ),
           ),
         ),

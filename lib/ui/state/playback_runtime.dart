@@ -223,11 +223,10 @@ class PlaybackRuntime {
   /// The set the app should open on launch: the most recent one, or a new
   /// empty one so there is somewhere to drop tracks on a fresh install.
   Future<String> openMostRecentPlaylist() async {
-    final playlists = await session.repository.db.playlistDao.watchAll().first;
+    final recent = await session.repository.db.playlistDao.mostRecentlyUsed();
 
-    final id = playlists.isNotEmpty
-        ? playlists.first.id
-        : await db.playlistDao.createPlaylist(name: 'Tonight');
+    final id = recent?.id ??
+        await db.playlistDao.createPlaylist(name: 'Tonight');
 
     await session.openPlaylist(id);
     return id;

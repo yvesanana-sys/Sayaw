@@ -71,6 +71,41 @@ void main() {
     handle.dispose();
   });
 
+  group('the mixer button across the top', () {
+    testWidgets('joins every row in one press', (tester) async {
+      final access = await pumpQueue(tester);
+
+      await tester.tap(find.text('Mixer'));
+      await tester.pumpAndSettle();
+
+      expect(access.mergedAll, [true]);
+    });
+
+    testWidgets('reads as on when every row leads into the next, and turns off',
+        (tester) async {
+      final handle = tester.ensureSemantics();
+      final all = testQueue();
+      final joined = [
+        for (var i = 0; i < all.length; i++)
+          i < all.length - 1 ? all[i].withMergeIntoNext(true) : all[i],
+      ];
+      final access = await pumpQueue(tester, queue: joined);
+
+      expect(find.text('Mixer on'), findsOneWidget);
+      await tester.tap(find.text('Mixer on'));
+      await tester.pumpAndSettle();
+
+      expect(access.mergedAll, [false]);
+      handle.dispose();
+    });
+
+    testWidgets('one row is not a mixer', (tester) async {
+      await pumpQueue(tester, queue: [testQueue().first]);
+
+      expect(find.byType(QueueMixerButton), findsNothing);
+    });
+  });
+
   testWidgets('the strip says merge where it would say nothing',
       (tester) async {
     final container = await pumpSayaw(

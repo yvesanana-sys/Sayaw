@@ -267,6 +267,7 @@ class PlaybackUiState {
     this.announcement,
     this.nextMerges = false,
     this.songLength,
+    this.setName = '',
   });
 
   final DeckUiState deckA;
@@ -303,6 +304,9 @@ class PlaybackUiState {
   /// each to its end.
   final Duration? songLength;
 
+  /// What the open set is called. Empty with none open.
+  final String setName;
+
   DeckUiState deck(DeckSlot slot) =>
       slot == DeckSlot.a ? deckA : deckB;
 
@@ -322,6 +326,7 @@ class PlaybackUiState {
     List<String>? offlineServices,
     bool? nextMerges,
     Duration? songLength,
+    String? setName,
   }) {
     return PlaybackUiState(
       deckA: deckA ?? this.deckA,
@@ -337,6 +342,7 @@ class PlaybackUiState {
       announcement: announcement,
       nextMerges: nextMerges ?? this.nextMerges,
       songLength: songLength ?? this.songLength,
+      setName: setName ?? this.setName,
     );
   }
 
@@ -358,6 +364,7 @@ class PlaybackUiState {
         announcement: announcement,
         nextMerges: nextMerges,
         songLength: songLength,
+        setName: setName,
       );
 
   /// Its own method for the reason [withSnowball] is: null means "each song
@@ -376,6 +383,7 @@ class PlaybackUiState {
         announcement: announcement,
         nextMerges: nextMerges,
         songLength: songLength,
+        setName: setName,
       );
 
   /// Its own method for the same reason [withSnowball] is: null means "the
@@ -396,6 +404,7 @@ class PlaybackUiState {
         announcement: announcement,
         nextMerges: nextMerges,
         songLength: songLength,
+        setName: setName,
       );
 }
 
@@ -442,6 +451,7 @@ class PlaybackController extends Notifier<PlaybackUiState> {
     NextAnnouncementUi? announcement,
     bool nextMerges = false,
     Duration? songLength,
+    String? setName,
   }) {
     state = state.copyWith(
       deckA: activeSlot == DeckSlot.a ? active : standby,
@@ -452,6 +462,7 @@ class PlaybackController extends Notifier<PlaybackUiState> {
       // them rather than the other way round.
       crossfader: crossfader,
       nextMerges: nextMerges,
+      setName: setName,
     )
         .withSnowball(snowball)
         .withAnnouncement(announcement)
@@ -708,6 +719,16 @@ final cueTagProvider = Provider<CueTagAccess?>(
 /// Joining rows of the open set into one dance.
 final mergeProvider = Provider<MergeAccess?>(
   (ref) => ref.watch(playbackSessionProvider),
+);
+
+/// The sets the operator keeps.
+final setsProvider = Provider<SetsAccess?>(
+  (ref) => ref.watch(playbackSessionProvider),
+);
+
+/// What the open set is called, for the queue's header.
+final setNameProvider = Provider<String>(
+  (ref) => ref.watch(playbackProvider.select((s) => s.setName)),
 );
 
 /// How much of each song plays, for the chips under the decks.
