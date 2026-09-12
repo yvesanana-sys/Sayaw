@@ -390,6 +390,69 @@ class CrossfadeEngine {
     if (_standbyEntry == null) await _preloadNext();
   }
 
+  /// The rows the engine holds, in the order it will play them.
+  List<QueueEntry> get queue => _queue;
+
+  /// Replaces the queue — the same rows in another order, one fewer, one
+  /// more — without touching the deck that is audible.
+  ///
+  /// A drag, a removal, an undo. The audible row is found again by id and
+  /// the set carries on from wherever it landed. The deck cued behind it is
+  /// kept if it is still the row that comes next, and re-cued from the new
+  /// order if it is not — that is what makes a drag to the top play next,
+  /// which until now it did not: the order on screen changed and the engine
+  /// played on in the order it had loaded.
+  ///
+  /// Mid-transition the decks are left alone and only the bookkeeping moves;
+  /// the swap that is under way completes on the row it started with, and
+  /// the next cue-up reads the new order. The audible row must be in
+  /// [entries]: removing the song on the floor is not a queue edit.
+  Future<void> replaceQueue(List<QueueEntry> entries) async {
+    _lookahead = null;
+    _lookaheadIndex = -1;
+
+    final activeId = _activeEntry?.itemId;
+    if (activeId == null) {
+      // Nothing on a deck: as a fresh load, minus the teardown.
+      _queue = List.unmodifiable(entries);
+      _index = -1;
+      _standbyEntry = null;
+      _standbyIndex = -1;
+      if (_queue.isNotEmpty) await _advanceToNext(immediate: true);
+      return;
+    }
+
+    final newIndex = entries.indexWhere((e) => e.itemId == activeId);
+    if (newIndex < 0) return;
+    _queue = List.unmodifiable(entries);
+    _index = newIndex;
+
+    final standbyId = _standbyEntry?.itemId;
+    final nextId =
+        newIndex + 1 < _queue.length ? _queue[newIndex + 1].itemId : null;
+
+    if (standbyId != null && standbyId == nextId) {
+      // Still the row that comes next; only its number changed — and its
+      // transition may have, if its neighbour did. Take the fresh copy.
+      _standbyIndex = newIndex + 1;
+      _standbyEntry = _queue[newIndex + 1];
+      return;
+    }
+
+    if (_transitionInFlight) {
+      // The deck coming in is mid-fade on a row that is no longer next, or
+      // is gone. Let it land; renumber it if it is still here.
+      _standbyIndex =
+          standbyId == null ? -1 : _queue.indexWhere((e) => e.itemId == standbyId);
+      return;
+    }
+
+    _standbyEntry = null;
+    _standbyIndex = -1;
+    await _standby.stop();
+    await _preloadNext();
+  }
+
   /// Changes what one row announces, without disturbing what is loaded.
   ///
   /// The entries the engine holds were resolved when the set was opened, so

@@ -1,7 +1,12 @@
+import 'dart:io';
+
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
 
 import '../../data/db/database.dart';
+import '../../data/set_bundle.dart';
 import '../state/library_access.dart';
 import '../state/playback_ui_state.dart';
 import '../theme/sayaw_theme.dart';
@@ -61,6 +66,28 @@ class _SetsSheetState extends ConsumerState<SetsSheet> {
     messenger?.showSnackBar(SnackBar(content: Text('Saved a copy as "$name"')));
   }
 
+  /// A copy, now, under a name nobody has to type: the set's own name and
+  /// the moment. The end of a night that went well is one tap.
+  Future<void> _quickSave() async {
+    final openName = ref.read(setNameProvider);
+    final now = DateTime.now();
+    final stamp = '${now.year}-${_two(now.month)}-${_two(now.day)} '
+        '${_two(now.hour)}:${_two(now.minute)}';
+    final name = '${openName.isEmpty ? 'Set' : openName} $stamp';
+
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final id = await widget.access.saveSetAs(name);
+    if (!mounted) return;
+    if (id == null) {
+      setState(() => _error = 'No set is open to save.');
+      return;
+    }
+    setState(() => _error = null);
+    messenger?.showSnackBar(SnackBar(content: Text('Saved a copy as "$name"')));
+  }
+
+  static String _two(int n) => n.toString().padLeft(2, '0');
+
   Future<void> _newSet() async {
     final name = _name.text.trim().isEmpty ? 'New set' : _name.text.trim();
     final navigator = Navigator.of(context);
@@ -83,6 +110,87 @@ class _SetsSheetState extends ConsumerState<SetsSheet> {
       return;
     }
     navigator.pop();
+  }
+
+  /// Writes a set to a folder the operator picks — a stick, a cloud folder —
+  /// and asks whether the music goes with it. It usually should: the file
+  /// alone opens only where the same music already is.
+  Future<void> _export(Playlist set) async {
+    final folder = await getDirectoryPath();
+    if (folder == null || !mounted) return;
+
+    final copy = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: SayawColors.surfaceContainer,
+        title: Text('Save "${set.name}" to ${p.basename(folder)}'),
+        content: const Text(
+          'Copy the music and announcer recordings beside it? Then the set '
+          'opens on any machine the folder is plugged into. Without them it '
+          'opens only where that music is already in the library.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Just the set file'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Copy everything'),
+          ),
+        ],
+      ),
+    );
+    if (copy == null || !mounted) return;
+
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    setState(() => _error = null);
+    try {
+      final report = await widget.access
+          .exportSet(set.id, into: Directory(folder), copyMedia: copy);
+      messenger?.showSnackBar(SnackBar(
+        content: Text(
+          'Saved ${p.basename(report.file.path)} — ${report.rows} songs'
+          '${copy ? ', ${report.copied} files copied' : ''}'
+          '${report.skippedRemote == 0 ? '' : '; ${report.skippedRemote} on a server were left out'}',
+        ),
+      ));
+    } on Object catch (e) {
+      if (mounted) setState(() => _error = 'Could not save: $e');
+    }
+  }
+
+  /// Reads a `.sayawset` file the operator picks, and opens the set.
+  Future<void> _import() async {
+    final file = await openFile(acceptedTypeGroups: const [
+      XTypeGroup(label: 'Sayaw set', extensions: [SetBundle.extension]),
+    ]);
+    if (file == null || !mounted) return;
+
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final navigator = Navigator.of(context);
+    setState(() => _error = null);
+    try {
+      final report = await widget.access.importSet(File(file.path));
+      if (!mounted) return;
+      messenger?.showSnackBar(SnackBar(
+        content: Text(
+          'Opened "${report.name}" — ${report.rows} songs'
+          '${report.soundsAdded == 0 ? '' : ', ${report.soundsAdded} announcers added'}'
+          '${report.missing.isEmpty ? '' : '; ${report.missing.length} not found: ${report.missing.take(3).join(', ')}${report.missing.length > 3 ? '…' : ''}'}',
+        ),
+      ));
+      if (widget.access.isRunning) {
+        setState(() => _error =
+            '"${report.name}" is saved. Stop the music to put it on the decks.');
+        return;
+      }
+      navigator.pop();
+    } on FormatException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } on Object catch (e) {
+      if (mounted) setState(() => _error = 'Could not open that file: $e');
+    }
   }
 
   Future<void> _rename(Playlist set) async {
@@ -134,6 +242,10 @@ class _SetsSheetState extends ConsumerState<SetsSheet> {
     await widget.access.deleteSet(set.id);
   }
 
+  /// File and folder pickers walk `dart:io` paths, which is the desktop.
+  static bool get _canUseFiles =>
+      Platform.isWindows || Platform.isMacOS || Platform.isLinux;
+
   @override
   Widget build(BuildContext context) {
     final sets = ref.watch(_setsListProvider).value ?? const <Playlist>[];
@@ -149,10 +261,22 @@ class _SetsSheetState extends ConsumerState<SetsSheet> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            SizedBox(
+              width: double.infinity,
+              height: kMinTouchTarget,
+              child: FilledButton.icon(
+                onPressed: _quickSave,
+                icon: const Icon(Icons.bolt, size: 18),
+                label: Text(openName.isEmpty
+                    ? 'Quick save'
+                    : 'Quick save "$openName" now'),
+              ),
+            ),
+            const SizedBox(height: 12),
             Text(
               openName.isEmpty
-                  ? 'Save the open set as'
-                  : 'Save a copy of "$openName" as',
+                  ? 'Or save the open set as'
+                  : 'Or save a copy of "$openName" as',
               style: const TextStyle(
                 fontSize: 12,
                 color: SayawColors.onSurfaceVariant,
@@ -184,13 +308,28 @@ class _SetsSheetState extends ConsumerState<SetsSheet> {
               ],
             ),
             const SizedBox(height: 8),
-            SizedBox(
-              height: kMinTouchTarget,
-              child: OutlinedButton.icon(
-                onPressed: _newSet,
-                icon: const Icon(Icons.playlist_add, size: 18),
-                label: const Text('New empty set'),
-              ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                SizedBox(
+                  height: kMinTouchTarget,
+                  child: OutlinedButton.icon(
+                    onPressed: _newSet,
+                    icon: const Icon(Icons.playlist_add, size: 18),
+                    label: const Text('New empty set'),
+                  ),
+                ),
+                if (_canUseFiles)
+                  SizedBox(
+                    height: kMinTouchTarget,
+                    child: OutlinedButton.icon(
+                      onPressed: _import,
+                      icon: const Icon(Icons.file_open_outlined, size: 18),
+                      label: const Text('Open a .sayawset file'),
+                    ),
+                  ),
+              ],
             ),
             if (_error case final error?) ...[
               const SizedBox(height: 8),
@@ -217,6 +356,7 @@ class _SetsSheetState extends ConsumerState<SetsSheet> {
                   isOpen: sets[index].id == openId,
                   onOpen: () => _open(sets[index]),
                   onRename: () => _rename(sets[index]),
+                  onExport: _canUseFiles ? () => _export(sets[index]) : null,
                   onDelete: () => _delete(sets[index]),
                 ),
               ),
@@ -245,6 +385,7 @@ class _SetRow extends StatelessWidget {
     required this.isOpen,
     required this.onOpen,
     required this.onRename,
+    required this.onExport,
     required this.onDelete,
   });
 
@@ -252,6 +393,9 @@ class _SetRow extends StatelessWidget {
   final bool isOpen;
   final VoidCallback onOpen;
   final VoidCallback onRename;
+
+  /// Null where there is no folder picker to save into.
+  final VoidCallback? onExport;
   final VoidCallback onDelete;
 
   @override
@@ -312,6 +456,12 @@ class _SetRow extends StatelessWidget {
           label: 'Rename ${set.name}',
           onPressed: onRename,
         ),
+        if (onExport case final export?)
+          _IconAction(
+            icon: Icons.drive_file_move_outlined,
+            label: 'Save ${set.name} to a folder or USB stick',
+            onPressed: export,
+          ),
         _IconAction(
           icon: Icons.close,
           label: 'Remove ${set.name}',

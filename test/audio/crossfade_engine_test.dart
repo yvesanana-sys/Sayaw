@@ -1001,6 +1001,117 @@ void main() {
     });
   });
 
+  group('replacing the queue under a running set', () {
+    test('a row dragged to the top plays next', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(minutes: 5));
+        final one = _entry('one'), two = _entry('two'), three = _entry('three');
+        rig.start([one, two, three], async);
+        expect(rig.engine.standbyEntry?.itemId, 'two');
+
+        rig.engine.replaceQueue([one, three, two]);
+        async.flushMicrotasks();
+
+        expect(rig.engine.currentEntry?.itemId, 'one',
+            reason: 'the audible row is untouched');
+        expect(rig.a.isPlaying, isTrue);
+        expect(rig.engine.standbyEntry?.itemId, 'three',
+            reason: 'the deck behind it was re-cued from the new order');
+      });
+    });
+
+    test('the same next row is kept cued, not reloaded', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(minutes: 5));
+        final one = _entry('one'), two = _entry('two'), three = _entry('three');
+        rig.start([one, two, three], async);
+        final loadsBefore = rig.b.calls.where((c) => c == 'load').length;
+
+        rig.engine.replaceQueue([one, two]);
+        async.flushMicrotasks();
+
+        expect(rig.engine.standbyEntry?.itemId, 'two');
+        expect(rig.b.calls.where((c) => c == 'load').length, loadsBefore);
+      });
+    });
+
+    test('removing the row that was cued re-cues the one after it', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(minutes: 5));
+        final one = _entry('one'), two = _entry('two'), three = _entry('three');
+        rig.start([one, two, three], async);
+
+        rig.engine.replaceQueue([one, three]);
+        async.flushMicrotasks();
+
+        expect(rig.engine.standbyEntry?.itemId, 'three');
+        expect(rig.engine.currentIndex, 0);
+      });
+    });
+
+    test('a row put back before the cued one becomes the cued one', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(minutes: 5));
+        final one = _entry('one'), two = _entry('two'), three = _entry('three');
+        rig.start([one, three], async);
+        expect(rig.engine.standbyEntry?.itemId, 'three');
+
+        rig.engine.replaceQueue([one, two, three]);
+        async.flushMicrotasks();
+
+        expect(rig.engine.standbyEntry?.itemId, 'two');
+      });
+    });
+
+    test('mid-crossfade the decks are left alone', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(seconds: 10));
+        final one = _entry('one'), two = _entry('two'), three = _entry('three');
+        rig.start([one, two, three], async);
+        async.elapse(const Duration(milliseconds: 7000));
+        async.flushMicrotasks();
+        expect(rig.engine.phase, EnginePhase.crossfading);
+
+        rig.engine.replaceQueue([one, three, two]);
+        async.flushMicrotasks();
+        async.elapse(const Duration(seconds: 5));
+        async.flushMicrotasks();
+
+        // The fade that was under way landed on the row it started with.
+        expect(rig.engine.currentEntry?.itemId, 'two');
+        // And the next cue-up read the new order: nothing after two now.
+        expect(rig.engine.standbyEntry, isNull);
+      });
+    });
+
+    test('the audible row and its number move together', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(minutes: 5));
+        final one = _entry('one'), two = _entry('two'), three = _entry('three');
+        rig.start([one, two, three], async);
+
+        rig.engine.replaceQueue([two, three, one]);
+        async.flushMicrotasks();
+
+        expect(rig.engine.currentEntry?.itemId, 'one');
+        expect(rig.engine.currentIndex, 2);
+        expect(rig.engine.standbyEntry, isNull, reason: 'now last');
+      });
+    });
+
+    test('with nothing loaded it loads the first row', () {
+      fakeAsync((async) {
+        final rig = _Rig(track: const Duration(minutes: 5));
+        rig.engine.replaceQueue([_entry('one'), _entry('two')]);
+        async.flushMicrotasks();
+
+        expect(rig.engine.currentEntry?.itemId, 'one');
+        expect(rig.engine.standbyEntry?.itemId, 'two');
+        expect(rig.engine.phase, EnginePhase.idle);
+      });
+    });
+  });
+
   group('gain composition', () {
     test('per-track trim scales the deck volume', () {
       fakeAsync((async) {

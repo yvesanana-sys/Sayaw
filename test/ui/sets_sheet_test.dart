@@ -48,6 +48,19 @@ void main() {
     expect(find.text('Saved a copy as "Friday class"'), findsOneWidget);
   });
 
+  testWidgets('quick save is one tap and no typing', (tester) async {
+    final sets = await pumpSheet(tester);
+
+    await tester.tap(find.textContaining('Quick save'));
+    await tester.pumpAndSettle();
+
+    expect(sets.savedAs, hasLength(1));
+    // Named for the set and the moment, so two quick saves in a night are
+    // told apart without anyone naming them.
+    expect(sets.savedAs.single, startsWith('Tonight 20'));
+    expect(find.textContaining('Saved a copy as'), findsOneWidget);
+  });
+
   testWidgets('lists the sets, with the open one marked', (tester) async {
     final handle = tester.ensureSemantics();
     await pumpSheet(tester);
@@ -120,6 +133,20 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(sets.renamed, [('p2', 'Beginners')]);
+  });
+
+  testWidgets('every set offers to be saved to a folder', (tester) async {
+    // The picker itself is the platform's; what the test can see is that the
+    // offer is there, by name, on every set.
+    final handle = tester.ensureSemantics();
+    await pumpSheet(tester);
+
+    expect(find.bySemanticsLabel('Save Tonight to a folder or USB stick'),
+        findsOneWidget);
+    expect(find.bySemanticsLabel('Save Class to a folder or USB stick'),
+        findsOneWidget);
+    expect(find.text('Open a .sayawset file'), findsOneWidget);
+    handle.dispose();
   });
 
   testWidgets('a new empty set', (tester) async {

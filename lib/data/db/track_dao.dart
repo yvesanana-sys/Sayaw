@@ -54,6 +54,11 @@ class TrackDao extends DatabaseAccessor<SayawDatabase> with _$TrackDaoMixin {
   Future<void> upsertAll(Iterable<TracksCompanion> rows) =>
       batch((b) => b.insertAllOnConflictUpdate(tracks, rows.toList()));
 
+  /// Every track that is a file on this machine.
+  Future<List<Track>> localTracks() => (select(tracks)
+        ..where((t) => t.sourceType.equalsValue(SourceType.local)))
+      .get();
+
   /// Empties the library. Every row that pointed at a track — the set, the
   /// cache index, the history — goes with it, by the schema's own cascades.
   /// The files on disk are not touched: Sayaw only ever reads them.

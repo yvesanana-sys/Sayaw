@@ -3,6 +3,7 @@ import 'dart:io';
 import '../../data/db/database.dart';
 import '../../data/event_mode.dart';
 import '../../data/library/library_scanner.dart';
+import '../../data/set_bundle.dart';
 import '../../data/set_ordering.dart';
 
 /// What the library pane needs, and nothing else.
@@ -86,6 +87,26 @@ abstract class MergeAccess {
   Future<void> setMergeAll(bool merge);
 }
 
+/// A row taken out of the set, held so it can be put back.
+class RemovedRow {
+  const RemovedRow({required this.item, required this.title});
+
+  /// The row exactly as it was — same id, same position, every override —
+  /// so an undo lands it where it came from with everything on it.
+  final PlaylistItem item;
+  final String title;
+}
+
+/// Taking rows out of the open set, and putting one back.
+abstract class QueueEditAccess {
+  /// Removes a row. Null when it was not removed — the row on the floor
+  /// cannot be, and says so on its button rather than here.
+  Future<RemovedRow?> removeFromSet(String itemId);
+
+  /// Puts a removed row back where it was.
+  Future<void> restoreToSet(RemovedRow row);
+}
+
 /// The sets the operator keeps, and which one is open.
 ///
 /// The set being played is already a playlist — every edit lands in it as
@@ -117,6 +138,19 @@ abstract class SetsAccess {
   /// Removes a set. Removing the open one opens whatever was used last, or
   /// a fresh empty one.
   Future<void> deleteSet(String id);
+
+  /// Writes a set as a `.sayawset` file [into] a folder — a stick, a cloud
+  /// folder — with its music and announcer recordings copied beside it when
+  /// [copyMedia]. See `SetBundle`.
+  Future<ExportReport> exportSet(
+    String id, {
+    required Directory into,
+    bool copyMedia = true,
+  });
+
+  /// Reads a `.sayawset` file in, music from beside it or from the library,
+  /// and opens the set it describes when nothing is playing.
+  Future<ImportReport> importSet(File file);
 }
 
 /// How the night is shaped: how many songs, and how much of each.

@@ -716,6 +716,11 @@ final cueTagProvider = Provider<CueTagAccess?>(
   (ref) => ref.watch(playbackSessionProvider),
 );
 
+/// Taking rows out of the open set, and putting one back.
+final queueEditProvider = Provider<QueueEditAccess?>(
+  (ref) => ref.watch(playbackSessionProvider),
+);
+
 /// Joining rows of the open set into one dance.
 final mergeProvider = Provider<MergeAccess?>(
   (ref) => ref.watch(playbackSessionProvider),

@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:drift/drift.dart' show InsertMode;
+
 import '../../audio/crossfade_engine.dart';
 import '../../data/cache/media_downloader.dart';
 import '../../data/db/database.dart';
@@ -8,6 +10,7 @@ import '../../data/event_mode.dart';
 import '../../data/library/library_scanner.dart';
 import '../../data/media_resolver.dart' show NetworkMode, UnavailableOffline;
 import '../../data/playlist_repository.dart';
+import '../../data/set_bundle.dart';
 import '../../data/set_ordering.dart';
 import 'library_access.dart';
 import 'playback_ui_state.dart';
@@ -29,7 +32,8 @@ class PlaybackSession
         SetShapeAccess,
         CueTagAccess,
         MergeAccess,
-        SetsAccess {
+        SetsAccess,
+        QueueEditAccess {
   PlaybackSession({
     required this.engine,
     required this.repository,
@@ -371,7 +375,127 @@ class PlaybackSession
         if (byId[row.item.id] case final existing?)
           existing.copyWith(position: row.item.position),
     ]);
+
+    // And the engine, which until now played on in the order it had loaded
+    // while the screen showed another. A row dragged to the top plays next.
+    await _replayOrder(rows);
+    _publish();
   }
+
+  /// Hands the engine the rows in their current order, built from the
+  /// entries it already holds — no media is re-resolved — with each row's
+  /// transition re-said for its new neighbour, since a merge belongs to the
+  /// row before it and the row before it may have changed.
+  Future<void> _replayOrder(List<PlaylistRow> rows,
+      {Map<String, QueueEntry> extra = const {}}) async {
+    final playlist = await repository.db.playlistDao.byId(_playlistId!);
+    if (playlist == null) return;
+    final held = {for (final e in engine.queue) e.itemId: e, ...extra};
+
+    final entries = <QueueEntry>[];
+    for (var i = 0; i < rows.length; i++) {
+      final row = rows[i];
+      final entry = held[row.item.id];
+      if (entry == null) continue;
+      entries.add(entry.withAnnouncement(
+        clipPath: PlaylistRepository.announcementClipFor(row),
+        spec: PlaylistRepository.specFor(
+          playlist,
+          row.item,
+          taggedCue: row.soundCue != null,
+          mergedFromPrevious: i > 0 && rows[i - 1].item.mergeIntoNext,
+        ),
+      ));
+    }
+
+    _engineItemIds = [for (final e in entries) e.itemId];
+    await engine.replaceQueue(entries);
+  }
+
+  /// Refused for the row on the floor: taking the song that is playing out
+  /// of the set is a stop, not an edit, and the button says so. Also refused
+  /// for the row fading in while it fades — the transition lands on it.
+  @override
+  Future<RemovedRow?> removeFromSet(String itemId) async {
+    final playlistId = _playlistId;
+    if (playlistId == null) return null;
+    if (engine.currentEntry?.itemId == itemId) return null;
+    if (engine.standbyEntry?.itemId == itemId &&
+        engine.phase == EnginePhase.crossfading) {
+      return null;
+    }
+
+    final row = await repository.db.playlistDao.rowById(itemId);
+    if (row == null) return null;
+
+    await repository.db.playlistDao.removeItem(itemId);
+    controller.setQueue([
+      for (final item in controller.queueSnapshot)
+        if (item.id != itemId) item,
+    ]);
+    await _replayOrder(await repository.db.playlistDao.itemsOf(playlistId));
+    _publish();
+
+    return RemovedRow(
+      item: row.item,
+      title: row.track?.title ?? row.danceType?.name ?? 'Untitled',
+    );
+  }
+
+  @override
+  Future<void> restoreToSet(RemovedRow removed) async {
+    final playlistId = _playlistId;
+    if (playlistId == null || removed.item.playlistId != playlistId) return;
+
+    await repository.db.into(repository.db.playlistItems).insert(
+          removed.item.toCompanion(false),
+          mode: InsertMode.insertOrIgnore,
+        );
+    final rows = await repository.db.playlistDao.itemsOf(playlistId);
+    final row = rows.where((r) => r.item.id == removed.item.id).firstOrNull;
+    if (row == null) return;
+    final playlist = (await repository.db.playlistDao.byId(playlistId))!;
+
+    // Back on screen where it was, with whatever the engine will say of it.
+    QueueEntry? entry;
+    UnavailableReason? reason;
+    if (row.track != null) {
+      try {
+        entry = await repository.resolveRow(row, playlist: playlist);
+      } on UnavailableOffline {
+        reason = _reasonFor(UnavailableItem(
+          itemId: row.item.id,
+          title: row.track!.title,
+          kind: row.track!.sourceType == SourceType.local
+              ? UnavailableKind.fileMissing
+              : UnavailableKind.unreachable,
+          reason: 'not reachable from here',
+        ));
+      }
+    }
+    final byId = {for (final item in controller.queueSnapshot) item.id: item};
+    controller.setQueue([
+      for (final r in rows)
+        byId[r.item.id] ??
+            QueueItemUi(
+              id: r.item.id,
+              title: r.track?.title ?? r.danceType?.name ?? 'Untitled',
+              artist: r.track?.artist ?? '',
+              danceType: r.danceType?.name,
+              duration: r.track?.durationMs,
+              bpm: effectiveBpm(r),
+              position: r.item.position,
+              unavailable: reason,
+              soundCueId: r.soundCue?.id,
+              soundCueLabel: r.soundCue?.label,
+              mergeIntoNext: r.item.mergeIntoNext,
+            ),
+    ]);
+
+    await _replayOrder(rows, extra: entry == null ? const {} : {entry.itemId: entry});
+    _publish();
+  }
+
 
   // -------------------------------------------------------------------------
   // The library
@@ -506,6 +630,29 @@ class PlaybackSession
     final nextId = next?.id ??
         await repository.db.playlistDao.createPlaylist(name: 'Tonight');
     await openPlaylist(nextId);
+  }
+
+  SetBundler get _bundler => SetBundler(
+        db: repository.db,
+        scanner: LibraryScanner(
+          db: repository.db,
+          bookmarks: repository.resolver.bookmarks,
+        ),
+      );
+
+  @override
+  Future<ExportReport> exportSet(
+    String id, {
+    required Directory into,
+    bool copyMedia = true,
+  }) =>
+      _bundler.export(id, into: into, copyMedia: copyMedia);
+
+  @override
+  Future<ImportReport> importSet(File file) async {
+    final report = await _bundler.import(file);
+    if (!isRunning) await openPlaylist(report.playlistId);
+    return report;
   }
 
   @override
