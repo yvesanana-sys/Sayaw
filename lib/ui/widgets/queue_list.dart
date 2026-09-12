@@ -50,9 +50,10 @@ class QueueList extends ConsumerWidget {
             ),
     );
 
-    // Across the top of the table, as words: the mixer and saving were the
-    // two things an operator could not find when they were an icon on a row
-    // and an icon in a corner.
+    // Across the top of the table, as words: the mixer and the sets were
+    // the two things an operator could not find when they were an icon on a
+    // row and an icon in a corner. Saving lives inside Sets — a second door
+    // to the same room beside it only asked which one to use.
     final toolbar = Padding(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
       child: Wrap(
@@ -60,7 +61,6 @@ class QueueList extends ConsumerWidget {
         runSpacing: 8,
         children: [
           if (queue.length > 1) QueueMixerButton(queue: queue),
-          const SaveSetButton(),
           const SetsButton(),
         ],
       ),

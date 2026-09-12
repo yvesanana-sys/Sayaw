@@ -48,6 +48,19 @@ void main() {
     expect(find.text('Saved a copy as "Friday class"'), findsOneWidget);
   });
 
+  testWidgets('quick save is one tap and no typing', (tester) async {
+    final sets = await pumpSheet(tester);
+
+    await tester.tap(find.textContaining('Quick save'));
+    await tester.pumpAndSettle();
+
+    expect(sets.savedAs, hasLength(1));
+    // Named for the set and the moment, so two quick saves in a night are
+    // told apart without anyone naming them.
+    expect(sets.savedAs.single, startsWith('Tonight 20'));
+    expect(find.textContaining('Saved a copy as'), findsOneWidget);
+  });
+
   testWidgets('lists the sets, with the open one marked', (tester) async {
     final handle = tester.ensureSemantics();
     await pumpSheet(tester);

@@ -66,6 +66,28 @@ class _SetsSheetState extends ConsumerState<SetsSheet> {
     messenger?.showSnackBar(SnackBar(content: Text('Saved a copy as "$name"')));
   }
 
+  /// A copy, now, under a name nobody has to type: the set's own name and
+  /// the moment. The end of a night that went well is one tap.
+  Future<void> _quickSave() async {
+    final openName = ref.read(setNameProvider);
+    final now = DateTime.now();
+    final stamp = '${now.year}-${_two(now.month)}-${_two(now.day)} '
+        '${_two(now.hour)}:${_two(now.minute)}';
+    final name = '${openName.isEmpty ? 'Set' : openName} $stamp';
+
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final id = await widget.access.saveSetAs(name);
+    if (!mounted) return;
+    if (id == null) {
+      setState(() => _error = 'No set is open to save.');
+      return;
+    }
+    setState(() => _error = null);
+    messenger?.showSnackBar(SnackBar(content: Text('Saved a copy as "$name"')));
+  }
+
+  static String _two(int n) => n.toString().padLeft(2, '0');
+
   Future<void> _newSet() async {
     final name = _name.text.trim().isEmpty ? 'New set' : _name.text.trim();
     final navigator = Navigator.of(context);
@@ -239,10 +261,22 @@ class _SetsSheetState extends ConsumerState<SetsSheet> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            SizedBox(
+              width: double.infinity,
+              height: kMinTouchTarget,
+              child: FilledButton.icon(
+                onPressed: _quickSave,
+                icon: const Icon(Icons.bolt, size: 18),
+                label: Text(openName.isEmpty
+                    ? 'Quick save'
+                    : 'Quick save "$openName" now'),
+              ),
+            ),
+            const SizedBox(height: 12),
             Text(
               openName.isEmpty
-                  ? 'Save the open set as'
-                  : 'Save a copy of "$openName" as',
+                  ? 'Or save the open set as'
+                  : 'Or save a copy of "$openName" as',
               style: const TextStyle(
                 fontSize: 12,
                 color: SayawColors.onSurfaceVariant,
