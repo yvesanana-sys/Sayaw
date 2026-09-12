@@ -575,6 +575,45 @@ void main() {
     });
   });
 
+  group('clearing the library', () {
+    setUp(() async {
+      await _addTracks(db, set, music, ['a', 'b']);
+      await session.openPlaylist(set);
+    });
+
+    test('empties the library, the set on screen and the decks', () async {
+      final removed = await session.clearLibrary();
+      await _settle();
+
+      expect(removed, 2);
+      expect(await session.libraryCount(), 0);
+      final state = container.read(playbackProvider);
+      expect(state.queue, isEmpty);
+      expect(state.deckA.isLoaded, isFalse);
+      expect(state.deckB.isLoaded, isFalse);
+      expect(engine.currentEntry, isNull);
+    });
+
+    test('is refused while music plays', () async {
+      await session.play();
+      await _settle();
+
+      final removed = await session.clearLibrary();
+      await _settle();
+
+      expect(removed, 0);
+      expect(await session.libraryCount(), 2);
+      expect(container.read(playbackProvider).deckA.isPlaying, isTrue,
+          reason: 'nothing was disturbed');
+    });
+
+    test('and the music files are not touched', () async {
+      await session.clearLibrary();
+
+      expect(File('${music.path}/a.flac').existsSync(), isTrue);
+    });
+  });
+
   group('the library', () {
     test('search finds what a scan imported', () async {
       _touch(music, 'library/kiss-of-fire.flac');

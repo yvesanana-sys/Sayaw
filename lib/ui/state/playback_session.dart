@@ -443,6 +443,35 @@ class PlaybackSession
     _publish();
   }
 
+  @override
+  Future<int> libraryCount() => repository.db.trackDao.count();
+
+  /// Empties the library, and with it the set.
+  ///
+  /// Refused while music is playing: every row of the set cascades away with
+  /// its track, and the only honest thing to do with a set that has just
+  /// vanished is reopen it — which tears the decks down, and that is not
+  /// something to do underneath a floor. The pane keeps the button off while
+  /// anything plays, and this is the same rule from the other side.
+  ///
+  /// Downloaded copies of remote tracks are removed from disk first; the
+  /// cascade would otherwise forget the rows and leave the bytes.
+  @override
+  Future<int> clearLibrary() async {
+    if (isRunning) return 0;
+
+    if (downloader case final downloader?) {
+      for (final entry in await repository.db.cacheDao.all()) {
+        await downloader.remove(entry.trackId);
+      }
+    }
+
+    final removed = await repository.db.trackDao.deleteAll();
+
+    if (_playlistId case final playlistId?) await openPlaylist(playlistId);
+    return removed;
+  }
+
   /// Points one row of the open set at one of the operator's soundboard cues,
   /// or clears the tag.
   ///

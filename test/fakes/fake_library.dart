@@ -60,6 +60,20 @@ class FakeLibrary implements LibraryAccess {
   }
 
   @override
+  Future<int> libraryCount() async => tracks.length;
+
+  /// How many times the library was cleared.
+  int cleared = 0;
+
+  @override
+  Future<int> clearLibrary() async {
+    cleared++;
+    final n = tracks.length;
+    tracks = [];
+    return n;
+  }
+
+  @override
   Future<ScanReport> scanFolders(
     Iterable<Directory> folders, {
     void Function(int filesSeen, String path)? onProgress,

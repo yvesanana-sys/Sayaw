@@ -54,6 +54,17 @@ class TrackDao extends DatabaseAccessor<SayawDatabase> with _$TrackDaoMixin {
   Future<void> upsertAll(Iterable<TracksCompanion> rows) =>
       batch((b) => b.insertAllOnConflictUpdate(tracks, rows.toList()));
 
+  /// Empties the library. Every row that pointed at a track — the set, the
+  /// cache index, the history — goes with it, by the schema's own cascades.
+  /// The files on disk are not touched: Sayaw only ever reads them.
+  Future<int> deleteAll() => delete(tracks).go();
+
+  Future<int> count() async {
+    final n = tracks.id.count();
+    final row = await (selectOnly(tracks)..addColumns([n])).getSingle();
+    return row.read(n) ?? 0;
+  }
+
   Future<int> deleteById(String id) =>
       (delete(tracks)..where((t) => t.id.equals(id))).go();
 

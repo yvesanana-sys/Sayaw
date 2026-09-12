@@ -28,6 +28,16 @@ abstract class LibraryAccess {
   /// Appends them all to the open set, in that order, as one write.
   Future<void> addAllToSet(List<String> trackIds);
 
+  /// How many tracks the library holds.
+  Future<int> libraryCount();
+
+  /// Empties the library, and with it the set. Returns how many went.
+  ///
+  /// A clean start before a different folder is imported. The music files
+  /// are never touched. Refused while music is playing — see
+  /// [PlaybackSession.clearLibrary].
+  Future<int> clearLibrary();
+
   Future<ScanReport> scanFolders(
     Iterable<Directory> folders, {
     void Function(int filesSeen, String path)? onProgress,

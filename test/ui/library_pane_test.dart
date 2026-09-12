@@ -150,6 +150,62 @@ void main() {
     });
   });
 
+  group('clearing the library', () {
+    testWidgets('asks first, saying what goes, then clears', (tester) async {
+      final library = await pumpLibrary(tester);
+
+      await tester.tap(find.bySemanticsLabel('Clear the library'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('all 40 tracks'), findsOneWidget);
+      expect(find.textContaining('The set empties with them'), findsOneWidget);
+      expect(find.textContaining('not touched'), findsOneWidget);
+
+      await tester.tap(find.text('Remove 40'));
+      await tester.pumpAndSettle();
+
+      expect(library.cleared, 1);
+      expect(find.text('Library cleared: 40 tracks removed'), findsOneWidget);
+    });
+
+    testWidgets('cancelling clears nothing', (tester) async {
+      final library = await pumpLibrary(tester);
+
+      await tester.tap(find.bySemanticsLabel('Clear the library'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(library.cleared, 0);
+    });
+
+    testWidgets('is off while music plays, and says why', (tester) async {
+      final library = FakeLibrary();
+      final container = await pumpSayaw(
+        tester,
+        const Scaffold(body: LibraryPane()),
+        queue: testQueue(),
+        overrides: [libraryAccessProvider.overrideWithValue(library)],
+      );
+      final controller = container.read(playbackProvider.notifier);
+      controller.playFrom(testQueue().first);
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+          find.bySemanticsLabel('Clear the library — stop the music first'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Remove all'), findsNothing);
+      expect(library.cleared, 0);
+    });
+
+    testWidgets('with nothing listed there is nothing to clear',
+        (tester) async {
+      await pumpLibrary(tester, library: FakeLibrary(tracks: []));
+
+      expect(find.bySemanticsLabel('Clear the library'), findsNothing);
+    });
+  });
+
   testWidgets('an empty library is explained rather than left blank',
       (tester) async {
     await pumpLibrary(tester, library: FakeLibrary(tracks: []));
