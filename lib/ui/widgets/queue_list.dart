@@ -260,6 +260,7 @@ class _QueueRow extends ConsumerWidget {
             ],
             if (!isLast) QueueMergeButton(item: item),
             if (hasCues) QueueCueButton(item: item),
+            QueueRemoveButton(item: item, isCurrent: isCurrent),
             QueueDragHandle(index: index, breakpoint: breakpoint, item: item),
           ],
         ),
@@ -359,6 +360,70 @@ class QueuePlayTarget extends ConsumerWidget {
             child: ConstrainedBox(
               constraints: const BoxConstraints(minHeight: kMinTouchTarget),
               child: Align(alignment: Alignment.centerLeft, child: child),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Takes a row out of the set.
+///
+/// One tap and an Undo, rather than a question every time: a row is cheap
+/// to put back and the snackbar does it, and a question on every removal is
+/// a question nobody reads by the fortieth. The one row that cannot go is
+/// the one on the floor — taking that out is a stop, not an edit — and its
+/// button says so instead of doing nothing.
+@visibleForTesting
+class QueueRemoveButton extends ConsumerWidget {
+  const QueueRemoveButton({
+    super.key,
+    required this.item,
+    required this.isCurrent,
+  });
+
+  final QueueItemUi item;
+  final bool isCurrent;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final access = ref.watch(queueEditProvider);
+    final enabled = access != null && !isCurrent;
+
+    Future<void> remove() async {
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      final removed = await access!.removeFromSet(item.id);
+      if (removed == null) return;
+      messenger?.showSnackBar(SnackBar(
+        content: Text('Removed ${displayTitle(removed.title)}'),
+        action: SnackBarAction(
+          label: 'UNDO',
+          onPressed: () => access.restoreToSet(removed),
+        ),
+      ));
+    }
+
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: isCurrent
+          ? '${item.title} is playing and cannot be removed'
+          : 'Remove ${item.title} from the set',
+      excludeSemantics: true,
+      child: SizedBox(
+        width: kMinTouchTarget,
+        height: kMinTouchTarget,
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            onTap: enabled ? remove : null,
+            child: Icon(
+              Icons.close,
+              size: 20,
+              color: enabled
+                  ? SayawColors.onSurfaceVariant
+                  : SayawColors.onSurfaceVariant.withValues(alpha: 0.3),
             ),
           ),
         ),

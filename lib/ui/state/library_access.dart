@@ -87,6 +87,26 @@ abstract class MergeAccess {
   Future<void> setMergeAll(bool merge);
 }
 
+/// A row taken out of the set, held so it can be put back.
+class RemovedRow {
+  const RemovedRow({required this.item, required this.title});
+
+  /// The row exactly as it was — same id, same position, every override —
+  /// so an undo lands it where it came from with everything on it.
+  final PlaylistItem item;
+  final String title;
+}
+
+/// Taking rows out of the open set, and putting one back.
+abstract class QueueEditAccess {
+  /// Removes a row. Null when it was not removed — the row on the floor
+  /// cannot be, and says so on its button rather than here.
+  Future<RemovedRow?> removeFromSet(String itemId);
+
+  /// Puts a removed row back where it was.
+  Future<void> restoreToSet(RemovedRow row);
+}
+
 /// The sets the operator keeps, and which one is open.
 ///
 /// The set being played is already a playlist — every edit lands in it as

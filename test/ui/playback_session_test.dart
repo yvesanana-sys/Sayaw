@@ -245,6 +245,20 @@ void main() {
           ['Track c', 'Track a', 'Track b']);
     });
 
+    test('a row dragged to the top plays next', () async {
+      await session.play();
+      await _settle();
+      expect(engine.standbyEntry?.title, 'Track b', reason: 'precondition');
+
+      controller.reorderQueue(2, 1);
+      await _settle();
+
+      expect(engine.standbyEntry?.title, 'Track c',
+          reason: 'the engine follows the drag, not just the screen');
+      expect(container.read(playbackProvider).deckA.title, 'Track a');
+      expect(container.read(playbackProvider).deckA.isPlaying, isTrue);
+    });
+
     test('the track already cued up keeps playing through a reorder', () async {
       await session.play();
       await _settle();
@@ -711,6 +725,59 @@ void main() {
     test('renaming the open set renames the header', () async {
       await session.renameSet(set, 'Friday');
       expect(container.read(playbackProvider).setName, 'Friday');
+    });
+  });
+
+  group('taking a row out, and putting it back', () {
+    setUp(() async {
+      await _addTracks(db, set, music, ['a', 'b', 'c']);
+      await session.openPlaylist(set);
+      await session.play();
+      await _settle();
+    });
+
+    test('a row goes from the set, the screen and the engine', () async {
+      final removed = await session.removeFromSet('item-b');
+      await _settle();
+
+      expect(removed?.title, 'Track b');
+      expect(await db.playlistDao.itemsOf(set), hasLength(2));
+      expect(
+        [for (final i in container.read(playbackProvider).queue) i.title],
+        ['Track a', 'Track c'],
+      );
+      expect(engine.standbyEntry?.title, 'Track c',
+          reason: 'the deck re-cued the row that comes next now');
+      expect(container.read(playbackProvider).deckA.isPlaying, isTrue);
+    });
+
+    test('the row on the floor cannot be removed', () async {
+      final removed = await session.removeFromSet('item-a');
+      await _settle();
+
+      expect(removed, isNull);
+      expect(await db.playlistDao.itemsOf(set), hasLength(3));
+      expect(engine.currentEntry?.title, 'Track a');
+    });
+
+    test('undo puts it back where it was, with everything on it', () async {
+      await db.playlistDao.setMergeIntoNext(itemId: 'item-b', merge: true);
+      await session.openPlaylist(set);
+      final removed = (await session.removeFromSet('item-b'))!;
+      await _settle();
+
+      await session.restoreToSet(removed);
+      await _settle();
+
+      final rows = await db.playlistDao.itemsOf(set);
+      expect([for (final r in rows) r.track!.title],
+          ['Track a', 'Track b', 'Track c']);
+      expect(rows[1].item.mergeIntoNext, isTrue);
+      final queue = container.read(playbackProvider).queue;
+      expect([for (final i in queue) i.title], ['Track a', 'Track b', 'Track c']);
+      expect(queue[1].mergeIntoNext, isTrue);
+      expect(engine.standbyEntry?.title, 'Track b',
+          reason: 'and it is next again');
     });
   });
 
