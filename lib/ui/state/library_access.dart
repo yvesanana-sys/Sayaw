@@ -82,6 +82,39 @@ abstract class MergeAccess {
   Future<void> setMergeIntoNext({required String itemId, required bool merge});
 }
 
+/// The sets the operator keeps, and which one is open.
+///
+/// The set being played is already a playlist — every edit lands in it as
+/// it is made. What this adds is a name on it, a copy of it, and a way to
+/// put a different one on the decks.
+abstract class SetsAccess {
+  /// Every set, most recently used first.
+  Stream<List<Playlist>> watchSets();
+
+  /// Null when no set is open.
+  String? get openPlaylistId;
+
+  /// Whether music is playing, which is what decides whether another set can
+  /// be put on the decks.
+  bool get isRunning;
+
+  /// A copy of the open set under [name] — its rows, their order, their
+  /// announcers, their joins, and the set's own shape. Returns the new id.
+  Future<String?> saveSetAs(String name);
+
+  /// An empty set under [name], opened. Returns its id.
+  Future<String> newSet(String name);
+
+  /// Puts a set on the decks. Refused while music plays.
+  Future<bool> openSet(String id);
+
+  Future<void> renameSet(String id, String name);
+
+  /// Removes a set. Removing the open one opens whatever was used last, or
+  /// a fresh empty one.
+  Future<void> deleteSet(String id);
+}
+
 /// How the night is shaped: how many songs, and how much of each.
 ///
 /// Its own interface, like the two above, so the dialog that edits it can be

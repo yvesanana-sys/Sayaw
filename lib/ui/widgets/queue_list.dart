@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../format/track_title.dart';
 import '../layout/breakpoints.dart';
 import '../screens/cue_tag_dialog.dart';
+import '../screens/sets_sheet.dart';
 import '../state/playback_ui_state.dart';
 import '../state/soundboard_provider.dart';
 import '../theme/sayaw_theme.dart';
@@ -31,12 +32,17 @@ class QueueList extends ConsumerWidget {
     final controller = ref.read(playbackProvider.notifier);
     final breakpoint = SayawLayout.of(context);
 
+    // The set's own name in the header rather than "Queue": there can be
+    // several now, and the one on the decks has to say which it is.
+    final setName = ref.watch(setNameProvider);
     final header = PaneHeader(
       icon: Icons.queue_music,
-      title: 'Queue',
-      trailing: queue.isEmpty
-          ? null
-          : Text(
+      title: setName.isEmpty ? 'Queue' : setName,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (queue.isNotEmpty)
+            Text(
               '${queue.length}',
               style: const TextStyle(
                 color: SayawColors.onSurfaceVariant,
@@ -44,6 +50,9 @@ class QueueList extends ConsumerWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
+          const SetsButton(),
+        ],
+      ),
     );
 
     if (queue.isEmpty) {

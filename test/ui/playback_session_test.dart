@@ -614,6 +614,63 @@ void main() {
     });
   });
 
+  group('the sets the operator keeps', () {
+    setUp(() async {
+      await _addTracks(db, set, music, ['a', 'b']);
+      await session.openPlaylist(set);
+    });
+
+    test('the open set has its name on screen', () async {
+      expect(container.read(playbackProvider).setName, 'Saturday Social');
+    });
+
+    test('saving a copy keeps the open set open', () async {
+      final copyId = await session.saveSetAs('Keepsake');
+
+      expect(copyId, isNotNull);
+      expect(session.openPlaylistId, set);
+      expect(await db.playlistDao.itemsOf(copyId!), hasLength(2));
+      final names = [for (final p in await session.watchSets().first) p.name];
+      expect(names, containsAll(['Saturday Social', 'Keepsake']));
+    });
+
+    test('opening another set puts it on the decks', () async {
+      final other = await db.playlistDao.createPlaylist(name: 'Class');
+
+      expect(await session.openSet(other), isTrue);
+
+      final state = container.read(playbackProvider);
+      expect(state.setName, 'Class');
+      expect(state.queue, isEmpty);
+    });
+
+    test('but not while music plays', () async {
+      final other = await db.playlistDao.createPlaylist(name: 'Class');
+      await session.play();
+      await _settle();
+
+      expect(await session.openSet(other), isFalse);
+      expect(container.read(playbackProvider).setName, 'Saturday Social');
+      expect(container.read(playbackProvider).deckA.isPlaying, isTrue);
+    });
+
+    test('removing the open set opens the one used last', () async {
+      final other = await db.playlistDao.createPlaylist(name: 'Class');
+      await session.openSet(other);
+      await session.openSet(set);
+
+      await session.deleteSet(set);
+
+      expect(container.read(playbackProvider).setName, 'Class');
+      expect(await db.playlistDao.byId(set), isNull);
+    });
+
+    test('renaming the open set renames the header', () async {
+      await session.renameSet(set, 'Friday');
+      expect(container.read(playbackProvider).setName, 'Friday');
+    });
+  });
+
   group('the library', () {
     test('search finds what a scan imported', () async {
       _touch(music, 'library/kiss-of-fire.flac');
