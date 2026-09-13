@@ -86,8 +86,20 @@ class TrackDao extends DatabaseAccessor<SayawDatabase> with _$TrackDaoMixin {
         ..orderBy([(t) => OrderingTerm.asc(t.title)]))
       .get();
 
+  /// Newest import first, and within one import the folder's own order.
+  ///
+  /// Every file in a scan gets the same `added_at`, so between them the
+  /// order was whatever SQLite felt like — a numbered folder shown shuffled,
+  /// which beside a set built from it in order read as the two disagreeing.
   Future<List<Track>> recentlyAdded({int limit = 50}) => (select(tracks)
-        ..orderBy([(t) => OrderingTerm.desc(t.addedAt)])
+        ..orderBy([
+          (t) => OrderingTerm.desc(t.addedAt),
+          (t) => OrderingTerm(
+                expression: coalesce([t.localPath, t.title]).collate(
+                  Collate.noCase,
+                ),
+              ),
+        ])
         ..limit(limit))
       .get();
 
@@ -110,20 +122,28 @@ class TrackDao extends DatabaseAccessor<SayawDatabase> with _$TrackDaoMixin {
   }
 
   /// Every track the search would list for [query], without the cap the list
-  /// on screen has, and in title order rather than search rank.
+  /// on screen has, and in *filename* order rather than search rank.
   ///
   /// These ids feed a set, and a set has an order the operator reads top to
   /// bottom. Rank is right for a list being scanned for one song; it is
   /// meaningless as a running order, and "most recently added first" is the
   /// folder backwards. Files named to play in order — `01_`, `02_` — arrive
   /// in it.
+  ///
+  /// The filename, not the title. A title comes from the file's tag when it
+  /// has one and from the filename when it does not, and a folder where some
+  /// files are tagged sorts the tagged ones by a name nobody numbered — so
+  /// `00_03_Rilassamento` went to the bottom of the set while `00_04` stayed
+  /// at the top, and a hundred rows down looked like a song never added. A
+  /// track with no file — a server's — sorts by its title among them.
   Future<List<String>> idsMatching(String query) async {
     if (query.trim().isEmpty) {
-      final rows = await (selectOnly(tracks)
-            ..addColumns([tracks.id])
-            ..orderBy([OrderingTerm.asc(tracks.title)]))
-          .get();
-      return [for (final row in rows) row.read(tracks.id)!];
+      final rows = await customSelect(
+        'SELECT id FROM tracks '
+        'ORDER BY COALESCE(local_path, title) COLLATE NOCASE',
+        readsFrom: {tracks},
+      ).get();
+      return [for (final row in rows) row.read<String>('id')];
     }
 
     // Typed, but nothing in it to search on: what the list shows for that is
@@ -135,7 +155,7 @@ class TrackDao extends DatabaseAccessor<SayawDatabase> with _$TrackDaoMixin {
       'SELECT t.id AS id FROM tracks_fts '
       'JOIN tracks t ON t.rowid = tracks_fts.rowid '
       'WHERE tracks_fts MATCH ?1 '
-      'ORDER BY t.title',
+      'ORDER BY COALESCE(t.local_path, t.title) COLLATE NOCASE',
       variables: [Variable<String>(match)],
       readsFrom: {tracks},
     ).get();
