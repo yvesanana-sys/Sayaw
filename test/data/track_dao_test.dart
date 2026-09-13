@@ -156,6 +156,37 @@ void main() {
     });
   });
 
+  group('what arrived most recently', () {
+    test('one import, in the folder\'s own order', () async {
+      final db = openTestDatabase();
+      final scanned = DateTime.utc(2026, 9, 13, 20);
+      await db.trackDao.upsertAll([
+        _local('c').copyWith(
+          localPath: const Value('/m/00_03_C.mp3'),
+          title: const Value('Zebra'),
+          addedAt: Value(scanned),
+        ),
+        _local('a').copyWith(
+          localPath: const Value('/m/00_01_A.mp3'),
+          addedAt: Value(scanned),
+        ),
+        _local('b').copyWith(
+          localPath: const Value('/m/00_02_B.mp3'),
+          addedAt: Value(scanned),
+        ),
+        // An older import stays behind the new one.
+        _local('old').copyWith(
+          localPath: const Value('/m/00_00_old.mp3'),
+          addedAt: Value(scanned.subtract(const Duration(days: 1))),
+        ),
+      ]);
+
+      final ids = [for (final t in await db.trackDao.recentlyAdded()) t.id];
+
+      expect(ids, ['a', 'b', 'c', 'old']);
+    });
+  });
+
   group('every id a search would list', () {
     late SayawDatabase db;
 
@@ -175,8 +206,33 @@ void main() {
       expect(await db.trackDao.idsMatching(''), ['a', 'b', 'c']);
     });
 
-    test('a query is every match, uncapped, still in title order', () async {
+    test('a query is every match, uncapped, still in file order', () async {
       expect(await db.trackDao.idsMatching('waltz'), ['a', 'b']);
+    });
+
+    test('a title tag does not move a file out of its numbered place',
+        () async {
+      // Half the folder is tagged. The tagged ones carry titles nobody
+      // numbered, and sorting by title sent them to the bottom of the set.
+      await db.trackDao.upsertAll([
+        _local('t2').copyWith(
+          localPath: const Value('/music/00_02_(Waltz)_B.mp3'),
+          title: const Value('Rilassamento'),
+        ),
+        _local('t1').copyWith(
+          localPath: const Value('/music/00_01_(Tango)_A.mp3'),
+          title: const Value('00_01_(Tango)_A'),
+        ),
+        _local('t3').copyWith(
+          localPath: const Value('/music/00_03_(Rumba)_C.mp3'),
+          title: const Value('Aqua de Beber'),
+        ),
+      ]);
+
+      final ids = await db.trackDao.idsMatching('');
+
+      expect(ids.where((id) => id.startsWith('t')).toList(), ['t1', 't2', 't3'],
+          reason: 'the folder\'s own order, whatever the tags say');
     });
 
     test('a query with nothing to search on is nothing', () async {
