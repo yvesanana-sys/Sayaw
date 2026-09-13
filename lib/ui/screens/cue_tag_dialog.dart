@@ -14,11 +14,10 @@ Future<void> showCueTagDialog(
   BuildContext context, {
   required QueueItemUi item,
   required CueTagAccess access,
-}) =>
-    showDialog<void>(
-      context: context,
-      builder: (_) => CueTagDialog(item: item, access: access),
-    );
+}) => showDialog<void>(
+  context: context,
+  builder: (_) => CueTagDialog(item: item, access: access),
+);
 
 /// Which of the operator's own sounds announces one row of the set.
 ///
@@ -30,11 +29,27 @@ Future<void> showCueTagDialog(
 /// Deliberately no preview button. Every cue here plays through the room's
 /// PA, and a picker that can put a whistle over a full floor by accident is
 /// not worth the confirmation it saves. The bar is one tap away for that.
-class CueTagDialog extends ConsumerWidget {
+class CueTagDialog extends ConsumerStatefulWidget {
   const CueTagDialog({super.key, required this.item, required this.access});
 
   final QueueItemUi item;
   final CueTagAccess access;
+
+  @override
+  ConsumerState<CueTagDialog> createState() => _CueTagDialogState();
+}
+
+class _CueTagDialogState extends ConsumerState<CueTagDialog> {
+  final _scroll = ScrollController();
+
+  QueueItemUi get item => widget.item;
+  CueTagAccess get access => widget.access;
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
 
   Future<void> _tag(BuildContext context, String? cueId) async {
     // Taken before the await: afterwards this dialog's element is deactivated
@@ -45,16 +60,20 @@ class CueTagDialog extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final cues = ref.watch(soundCuesProvider).value ?? const <SoundCue>[];
 
     return AlertDialog(
       backgroundColor: SayawColors.surfaceContainer,
       title: const Text('Announce with'),
+      // A fixed height with the list scrolling inside it, rather than a
+      // column the dialog stretches to fit: past a dozen cues the dialog was
+      // taller than the window and the ones at the bottom were simply not
+      // there. The scrollbar is always drawn, so the rest are seen to exist.
       content: SizedBox(
         width: 420,
+        height: 440,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
@@ -67,28 +86,32 @@ class CueTagDialog extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 12),
-            Flexible(
-              child: ListView(
-                shrinkWrap: true,
-                children: [
-                  _CueOption(
-                    label: 'Nothing',
-                    detail: item.danceType == null
-                        ? 'Announce this row the way the set does'
-                        : 'Announce it the way ${item.danceType} does',
-                    selected: !item.hasSoundCue,
-                    onTap: () => _tag(context, null),
-                  ),
-                  for (final cue in cues)
+            Expanded(
+              child: Scrollbar(
+                controller: _scroll,
+                thumbVisibility: true,
+                child: ListView(
+                  controller: _scroll,
+                  children: [
                     _CueOption(
-                      label: cue.label,
-                      detail: cue.ducks
-                          ? 'Music dips underneath it'
-                          : 'Plays over the music at full level',
-                      selected: cue.id == item.soundCueId,
-                      onTap: () => _tag(context, cue.id),
+                      label: 'Nothing',
+                      detail: item.danceType == null
+                          ? 'Announce this row the way the set does'
+                          : 'Announce it the way ${item.danceType} does',
+                      selected: !item.hasSoundCue,
+                      onTap: () => _tag(context, null),
                     ),
-                ],
+                    for (final cue in cues)
+                      _CueOption(
+                        label: cue.label,
+                        detail: cue.ducks
+                            ? 'Music dips underneath it'
+                            : 'Plays over the music at full level',
+                        selected: cue.id == item.soundCueId,
+                        onTap: () => _tag(context, cue.id),
+                      ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -168,8 +191,9 @@ class _CueOption extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontWeight:
-                            selected ? FontWeight.w700 : FontWeight.w500,
+                        fontWeight: selected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
                         color: SayawColors.onSurface,
                       ),
                     ),

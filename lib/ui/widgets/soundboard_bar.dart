@@ -11,7 +11,7 @@ import '../touch/touch_targets.dart';
 /// A strip rather than a dialog, and it never scrolls out of reach — a tag
 /// call is a thing that happens *now*, and anything that takes two taps to
 /// reach has already missed the moment.
-class SoundboardBar extends ConsumerWidget {
+class SoundboardBar extends ConsumerStatefulWidget {
   const SoundboardBar({super.key, this.maxHeight});
 
   /// The most of the column this may take before it scrolls within itself.
@@ -23,7 +23,20 @@ class SoundboardBar extends ConsumerWidget {
   final double? maxHeight;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SoundboardBar> createState() => _SoundboardBarState();
+}
+
+class _SoundboardBarState extends ConsumerState<SoundboardBar> {
+  final _scroll = ScrollController();
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // A cut-in that made no noise is the one thing here the operator cannot
     // work out for themselves: they pressed a button in front of a room and
     // heard nothing, and need to know it was the file rather than their
@@ -32,7 +45,9 @@ class SoundboardBar extends ConsumerWidget {
       final label = next.value;
       if (label == null) return;
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        SnackBar(content: Text('$label did not play — is the file still there?')),
+        SnackBar(
+          content: Text('$label did not play — is the file still there?'),
+        ),
       );
     });
 
@@ -65,12 +80,22 @@ class SoundboardBar extends ConsumerWidget {
     return Container(
       width: double.infinity,
       color: SayawColors.surface,
-      constraints: BoxConstraints(maxHeight: maxHeight ?? double.infinity),
-      child: SingleChildScrollView(
-        // Vertical, and only once the ceiling is reached: below it the bar
-        // simply is as tall as its rows.
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        child: wrap,
+      constraints: BoxConstraints(
+        maxHeight: widget.maxHeight ?? double.infinity,
+      ),
+      // The bar is always drawn when there is more below: a scrollbar that
+      // appears on hover is invisible to a finger, and a glance from across
+      // the booth has to be able to tell nine cues from twenty.
+      child: Scrollbar(
+        controller: _scroll,
+        thumbVisibility: true,
+        child: SingleChildScrollView(
+          controller: _scroll,
+          // Vertical, and only once the ceiling is reached: below it the bar
+          // simply is as tall as its rows.
+          padding: const EdgeInsets.fromLTRB(8, 6, 16, 6),
+          child: wrap,
+        ),
       ),
     );
   }

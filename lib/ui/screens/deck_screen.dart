@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -203,6 +205,11 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
   /// Deck A above, crossfader across the middle, deck B below, transport at the
   /// bottom. Identical in every breakpoint — muscle memory is worth more than
   /// a layout that makes clever use of a wide window.
+  /// The header above the soundboard and the transport below it, plus a
+  /// strip of deck so the column never reads as only cues.
+  static const double _reservedAroundSoundboard =
+      kMinTouchTarget + kTransportTouchTarget + 16 + 120;
+
   Widget _decksColumn({required bool compactTransport}) {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -239,11 +246,19 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
               ),
             ),
             const Divider(height: 1),
-            // Directly above the transport, where a hand already is. A tag call
-            // happens now; anything needing a pane change has missed it. Up to
-            // half the column tall, then it scrolls: the decks above and the
-            // transport below are not for it to push off the screen.
-            SoundboardBar(maxHeight: constraints.maxHeight * 0.5),
+            // Directly above the transport, where a hand already is. A tag
+            // call happens now; anything needing a pane change has missed it.
+            // It takes whatever the window can spare after the header and
+            // the transport, and scrolls only past that — the decks above
+            // are already a scroll and can give up their room; the transport
+            // cannot. Half the column, which this used to be, was nine cues
+            // on a laptop.
+            SoundboardBar(
+              maxHeight: math.max(
+                kMinTouchTarget * 2,
+                constraints.maxHeight - _reservedAroundSoundboard,
+              ),
+            ),
             TransportBar(compact: compactTransport),
           ],
         );
