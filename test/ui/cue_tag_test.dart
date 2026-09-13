@@ -113,6 +113,34 @@ void main() {
     expect(find.byType(CueTagDialog), findsNothing);
   });
 
+  testWidgets('thirty sounds: every one is reachable, and the list says so',
+      (tester) async {
+    // Past a dozen cues the dialog was taller than the window and the ones
+    // at the bottom were simply not there. Now the list scrolls inside a
+    // dialog that fits, with a bar always drawn, and a drag reaches the end.
+    final many = [
+      for (var i = 0; i < 30; i++)
+        SoundCue(id: 'c$i', label: 'Cue number $i', filePath: '/fx/$i.wav'),
+    ];
+    final access = await pumpQueue(tester, cues: many);
+
+    await tester.tap(_buttonFor('q1'));
+    await tester.pumpAndSettle();
+    // The list itself is bounded, whatever the dialog's own box measures.
+    final list = find.descendant(
+        of: find.byType(CueTagDialog), matching: find.byType(ListView));
+    expect(tester.getSize(list).height, lessThan(kExpandedSize.height / 2));
+    expect(find.byType(Scrollbar), findsWidgets);
+
+    final last = find.text('Cue number 29');
+    await tester.dragUntilVisible(last, list, const Offset(0, -200));
+    await tester.pumpAndSettle();
+    await tester.tap(last);
+    await tester.pumpAndSettle();
+
+    expect(access.tagged, [('q1', 'c29')]);
+  });
+
   testWidgets('choosing nothing clears the tag', (tester) async {
     final access = await pumpQueue(tester, cues: const [_partners]);
 

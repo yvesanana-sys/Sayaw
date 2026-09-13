@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -109,6 +110,14 @@ Future<void> main() async {
   );
 }
 
+/// Every pointer drags.
+class SayawScrollBehavior extends MaterialScrollBehavior {
+  const SayawScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => PointerDeviceKind.values.toSet();
+}
+
 class SayawApp extends ConsumerWidget {
   const SayawApp({super.key, required this.windows});
 
@@ -125,6 +134,12 @@ class SayawApp extends ConsumerWidget {
       // and a white flash between screens is a genuine problem on a stage
       // monitor, so the system setting is deliberately ignored.
       themeMode: ThemeMode.dark,
+      // A drag scrolls, whatever is doing the dragging. Flutter's desktop
+      // default lets only a wheel scroll a list, so a hand on a laptop
+      // trackpad or a touchscreen — or a mouse, dragged the way every list
+      // on a phone is dragged — reached the ninth cue and stopped, with
+      // nothing on screen to say there were more.
+      scrollBehavior: const SayawScrollBehavior(),
       home: WindowGeometrySaver(
         controller: windows,
         child: const PlaybackWakelock(
@@ -164,12 +179,14 @@ class _BootstrapState extends ConsumerState<_Bootstrap> {
       );
       _runtime = runtime;
       ref.read(sourcesHolderProvider.notifier).set(runtime.sources);
-      _soundboard =
-          SoundboardService(board: runtime.soundboard, db: runtime.db);
+      _soundboard = SoundboardService(
+        board: runtime.soundboard,
+        db: runtime.db,
+      );
       ref.read(soundboardHolderProvider.notifier).set(_soundboard);
-      ref.read(jackAndJillHolderProvider.notifier).set(
-            JackAndJillService(db: runtime.db, library: runtime.session),
-          );
+      ref
+          .read(jackAndJillHolderProvider.notifier)
+          .set(JackAndJillService(db: runtime.db, library: runtime.session));
 
       // Before the set is opened: on Android this is the foreground service,
       // and starting it after a four-hour playlist has finished resolving is
