@@ -175,6 +175,22 @@ missing. Install it — see step 1.
 **Windows: the installer will not run.** See
 [the SmartScreen warning](#the-smartscreen-warning).
 
+**Sayaw closed on its own.** The next time it starts it will say so and
+offer **Report** — that opens the log, which records what the app was doing
+at the moment it stopped. You can also get there any time from the music
+sources screen (the server icon in the top bar) → **Report a problem** →
+**Copy log**, and paste it into your message. The file itself is at:
+
+```
+%APPDATA%\Sayaw\Sayaw\logs\sayaw.log
+```
+
+with the run before it in `sayaw.previous.log` alongside.
+
+**Windows 7 or 8.** Not supported: the app and its audio engine both need
+Windows 10 or later, and on an older Windows it will close without warning
+the first time either is asked for something the OS does not have.
+
 **A track is greyed out.** The queue says why on the row: the file has moved,
 a folder permission expired, or the source needs a connection that is not
 there.

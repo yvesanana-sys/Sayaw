@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/diagnostics/app_log.dart';
 import '../layout/breakpoints.dart';
 import '../state/playback_ui_state.dart';
 import '../theme/sayaw_theme.dart';
@@ -21,6 +22,7 @@ import '../widgets/transport_bar.dart';
 import '../widgets/up_next_card.dart';
 import 'event_mode_dialog.dart';
 import 'jack_and_jill_dialog.dart';
+import 'problem_report_dialog.dart';
 import 'set_shape_dialog.dart';
 import 'soundboard_sheet.dart';
 import 'sources_screen.dart';
@@ -57,6 +59,28 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
   final _libraryScroll = ScrollController();
 
   SayawPane _pane = SayawPane.decks;
+
+  @override
+  void initState() {
+    super.initState();
+    // Said once, on the first screen after a run that did not end on
+    // purpose: the log has the story and the button is right there.
+    final log = AppLog.current;
+    if (log != null && log.previousRunCrashed) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
+          duration: const Duration(seconds: 12),
+          content: const Text(
+              'Sayaw closed unexpectedly last time. The log has what it was doing.'),
+          action: SnackBarAction(
+            label: 'REPORT',
+            onPressed: () => showProblemReport(context),
+          ),
+        ));
+      });
+    }
+  }
 
   @override
   void dispose() {

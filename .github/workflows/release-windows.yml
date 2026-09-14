@@ -43,9 +43,6 @@ jobs:
       - name: Test
         run: flutter test -x golden
 
-      - name: Build
-        run: flutter build windows --release
-
       - name: Version from the tag
         id: version
         shell: bash
@@ -58,6 +55,13 @@ jobs:
           else
             echo "value=0.0.0" >> "$GITHUB_OUTPUT"
           fi
+
+      # The same number into the app itself, so the log it writes says which
+      # build wrote it. Before the build, because it is baked in at compile.
+      - name: Build
+        run: >
+          flutter build windows --release
+          --dart-define=SAYAW_VERSION=${{ steps.version.outputs.value }}
 
       # Present on the windows-latest image today, installed if that changes.
       # A release that fails on a missing build tool is a bad way to find out.
