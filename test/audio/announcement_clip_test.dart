@@ -1,6 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sayaw/audio/announcement_engine.dart';
+import 'package:sayaw/audio/crossfade_engine.dart';
+import 'package:sayaw/audio/deck.dart';
 
+import '../fakes/fake_clip_factory.dart';
 import '../fakes/fake_deck.dart';
 
 /// A deck that loads a file and will not say how long it is — which is what
@@ -15,6 +18,8 @@ class _LengthlessDeck extends FakeDeck {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  _readinessTests();
 
   group('reading a clip the operator recorded', () {
     test('a length the backend will not report is assumed, not fatal', () async {
@@ -73,6 +78,79 @@ void main() {
       );
 
       expect(await factory.probe('/clips/moved.wav', text: 'Waltz'), isNull);
+    });
+  });
+}
+
+/// A factory that cannot speak and says why — a Linux box with no espeak-ng,
+/// which is the one real cause of a silent synthesised announcement.
+class _MuteFactory extends FakeClipFactory {
+  _MuteFactory() {
+    failRender = true;
+  }
+
+  @override
+  Future<String?> describeUnavailable() async =>
+      'No speech synthesiser is installed.';
+}
+
+QueueEntry _row(String id, {String? dance, AnnounceMode mode = AnnounceMode.duckOver}) =>
+    QueueEntry(
+      itemId: id,
+      media: PlayableMedia(uri: Uri.parse('fake://$id')),
+      spec: TransitionSpec(announceMode: mode),
+      danceTypeName: dance,
+    );
+
+void _readinessTests() {
+  group('knowing before the room does', () {
+    late AnnouncementEngine engine;
+    late _MuteFactory mute;
+
+    setUp(() {
+      mute = _MuteFactory();
+      engine = AnnouncementEngine(
+        voiceDeck: FakeDeck('voice'),
+        cacheDirectory: '/tmp/sayaw-test',
+        settings: const TtsVoiceSettings(),
+        clipFactory: mute,
+      );
+    });
+
+    test('a row that will not speak is not a failure', () async {
+      // No dance, no text: it was never going to say anything, and calling
+      // that broken would cry wolf on most of a social set.
+      await engine.warm(_row('quiet'));
+      expect(engine.statusFor('quiet').readiness, AnnouncementReadiness.silent);
+      expect(engine.statusFor('quiet').isFailure, isFalse);
+    });
+
+    test('a row set to say nothing is silent, not failed', () async {
+      await engine.warm(_row('off', dance: 'Salsa', mode: AnnounceMode.off));
+      expect(engine.statusFor('off').readiness, AnnouncementReadiness.silent);
+    });
+
+    test('a row that should speak and cannot says so, with the cause',
+        () async {
+      await engine.warm(_row('bachata', dance: 'Bachata'));
+
+      final status = engine.statusFor('bachata');
+      expect(status.isFailure, isTrue);
+      expect(status.reason, 'No speech synthesiser is installed.');
+    });
+
+    test('a row that renders is ready', () async {
+      mute.failRender = false;
+      await engine.warm(_row('waltz', dance: 'Waltz'));
+      expect(engine.statusFor('waltz').readiness, AnnouncementReadiness.ready);
+    });
+
+    test('a row nothing has looked at yet is unknown, not broken', () async {
+      // Warming has not run. Drawing that as a failure would light the card up
+      // red for every set the moment it opens.
+      expect(engine.statusFor('never-seen').readiness,
+          AnnouncementReadiness.unknown);
+      expect(engine.statusFor('never-seen').isFailure, isFalse);
     });
   });
 }

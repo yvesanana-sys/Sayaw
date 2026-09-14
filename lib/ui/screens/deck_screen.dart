@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/diagnostics/app_log.dart';
 import '../layout/breakpoints.dart';
+import '../state/first_run.dart';
 import '../state/playback_ui_state.dart';
 import '../theme/sayaw_theme.dart';
 import '../touch/touch_targets.dart';
@@ -21,6 +22,7 @@ import '../widgets/soundboard_bar.dart';
 import '../widgets/transport_bar.dart';
 import '../widgets/up_next_card.dart';
 import 'event_mode_dialog.dart';
+import 'first_run_screen.dart';
 import 'jack_and_jill_dialog.dart';
 import 'problem_report_dialog.dart';
 import 'set_shape_dialog.dart';
@@ -94,6 +96,11 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
     final performanceMode = ref.watch(
       playbackProvider.select((s) => s.performanceMode),
     );
+
+    // Nothing in the library means nobody has got as far as having one. The
+    // panes behind this are four empty dead ends in no particular order; this
+    // is the single ordered path through them.
+    if (ref.watch(isFirstRunProvider)) return const FirstRunScreen();
 
     return SayawLayout(
       builder: (context, breakpoint) {

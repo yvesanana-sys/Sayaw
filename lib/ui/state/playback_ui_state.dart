@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../audio/announcement_engine.dart' show AnnouncementStatus;
 import '../../audio/crossfade_engine.dart' show EnginePhase;
 import '../../data/fractional_order.dart';
 import '../../data/media_resolver.dart' show NetworkMode;
@@ -248,6 +249,7 @@ class NextAnnouncementUi {
     required this.isRecording,
     required this.timing,
     this.danceType,
+    this.status = AnnouncementStatus.unknown,
   });
 
   /// The cue's name when the operator tagged one, otherwise the words that
@@ -258,6 +260,12 @@ class NextAnnouncementUi {
   final bool isRecording;
 
   final AnnouncementTiming timing;
+
+  /// Whether this announcement will actually be heard, and why not if it will
+  /// not. The whole reason the card can go red before the room goes quiet.
+  final AnnouncementStatus status;
+
+  bool get willFail => status.isFailure;
 
   /// The dance the incoming row is, when it has one. Named in the sentence so
   /// the operator reads what the floor is about to be asked to do, rather than

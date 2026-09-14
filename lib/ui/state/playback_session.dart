@@ -953,6 +953,7 @@ class PlaybackSession
         isRecording: true,
         timing: timing,
         danceType: next.danceTypeName,
+        status: engine.announcements.statusFor(next.itemId),
       );
     }
 
@@ -966,6 +967,7 @@ class PlaybackSession
       isRecording: false,
       timing: timing,
       danceType: next.danceTypeName,
+      status: engine.announcements.statusFor(next.itemId),
     );
   }
 

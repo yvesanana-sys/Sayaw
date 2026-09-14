@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sayaw/audio/announcement_engine.dart'
+    show AnnouncementReadiness, AnnouncementStatus;
 import 'package:sayaw/ui/state/playback_ui_state.dart';
 import 'package:sayaw/ui/state/transition_sentence.dart';
 
@@ -123,6 +125,85 @@ void main() {
             until: const Duration(seconds: 5)),
         contains('blends into the next song'),
       );
+    });
+  });
+
+  group('an announcement that will not be heard', () {
+    const broken = AnnouncementStatus(
+      AnnouncementReadiness.failed,
+      'No speech synthesiser is installed.',
+    );
+
+    NextAnnouncementUi failing() => const NextAnnouncementUi(
+          label: 'Next dance: Bachata',
+          isRecording: false,
+          timing: AnnouncementTiming.overTheCrossfade,
+          status: broken,
+        );
+
+    test('says so before the room finds out', () {
+      // The bug with a room attached: a failed announcement and a row nobody
+      // tagged are identical from the booth, and only one is worth acting on.
+      final sentence = composeTransitionSentence(
+        announcement: failing(),
+        merges: false,
+        incomingDance: 'Bachata',
+        until: const Duration(seconds: 38),
+      );
+
+      expect(sentence.isTrouble, isTrue);
+      expect(sentence.text, contains('the room will hear nothing'));
+      expect(sentence.text, contains('will not be said'));
+    });
+
+    test('carries the cause, not just the symptom', () {
+      final sentence = composeTransitionSentence(
+        announcement: failing(),
+        merges: false,
+        incomingDance: 'Bachata',
+        until: const Duration(seconds: 38),
+      );
+
+      // "No voice" sends the operator looking; this says where to look.
+      expect(sentence.cause, 'No speech synthesiser is installed.');
+    });
+
+    test('the music is still described — only the voice is lost', () {
+      final sentence = composeTransitionSentence(
+        announcement: failing(),
+        merges: false,
+        incomingDance: 'Bachata',
+        until: const Duration(seconds: 38),
+      );
+
+      expect(sentence.text, startsWith('In 38 seconds, the music blends into'));
+      expect(
+        sentence.spans.where((s) => s.tone == SentenceTone.dance).single.text,
+        'Bachata',
+      );
+    });
+
+    test('a working announcement is never marked as trouble', () {
+      for (final status in [
+        AnnouncementStatus.ready,
+        AnnouncementStatus.silent,
+        AnnouncementStatus.unknown,
+      ]) {
+        final sentence = composeTransitionSentence(
+          announcement: NextAnnouncementUi(
+            label: 'Next dance: Bachata',
+            isRecording: false,
+            timing: AnnouncementTiming.overTheCrossfade,
+            status: status,
+          ),
+          merges: false,
+          incomingDance: 'Bachata',
+          until: const Duration(seconds: 40),
+        );
+        expect(sentence.isTrouble, isFalse,
+            reason: 'readiness ${status.readiness.name}');
+        expect(sentence.cause, isNull);
+      }
     });
   });
 
