@@ -7,6 +7,7 @@ import '../../data/media_resolver.dart' show NetworkMode;
 import '../../data/set_ordering.dart' show SnowballProgress;
 import 'library_access.dart';
 import 'playback_session.dart';
+import 'transition_sentence.dart';
 
 /// Which of the two music decks.
 enum DeckSlot {
@@ -221,6 +222,7 @@ class NextAnnouncementUi {
     required this.label,
     required this.isRecording,
     required this.timing,
+    this.danceType,
   });
 
   /// The cue's name when the operator tagged one, otherwise the words that
@@ -231,6 +233,11 @@ class NextAnnouncementUi {
   final bool isRecording;
 
   final AnnouncementTiming timing;
+
+  /// The dance the incoming row is, when it has one. Named in the sentence so
+  /// the operator reads what the floor is about to be asked to do, rather than
+  /// a file name they would have to recognise.
+  final String? danceType;
 }
 
 /// Where in the transition the announcement lands.
@@ -313,6 +320,29 @@ class PlaybackUiState {
   /// Drives the wakelock. A tablet sleeping mid-event is a show-stopper, so
   /// this is deliberately generous: anything that is not fully stopped counts.
   bool get anyDeckPlaying => deckA.isPlaying || deckB.isPlaying;
+
+  /// How long until the song now playing hands over.
+  ///
+  /// The *smallest* remaining time across the playing decks, not the active
+  /// one's. During a crossfade both decks play, and the one on its way out has
+  /// almost nothing left — which is the honest answer to "when does this
+  /// change", because it is already changing.
+  ///
+  /// Null when nothing is playing, or when the backend has not reported a
+  /// length. A sentence with no number in it is better than one with a number
+  /// that was guessed.
+  Duration? get timeUntilTransition {
+    Duration? soonest;
+    for (final deck in [deckA, deckB]) {
+      if (!deck.isPlaying) continue;
+      final total = deck.duration;
+      if (total == null) continue;
+      final left = total - deck.position;
+      if (left.isNegative) continue;
+      if (soonest == null || left < soonest) soonest = left;
+    }
+    return soonest;
+  }
 
   PlaybackUiState copyWith({
     DeckUiState? deckA,
@@ -768,4 +798,48 @@ final snowballProvider = Provider<SnowballProgress?>(
 /// tick.
 final nextAnnouncementProvider = Provider<NextAnnouncementUi?>(
   (ref) => ref.watch(playbackProvider.select((s) => s.announcement)),
+);
+
+/// Whole seconds until the song now playing hands over, or null when nothing
+/// is playing and nothing is about to.
+///
+/// Whole seconds on purpose. The engine writes position at 50 Hz and the rest
+/// of this file is careful to keep the announcer off that path; selecting an
+/// `int` rather than a `Duration` means Riverpod rebuilds the sentence once a
+/// second instead of fifty times, which is exactly as often as a countdown
+/// that reads in seconds can actually change.
+final secondsUntilTransitionProvider = Provider<int?>(
+  (ref) => ref.watch(playbackProvider.select((s) {
+    final remaining = s.timeUntilTransition;
+    return remaining?.inSeconds;
+  })),
+);
+
+/// The one sentence the deck screen leads with.
+///
+/// Composed here rather than in the widget — see
+/// `lib/ui/state/transition_sentence.dart` for why.
+final transitionSentenceProvider = Provider<TransitionSentence>((ref) {
+  final announcement = ref.watch(nextAnnouncementProvider);
+  final merges = ref.watch(nextMergesProvider);
+  final seconds = ref.watch(secondsUntilTransitionProvider);
+
+  return composeTransitionSentence(
+    announcement: announcement,
+    merges: merges,
+    incomingDance: announcement?.danceType ?? ref.watch(incomingDanceProvider),
+    until: seconds == null ? null : Duration(seconds: seconds),
+  );
+});
+
+/// The dance name of the row cued up, when the queue knows one. Falls back to
+/// nothing rather than to the track title: "blends into Obsesión" reads as a
+/// dance to someone who does not know the song.
+final incomingDanceProvider = Provider<String?>(
+  (ref) => ref.watch(playbackProvider.select((s) {
+    final next = s.currentIndex + 1;
+    if (next < 0 || next >= s.queue.length) return null;
+    final dance = s.queue[next].danceType;
+    return dance == null || dance.isEmpty ? null : dance;
+  })),
 );

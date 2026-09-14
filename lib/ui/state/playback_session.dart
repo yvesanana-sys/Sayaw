@@ -952,6 +952,7 @@ class PlaybackSession
         label: tagged?.soundCueLabel ?? 'Recorded clip',
         isRecording: true,
         timing: timing,
+        danceType: next.danceTypeName,
       );
     }
 
@@ -964,6 +965,7 @@ class PlaybackSession
       label: spoken,
       isRecording: false,
       timing: timing,
+      danceType: next.danceTypeName,
     );
   }
 

@@ -7,96 +7,134 @@ import 'package:sayaw/ui/widgets/announcer_strip.dart';
 import 'harness.dart';
 
 Future<ProviderContainer> pumpStrip(
-  WidgetTester tester,
+  WidgetTester tester, {
   NextAnnouncementUi? announcement,
-) async {
+  bool merges = false,
+  int? seconds,
+  String? incomingDance,
+}) async {
   final container = await pumpSayaw(
     tester,
     const Scaffold(body: AnnouncerStrip()),
     overrides: [
-      if (announcement != null)
-        nextAnnouncementProvider.overrideWithValue(announcement),
+      nextAnnouncementProvider.overrideWithValue(announcement),
+      nextMergesProvider.overrideWithValue(merges),
+      secondsUntilTransitionProvider.overrideWithValue(seconds),
+      incomingDanceProvider.overrideWithValue(incomingDance),
     ],
   );
   await tester.pumpAndSettle();
   return container;
 }
 
-void main() {
-  testWidgets('nothing to say leaves it blank', (tester) async {
-    await pumpStrip(tester, null);
+/// The sentence as it is actually painted, spans and all.
+String renderedSentence(WidgetTester tester) {
+  final rich = tester.widget<RichText>(find.byType(RichText).last);
+  return rich.text.toPlainText();
+}
 
-    // Blank, but not gone: the decks must not move under a hand reaching for
-    // them because the next row happens to be untagged.
+void main() {
+  testWidgets('it leads with what happens and when', (tester) async {
+    await pumpStrip(
+      tester,
+      announcement: const NextAnnouncementUi(
+        label: 'Next dance: Bachata',
+        isRecording: false,
+        timing: AnnouncementTiming.overTheCrossfade,
+      ),
+      incomingDance: 'Bachata',
+      seconds: 40,
+    );
+
+    expect(
+      renderedSentence(tester),
+      'In 40 seconds, the music blends into Bachata '
+      'and the room hears “Next dance: Bachata”.',
+    );
+  });
+
+  testWidgets('nothing queued says so, and keeps its place', (tester) async {
+    await pumpStrip(tester);
+
+    // Blank would be wrong twice over: the decks must not move under a hand
+    // reaching for them, and silence about the end of the set looks exactly
+    // like a card that has not loaded.
     expect(find.byType(AnnouncerStrip), findsOneWidget);
     expect(tester.getSize(find.byType(AnnouncerStrip)).height,
         AnnouncerStrip.height);
-    expect(find.byType(Text), findsNothing);
+    expect(renderedSentence(tester), 'Nothing after this song.');
   });
 
-  testWidgets('a tagged recording is named, with when it lands',
+  testWidgets('its height does not move with what it says', (tester) async {
+    await pumpStrip(tester);
+    final empty = tester.getSize(find.byType(AnnouncerStrip)).height;
+
+    await pumpStrip(
+      tester,
+      announcement: const NextAnnouncementUi(
+        label: 'Next dance: Bachata, and please find a partner for this one',
+        isRecording: false,
+        timing: AnnouncementTiming.beforeTheMusic,
+      ),
+      incomingDance: 'Bachata',
+      seconds: 40,
+    );
+
+    expect(tester.getSize(find.byType(AnnouncerStrip)).height, empty);
+  });
+
+  testWidgets('a recording is drawn as theirs, a voice as synthesised',
       (tester) async {
     await pumpStrip(
       tester,
-      const NextAnnouncementUi(
+      announcement: const NextAnnouncementUi(
         label: 'Take your partners',
         isRecording: true,
         timing: AnnouncementTiming.overTheCrossfade,
       ),
+      incomingDance: 'Waltz',
+      seconds: 10,
     );
-
-    expect(find.text('Take your partners'), findsOneWidget);
-    expect(find.text('over the crossfade'), findsOneWidget);
     expect(find.byIcon(Icons.campaign), findsOneWidget);
-  });
+    expect(renderedSentence(tester), contains('your recording'));
 
-  testWidgets('a spoken announcement is drawn as a voice, not a recording',
-      (tester) async {
     await pumpStrip(
       tester,
-      const NextAnnouncementUi(
+      announcement: const NextAnnouncementUi(
         label: 'Next dance: Waltz',
         isRecording: false,
-        timing: AnnouncementTiming.beforeTheMusic,
+        timing: AnnouncementTiming.overTheCrossfade,
       ),
+      incomingDance: 'Waltz',
+      seconds: 10,
     );
-
-    expect(find.text('Next dance: Waltz'), findsOneWidget);
-    expect(find.text('before the music'), findsOneWidget);
-    // Only one of the two is in the operator's own voice, which is worth
-    // telling apart at a glance.
     expect(find.byIcon(Icons.record_voice_over), findsOneWidget);
-    expect(find.byIcon(Icons.campaign), findsNothing);
+    expect(renderedSentence(tester), isNot(contains('your recording')));
   });
 
-  testWidgets('a rotation says the gap is where it lands', (tester) async {
-    await pumpStrip(
-      tester,
-      const NextAnnouncementUi(
-        label: 'Rotate',
-        isRecording: true,
-        timing: AnnouncementTiming.inTheRotationGap,
-      ),
-    );
+  testWidgets('a merge reads as one dance, not as a tag that failed',
+      (tester) async {
+    await pumpStrip(tester, merges: true, incomingDance: 'Salsa', seconds: 15);
 
-    expect(find.text('in the rotation gap'), findsOneWidget);
+    expect(renderedSentence(tester),
+        'In 15 seconds, the music runs on into Salsa, still the same dance.');
   });
 
   testWidgets('it announces itself without a pointer', (tester) async {
     final handle = tester.ensureSemantics();
     await pumpStrip(
       tester,
-      const NextAnnouncementUi(
-        label: 'Take your partners',
-        isRecording: true,
+      announcement: const NextAnnouncementUi(
+        label: 'Next dance: Bachata',
+        isRecording: false,
         timing: AnnouncementTiming.overTheCrossfade,
       ),
+      incomingDance: 'Bachata',
+      seconds: 40,
     );
 
     expect(
-      find.bySemanticsLabel(
-        'Next transition announces Take your partners, over the crossfade',
-      ),
+      find.bySemanticsLabel(RegExp(r'What happens next\. In 40 seconds')),
       findsOneWidget,
     );
     handle.dispose();
