@@ -45,10 +45,15 @@ class TransportBar extends ConsumerWidget {
     final controller = ref.read(playbackProvider.notifier);
     final scheme = Theme.of(context).colorScheme;
 
-    Widget deckGroup(DeckSlot slot, bool compact) {
+    Widget deckGroup(DeckRole role, bool compact) {
+      final slot = state.slotFor(role);
       final deck = state.deck(slot);
-      final accent =
-          slot == DeckSlot.a ? SayawColors.primary : SayawColors.secondary;
+      // Role, not deck: the left-hand group is always the song the room has,
+      // the right-hand one always the song coming in. The panels above read
+      // the same way, and a hand that learned one has learned the other.
+      final accent = role == DeckRole.onFloor
+          ? SayawColors.primary
+          : SayawColors.secondary;
 
       return Row(
         mainAxisSize: MainAxisSize.min,
@@ -56,7 +61,7 @@ class TransportBar extends ConsumerWidget {
           if (!compact) ...[
             TransportButton(
               icon: Icons.replay,
-              label: 'Cue deck ${slot.label}',
+              label: 'Restart ${role.spoken}',
               caption: 'CUE',
               onPressed: deck.isLoaded ? () => controller.cue(slot) : null,
               background: accent,
@@ -72,9 +77,9 @@ class TransportBar extends ConsumerWidget {
           TransportButton(
             icon: deck.isPlaying ? Icons.pause : Icons.play_arrow,
             label: deck.isPlaying
-                ? 'Pause deck ${slot.label}'
-                : 'Play deck ${slot.label}',
-            caption: slot.label,
+                ? 'Pause ${role.spoken}'
+                : 'Play ${role.spoken}',
+            caption: role == DeckRole.onFloor ? 'FLOOR' : 'NEXT',
             onPressed:
                 deck.isLoaded ? () => controller.togglePlay(slot) : null,
             isActive: deck.isPlaying,
@@ -87,8 +92,8 @@ class TransportBar extends ConsumerWidget {
 
     final crossfadeNow = TransportButton(
       icon: Icons.swap_horiz,
-      label: 'Crossfade now',
-      caption: 'FADE',
+      label: 'Blend to the next song now',
+      caption: 'BLEND',
       onPressed: (state.deckA.isLoaded || state.deckB.isLoaded)
           ? controller.crossfadeNow
           : null,
@@ -123,7 +128,7 @@ class TransportBar extends ConsumerWidget {
           final fits = constraints.maxWidth >= needed;
 
           final controls = <Widget>[
-            deckGroup(DeckSlot.a, useCompact),
+            deckGroup(DeckRole.onFloor, useCompact),
             // Spacer, not Flexible around a button. Flexible would let the
             // framework shrink the crossfade-now target under pressure, which
             // is exactly how it ended up at 37dp — narrower than a fingertip,
@@ -133,7 +138,7 @@ class TransportBar extends ConsumerWidget {
             const SizedBox(width: kTransportSpacing),
             crossfadeNow,
             if (fits) const Spacer() else const SizedBox(width: kTransportSpacing),
-            deckGroup(DeckSlot.b, useCompact),
+            deckGroup(DeckRole.comingIn, useCompact),
           ];
 
           final row = Row(

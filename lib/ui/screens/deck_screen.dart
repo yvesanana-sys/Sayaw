@@ -30,9 +30,9 @@ import '../window/window_controller.dart';
 
 /// Which pane a single-pane or two-pane layout is showing.
 enum SayawPane {
-  library(Icons.library_music, 'Library'),
-  decks(Icons.album, 'Decks'),
-  queue(Icons.queue_music, 'Queue');
+  library(Icons.library_music, 'Music'),
+  decks(Icons.album, 'Now'),
+  queue(Icons.queue_music, 'Set list');
 
   const SayawPane(this.icon, this.label);
   final IconData icon;
@@ -239,13 +239,13 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
       builder: (context, constraints) {
         return Column(
           children: [
-            const PaneHeader(icon: Icons.album, title: 'Decks'),
+            const PaneHeader(icon: Icons.album, title: 'Now'),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                 child: Column(
                   children: [
-                    DeckPanel(slot: DeckSlot.a),
+                    DeckPanel(role: DeckRole.onFloor),
                     const SizedBox(height: 8),
                     const Crossfader(),
                     const SizedBox(height: 8),
@@ -254,7 +254,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                     // coming up has nothing to say.
                     const AnnouncerStrip(),
                     const SizedBox(height: 8),
-                    DeckPanel(slot: DeckSlot.b),
+                    DeckPanel(role: DeckRole.comingIn),
                     const SizedBox(height: 12),
                     // Under the decks because it changes between dances, not the
                     // day before: two minutes of each for a class, the whole song

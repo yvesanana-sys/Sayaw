@@ -37,7 +37,7 @@ class QueueList extends ConsumerWidget {
     final setName = ref.watch(setNameProvider);
     final header = PaneHeader(
       icon: Icons.queue_music,
-      title: setName.isEmpty ? 'Queue' : setName,
+      title: setName.isEmpty ? 'Set list' : setName,
       trailing: queue.isEmpty
           ? null
           : Text(

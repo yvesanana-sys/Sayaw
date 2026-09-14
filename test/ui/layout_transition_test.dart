@@ -140,7 +140,7 @@ void main() {
     );
 
     // Switch to the library in compact, via bottom navigation.
-    await tester.tap(find.text('Library'));
+    await tester.tap(find.text('Music'));
     await tester.pumpAndSettle();
     expect(find.byType(LibraryPane), findsOneWidget);
 

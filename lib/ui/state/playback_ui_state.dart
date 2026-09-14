@@ -9,6 +9,31 @@ import 'library_access.dart';
 import 'playback_session.dart';
 import 'transition_sentence.dart';
 
+/// What a deck is *doing*, which is the only thing the operator needs to know
+/// about it.
+///
+/// The decks alternate; the roles do not. Every surface the operator reads is
+/// addressed in these terms, and the mapping back to hardware lives in one
+/// place — [PlaybackUiState.slotFor].
+enum DeckRole {
+  /// The song the room is dancing to.
+  onFloor('ON THE FLOOR', 'the song playing'),
+
+  /// The song cued up behind it.
+  comingIn('COMING IN', 'the next song');
+
+  const DeckRole(this.label, this.spoken);
+
+  /// Shown on screen. Short, because it sits above a song title.
+  final String label;
+
+  /// Said aloud, where it has to read inside a sentence.
+  final String spoken;
+
+  DeckRole get other =>
+      this == DeckRole.onFloor ? DeckRole.comingIn : DeckRole.onFloor;
+}
+
 /// Which of the two music decks.
 enum DeckSlot {
   a,
@@ -303,6 +328,15 @@ class PlaybackUiState {
   /// [lanePosition], and the only place the flip is written down.
   double crossfaderForLane(double position) =>
       liveSlot == DeckSlot.a ? position : 1.0 - position;
+
+  /// Which deck is playing [role] at this moment.
+  ///
+  /// The one place the alternation is resolved. Everything the operator reads
+  /// goes through here, so no other widget has to know that decks take turns.
+  DeckSlot slotFor(DeckRole role) =>
+      role == DeckRole.onFloor ? liveSlot : liveSlot.other;
+
+  DeckUiState deckFor(DeckRole role) => deck(slotFor(role));
 
   /// The dance at each end of the lane, or null when that deck is empty or
   /// its row carries no dance.

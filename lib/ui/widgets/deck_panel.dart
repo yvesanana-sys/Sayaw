@@ -5,29 +5,38 @@ import '../format/track_title.dart';
 import '../state/playback_ui_state.dart';
 import '../theme/sayaw_theme.dart';
 
-/// What is loaded on one deck, how far through it is, and how loud it is.
+/// What is playing, or what is coming in: how far through it is and how loud.
+///
+/// Addressed by role, not by deck. The panel at the top of the column is always
+/// the song the room is dancing to, whichever of the two decks happens to be
+/// carrying it — so the operator reads position on the screen instead of
+/// tracking a letter that changes meaning every few minutes.
 ///
 /// Read-only. Every control lives in the transport bar so there is exactly one
 /// place to reach for, which is what makes the compact and expanded layouts
 /// feel like the same app.
 class DeckPanel extends ConsumerWidget {
-  const DeckPanel({super.key, required this.slot});
+  const DeckPanel({super.key, required this.role});
 
-  final DeckSlot slot;
+  final DeckRole role;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final deck = ref.watch(playbackProvider.select((s) => s.deck(slot)));
+    final deck = ref.watch(playbackProvider.select((s) => s.deckFor(role)));
     final title = deck.isLoaded ? displayTitle(deck.title) : '';
-    final accent =
-        slot == DeckSlot.a ? SayawColors.primary : SayawColors.secondary;
+    // Colour means role now: lavender is what the floor has, mint is what is
+    // coming. Still two hues apart in both hue and lightness, which is what
+    // the colour-blind rule actually asks for — it never cared which deck.
+    final accent = role == DeckRole.onFloor
+        ? SayawColors.primary
+        : SayawColors.secondary;
 
     return Semantics(
       container: true,
       label: deck.isLoaded
-          ? 'Deck ${slot.label}: $title by ${deck.artist}, '
+          ? '${role.label}: $title by ${deck.artist}, '
               '${_clock(deck.position)} of ${_clock(deck.duration)}'
-          : 'Deck ${slot.label}: empty',
+          : '${role.label}: nothing loaded',
       child: ExcludeSemantics(
         child: Container(
           padding: const EdgeInsets.all(16),
@@ -45,22 +54,20 @@ class DeckPanel extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  Container(
-                    width: 28,
-                    height: 28,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: accent.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                  Flexible(
                     child: Text(
-                      slot.label,
+                      role.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: accent,
+                        fontSize: 12,
                         fontWeight: FontWeight.w800,
+                        letterSpacing: 1.2,
                       ),
                     ),
                   ),
+                  const SizedBox(width: 8),
                   const Spacer(),
                   Text(
                     '${_clock(deck.position)} / ${_clock(deck.duration)}',
@@ -74,7 +81,7 @@ class DeckPanel extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                deck.isLoaded ? title : 'Empty',
+                deck.isLoaded ? title : '—',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -86,7 +93,11 @@ class DeckPanel extends ConsumerWidget {
                 ),
               ),
               Text(
-                deck.isLoaded ? deck.artist : 'Load a track to begin',
+                deck.isLoaded
+                    ? deck.artist
+                    : role == DeckRole.onFloor
+                        ? 'Nothing playing yet'
+                        : 'Nothing cued up yet',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(

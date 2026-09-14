@@ -88,24 +88,24 @@ void main() {
     // Drive the whole transport with taps only — no mouse, no hover, no
     // long-press-for-hidden-options. A track reaches a deck by tapping its
     // row in the queue, which in this layout is a pane away.
-    await tester.tap(find.text('Queue'));
+    await tester.tap(find.text('Set list'));
     await tester.pumpAndSettle();
     await tester.tap(find.bySemanticsLabel('Play Kiss of Fire now'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Decks'));
+    await tester.tap(find.text('Now').first);
     await tester.pumpAndSettle();
 
-    expect(find.bySemanticsLabel('Pause deck A'), findsOneWidget);
+    expect(find.bySemanticsLabel('Pause the song playing'), findsOneWidget);
 
     await tester.tap(find.bySemanticsLabel('Stop'));
     await tester.pumpAndSettle();
-    expect(find.bySemanticsLabel('Play deck A'), findsOneWidget);
+    expect(find.bySemanticsLabel('Play the song playing'), findsOneWidget);
 
-    await tester.tap(find.bySemanticsLabel('Play deck A'));
+    await tester.tap(find.bySemanticsLabel('Play the song playing'));
     await tester.pumpAndSettle();
-    expect(find.bySemanticsLabel('Pause deck A'), findsOneWidget);
+    expect(find.bySemanticsLabel('Pause the song playing'), findsOneWidget);
 
-    await tester.tap(find.bySemanticsLabel('Crossfade now'));
+    await tester.tap(find.bySemanticsLabel('Blend to the next song now'));
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);

@@ -32,17 +32,12 @@ class Crossfader extends ConsumerWidget {
     final outDance =
         ref.watch(playbackProvider.select((s) => s.outgoingDance));
     final inDance = ref.watch(playbackProvider.select((s) => s.incomingDance));
-    final live = ref.watch(playbackProvider.select((s) => s.liveSlot));
-
-    // Ends follow the *decks*, not fixed roles. The panels above and below
-    // still wear a colour per deck, and a lane that painted "going out" the
-    // same hue every time would disagree with them every other transition —
-    // which is a worse lie than the one the words already fix. The words carry
-    // the role; the colour keeps faith with the rest of the screen.
-    final outColour =
-        live == DeckSlot.a ? SayawColors.primary : SayawColors.secondary;
-    final inColour =
-        live == DeckSlot.a ? SayawColors.secondary : SayawColors.primary;
+    // Fixed, now that the panels are positioned by role too: lavender is
+    // always what the floor has and mint is always what is coming, on the lane
+    // and on the cards at either end of it. Colour that changed meaning every
+    // other transition taught nothing; this teaches one thing once.
+    const outColour = SayawColors.primary;
+    const inColour = SayawColors.secondary;
 
     // Two forms of each end. The band is labelled in the shortest thing that
     // is true — "SALSA OUT" — and everything spoken aloud uses a name that
