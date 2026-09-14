@@ -275,13 +275,64 @@ class PlaybackUiState {
     this.nextMerges = false,
     this.songLength,
     this.setName = '',
+    this.liveSlot = DeckSlot.a,
   });
 
   final DeckUiState deckA;
   final DeckUiState deckB;
 
   /// Crossfader position: `0.0` is deck A alone, `1.0` is deck B alone.
+  ///
+  /// Still expressed in decks, because that is what the engine writes and what
+  /// the two gain stages consume. What the operator sees is a *lane* — music
+  /// going out on the left, coming in on the right — and the two disagree
+  /// every other transition. [laneposition] is the translation.
   final double crossfader;
+
+  /// Where the handover stands, as the operator sees it: `0.0` is the song on
+  /// the floor alone, `1.0` is the one coming in.
+  ///
+  /// The decks alternate but this does not. Dragging toward `1.0` always
+  /// brings in the next song, which on the old fader was rightward on one
+  /// transition and leftward on the next — the same gesture meaning opposite
+  /// things depending on a letter the operator had to be tracking.
+  double get lanePosition =>
+      liveSlot == DeckSlot.a ? crossfader : 1.0 - crossfader;
+
+  /// The fader value that puts the lane at [position]. The inverse of
+  /// [lanePosition], and the only place the flip is written down.
+  double crossfaderForLane(double position) =>
+      liveSlot == DeckSlot.a ? position : 1.0 - position;
+
+  /// The dance at each end of the lane, or null when that deck is empty or
+  /// its row carries no dance.
+  ///
+  /// The dance, not the track title: "SALSA OUT / BACHATA IN" tells a floor
+  /// what is about to be asked of it, where two song titles tell them nothing
+  /// unless they already know both records. Never a deck letter — that is the
+  /// rule the whole lane exists to keep.
+  String? get outgoingDance => _danceOn(liveSlot);
+
+  String? get incomingDance => _danceOn(liveSlot.other);
+
+  String? _danceOn(DeckSlot slot) {
+    final title = deck(slot).title;
+    if (title.isEmpty) return null;
+
+    for (final item in queue) {
+      if (item.title != title) continue;
+      final dance = item.danceType;
+      if (dance != null && dance.isNotEmpty) return dance.toUpperCase();
+    }
+    return null;
+  }
+
+  /// Which deck the room is currently hearing.
+  ///
+  /// The decks alternate, so this flips at every transition and nothing on
+  /// screen should make the operator track it. It exists so the lane can put
+  /// what is going out on the left whichever deck that happens to be.
+  final DeckSlot liveSlot;
 
   final List<QueueItemUi> queue;
   final int currentIndex;
@@ -357,6 +408,7 @@ class PlaybackUiState {
     bool? nextMerges,
     Duration? songLength,
     String? setName,
+    DeckSlot? liveSlot,
   }) {
     return PlaybackUiState(
       deckA: deckA ?? this.deckA,
@@ -373,6 +425,7 @@ class PlaybackUiState {
       nextMerges: nextMerges ?? this.nextMerges,
       songLength: songLength ?? this.songLength,
       setName: setName ?? this.setName,
+      liveSlot: liveSlot ?? this.liveSlot,
     );
   }
 
@@ -395,6 +448,7 @@ class PlaybackUiState {
         nextMerges: nextMerges,
         songLength: songLength,
         setName: setName,
+      liveSlot: liveSlot,
       );
 
   /// Its own method for the reason [withSnowball] is: null means "each song
@@ -414,6 +468,7 @@ class PlaybackUiState {
         nextMerges: nextMerges,
         songLength: songLength,
         setName: setName,
+      liveSlot: liveSlot,
       );
 
   /// Its own method for the same reason [withSnowball] is: null means "the
@@ -435,6 +490,7 @@ class PlaybackUiState {
         nextMerges: nextMerges,
         songLength: songLength,
         setName: setName,
+      liveSlot: liveSlot,
       );
 }
 
@@ -493,6 +549,9 @@ class PlaybackController extends Notifier<PlaybackUiState> {
       crossfader: crossfader,
       nextMerges: nextMerges,
       setName: setName,
+      // The lane draws its ends from this: the engine knows which deck the
+      // room is hearing, and nothing on screen should ask the operator to.
+      liveSlot: activeSlot,
     )
         .withSnowball(snowball)
         .withAnnouncement(announcement)
@@ -603,6 +662,10 @@ class PlaybackController extends Notifier<PlaybackUiState> {
     );
     _applyCrossfaderGains();
   }
+
+  /// Move the handover lane, in the operator's terms rather than the decks'.
+  void setLanePosition(double position) =>
+      setCrossfader(state.crossfaderForLane(position.clamp(0.0, 1.0)));
 
   void setCrossfader(double value) {
     final position = value.clamp(0.0, 1.0);
