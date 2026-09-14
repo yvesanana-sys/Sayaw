@@ -6,6 +6,7 @@ import 'package:drift/drift.dart' show InsertMode;
 import '../../audio/crossfade_engine.dart';
 import '../../data/cache/media_downloader.dart';
 import '../../data/db/database.dart';
+import '../../data/diagnostics/app_log.dart';
 import '../../data/event_mode.dart';
 import '../../data/library/library_scanner.dart';
 import '../../data/media_resolver.dart' show NetworkMode, UnavailableOffline;
@@ -93,7 +94,10 @@ class PlaybackSession
   /// labelled. Dropping them would make the list on screen disagree with the
   /// list they built, which is worse than showing a row that cannot start.
   Future<ResolvedQueue> openPlaylist(String playlistId) async {
+    AppLog.current?.info('opening set $playlistId');
     final resolved = await repository.buildQueue(playlistId);
+    AppLog.current?.info('set resolved: ${resolved.entries.length} playable, '
+        '${resolved.unavailable.length} not');
     final rows = await repository.db.playlistDao.itemsOf(playlistId);
     final playlist = await repository.db.playlistDao.byId(playlistId);
     _snowballStages = playlist?.snowballStages ?? 0;
@@ -880,8 +884,24 @@ class PlaybackSession
 
   // -------------------------------------------------------------------------
 
+  EnginePhase? _loggedPhase;
+  String? _loggedEntry;
+
   void _onEngineEvent(EngineEvent event) {
     _publish();
+
+    // Breadcrumbs, not a trace: a line when the phase changes and a line when
+    // the song does. The last few of these before a crash are the report.
+    if (event.phase != _loggedPhase) {
+      _loggedPhase = event.phase;
+      AppLog.current?.info('engine: ${event.phase.name}');
+    }
+    final entry = event.entry;
+    if (entry != null && entry.itemId != _loggedEntry) {
+      _loggedEntry = entry.itemId;
+      AppLog.current?.info('now on deck: "${entry.title}" '
+          '(${entry.media.uri.toFilePath(windows: Platform.isWindows)})');
+    }
 
     final playing = event.phase == EnginePhase.playing ||
         event.phase == EnginePhase.crossfading ||

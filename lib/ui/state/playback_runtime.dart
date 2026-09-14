@@ -14,6 +14,7 @@ import '../../data/cache/media_downloader.dart';
 import '../../data/connectivity.dart';
 import '../../data/db/announcement_dao.dart';
 import '../../data/db/database.dart';
+import '../../data/diagnostics/app_log.dart';
 import '../../data/media_resolver.dart';
 import '../../data/playlist_repository.dart';
 import '../../data/sources/plex/plex_api_client.dart';
@@ -103,6 +104,17 @@ class PlaybackRuntime {
     // A fourth voice, so a cut-in can sound while an announcement is speaking
     // rather than cutting it off.
     final cueDeck = DeckFactory.create('cue');
+
+    // What the audio backend says went wrong, in the log with the deck's
+    // name on it. A file libmpv cannot open is reported here and nowhere
+    // else, and it is the likeliest last line before the process is gone.
+    for (final deck in [deckA, deckB, voiceDeck, cueDeck]) {
+      deck.statusStream.listen((status) {
+        if (status.state == DeckPlaybackState.error) {
+          AppLog.current?.error('deck ${deck.id}', status.error);
+        }
+      });
+    }
     final bus = MusicGainBus();
 
     final dio = http ?? Dio();

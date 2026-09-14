@@ -11,6 +11,7 @@ import '../../data/sources/plex/plex_library.dart';
 import '../../data/sources/sources_access.dart';
 import '../state/sources_provider.dart';
 import '../theme/sayaw_theme.dart';
+import 'problem_report_dialog.dart';
 import '../touch/touch_targets.dart';
 
 /// Connected music services.
@@ -88,6 +89,35 @@ class _Accounts extends StatelessWidget {
                 label: const Text('Connect a Plex server'),
               ),
             ),
+            const Divider(height: 48),
+            // Here rather than on the deck screen's bar, which is full at the
+            // narrowest window the app has to survive. A run that ended in a
+            // crash says so on the next start and brings the operator here
+            // itself; this is for the rest.
+            const Padding(
+              padding: EdgeInsets.fromLTRB(24, 0, 24, 8),
+              child: Text(
+                'HELP',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.6,
+                  color: SayawColors.onSurfaceVariant,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  onPressed: () => showProblemReport(context),
+                  icon: const Icon(Icons.bug_report_outlined),
+                  label: const Text('Report a problem'),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
           ],
         );
       },
