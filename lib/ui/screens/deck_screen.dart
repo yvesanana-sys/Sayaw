@@ -255,16 +255,22 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                     const AnnouncerStrip(),
                     const SizedBox(height: 8),
                     DeckPanel(slot: DeckSlot.b),
-                    const SizedBox(height: 8),
-                    // Fills the space that otherwise sat empty below the decks
-                    // once both were loaded, and doubles as the "what do I do
-                    // now" hint on a fresh set with nothing queued yet.
-                    const UpNextCard(),
                     const SizedBox(height: 12),
                     // Under the decks because it changes between dances, not the
                     // day before: two minutes of each for a class, the whole song
                     // for a social, and the hand is already here.
+                    //
+                    // Above the preview rather than below it, because this
+                    // column scrolls and whatever sits at the fold is the thing
+                    // that gets cut off. These are chips a hand has to hit; the
+                    // card below is only ever read. The one that can be lost to
+                    // the fold should be the one nobody needs to reach.
                     const SongLengthChips(),
+                    const SizedBox(height: 12),
+                    // Fills the space that otherwise sat empty below the decks
+                    // once both were loaded, and doubles as the "what do I do
+                    // now" hint on a fresh set with nothing queued yet.
+                    const UpNextCard(),
                   ],
                 ),
               ),
