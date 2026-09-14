@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sayaw/audio/announcement_engine.dart'
+    show AnnouncementReadiness, AnnouncementStatus;
 import 'package:sayaw/ui/state/playback_ui_state.dart';
 import 'package:sayaw/ui/widgets/announcer_strip.dart';
 
@@ -29,7 +31,7 @@ Future<ProviderContainer> pumpStrip(
 
 /// The sentence as it is actually painted, spans and all.
 String renderedSentence(WidgetTester tester) {
-  final rich = tester.widget<RichText>(find.byType(RichText).last);
+  final rich = tester.widget<RichText>(find.byKey(AnnouncerStrip.sentenceKey));
   return rich.text.toPlainText();
 }
 
@@ -118,6 +120,33 @@ void main() {
 
     expect(renderedSentence(tester),
         'In 15 seconds, the music runs on into Salsa, still the same dance.');
+  });
+
+  testWidgets('an announcement that cannot be made turns the card, not the '
+      'layout', (tester) async {
+    await pumpStrip(
+      tester,
+      announcement: const NextAnnouncementUi(
+        label: 'Next dance: Bachata',
+        isRecording: false,
+        timing: AnnouncementTiming.overTheCrossfade,
+        status: AnnouncementStatus(
+          AnnouncementReadiness.failed,
+          'No speech synthesiser is installed.',
+        ),
+      ),
+      incomingDance: 'Bachata',
+      seconds: 38,
+    );
+
+    expect(renderedSentence(tester), contains('the room will hear nothing'));
+    // The cause, so the operator is not left hunting for it.
+    expect(find.text('No speech synthesiser is installed.'), findsOneWidget);
+    expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
+    // Same slot, same height: a failure must not move what is under a hand
+    // already reaching for the controls below it.
+    expect(tester.getSize(find.byType(AnnouncerStrip)).height,
+        AnnouncerStrip.height);
   });
 
   testWidgets('it announces itself without a pointer', (tester) async {

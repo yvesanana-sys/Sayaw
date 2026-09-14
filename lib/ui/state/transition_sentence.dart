@@ -16,6 +16,10 @@ enum SentenceTone {
 
   /// What the room will actually hear — amber, the voice colour.
   voice,
+
+  /// Something that will not happen. Red, and only ever used for a thing the
+  /// operator can still get in front of.
+  trouble,
 }
 
 @immutable
@@ -44,9 +48,13 @@ class SentenceSpan {
 /// the floor; this cannot.
 @immutable
 class TransitionSentence {
-  const TransitionSentence(this.spans);
+  const TransitionSentence(this.spans, {this.cause});
 
   final List<SentenceSpan> spans;
+
+  /// The fixable thing behind a [isTrouble] sentence, in words the operator can
+  /// act on — "no speech synthesiser is installed". Null when nothing is wrong.
+  final String? cause;
 
   /// The whole thing as plain text — what a screen reader says, and what a
   /// test asserts.
@@ -55,6 +63,10 @@ class TransitionSentence {
   /// Whether anything is actually coming. False is not an error: it is the end
   /// of the set, and the card says so rather than going blank.
   bool get hasNext => spans.length > 1;
+
+  /// Whether this sentence is reporting something that will go wrong.
+  bool get isTrouble => spans.any((s) => s.tone == SentenceTone.trouble);
+
 
   @override
   String toString() => text;
@@ -108,6 +120,24 @@ TransitionSentence composeTransitionSentence({
       ..add(dance)
       ..add(const SentenceSpan(', with nothing said.'));
     return TransitionSentence(spans);
+  }
+
+  // Supposed to speak, and cannot. Said before the transition rather than
+  // discovered after it: from the booth a failed announcement and a row nobody
+  // tagged sound exactly the same, and only one of them is worth interrupting
+  // a night over.
+  if (announcement.willFail) {
+    final trouble = <SentenceSpan>[
+      if (lead != null) SentenceSpan(lead),
+      SentenceSpan(lead == null ? 'The music blends into ' : 'the music blends into '),
+      dance,
+      const SentenceSpan(' — but '),
+      SentenceSpan('the room will hear nothing', SentenceTone.trouble),
+      const SentenceSpan(', and '),
+      SentenceSpan('“${announcement.label}”', SentenceTone.voice),
+      const SentenceSpan(' will not be said.'),
+    ];
+    return TransitionSentence(trouble, cause: announcement.status.reason);
   }
 
   // Their own recording is worth naming as theirs: it is the one case where

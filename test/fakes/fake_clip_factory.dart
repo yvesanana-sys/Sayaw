@@ -28,6 +28,11 @@ class FakeClipFactory implements ClipFactory {
   @override
   bool exists(String path) => true;
 
+  /// Nothing is missing on a fake. Overridden by tests that want to stand in
+  /// for a machine with no synthesiser.
+  @override
+  Future<String?> describeUnavailable() async => null;
+
   @override
   Future<AnnouncementClip?> render(String text, String hash) async {
     rendered.add(text);

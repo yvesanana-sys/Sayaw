@@ -52,6 +52,44 @@ class TtsVoiceSettings {
   final double volume;
 }
 
+/// Whether the voice for a row is ready, and if not, why not.
+///
+/// The distinction that matters is between a row that was never going to speak
+/// and one that was supposed to and cannot. On the floor they sound identical
+/// — the transition simply runs without a voice — and for the whole life of
+/// this app that was the only signal anyone got. This is what lets the screen
+/// tell them apart before the room does.
+enum AnnouncementReadiness {
+  /// Nothing has tried to render it yet.
+  unknown,
+
+  /// This row was never going to say anything. Not a failure.
+  silent,
+
+  /// A clip exists and will play.
+  ready,
+
+  /// It should have spoken and cannot.
+  failed,
+}
+
+@immutable
+class AnnouncementStatus {
+  const AnnouncementStatus(this.readiness, [this.reason]);
+
+  static const unknown = AnnouncementStatus(AnnouncementReadiness.unknown);
+  static const silent = AnnouncementStatus(AnnouncementReadiness.silent);
+  static const ready = AnnouncementStatus(AnnouncementReadiness.ready);
+
+  final AnnouncementReadiness readiness;
+
+  /// Why it failed, in words an operator can act on. Null unless [readiness]
+  /// is [AnnouncementReadiness.failed].
+  final String? reason;
+
+  bool get isFailure => readiness == AnnouncementReadiness.failed;
+}
+
 /// Renders, caches and plays dance announcements, and owns the ducking
 /// envelope applied to the music bus while a voice is speaking.
 class AnnouncementEngine {
@@ -82,6 +120,24 @@ class AnnouncementEngine {
 
   final Map<String, Future<AnnouncementClip?>> _inFlight = {};
 
+  /// What happened last time each row's voice was rendered, by item id.
+  ///
+  /// Written by [warm], which runs at preload — so by the time a row is the
+  /// one coming up, this already knows whether it will speak.
+  final Map<String, AnnouncementStatus> _status = {};
+
+  AnnouncementStatus statusFor(String itemId) =>
+      _status[itemId] ?? AnnouncementStatus.unknown;
+
+  /// Whether this row is supposed to say anything at all.
+  bool wouldAnnounce(QueueEntry entry) {
+    if (entry.spec.announceMode == AnnounceMode.off) return false;
+    final custom = entry.announcementClipPath;
+    if (custom != null && custom.isNotEmpty) return true;
+    final text = _textFor(entry);
+    return text != null && text.isNotEmpty;
+  }
+
   // -------------------------------------------------------------------------
   // Text resolution
   // -------------------------------------------------------------------------
@@ -109,10 +165,26 @@ class AnnouncementEngine {
     // A row that will not speak has nothing to render. On the desktop this is
     // a synthesiser process per row, and a merged block of three songs would
     // otherwise pay for three voices nobody hears.
-    if (entry.spec.announceMode == AnnounceMode.off) return;
+    if (!wouldAnnounce(entry)) {
+      _status[entry.itemId] = AnnouncementStatus.silent;
+      return;
+    }
     try {
-      await clipFor(entry);
+      final clip = await clipFor(entry);
+      _status[entry.itemId] = clip != null
+          ? AnnouncementStatus.ready
+          // The factory knows what is missing; this is the only place that can
+          // carry it as far as the screen.
+          : AnnouncementStatus(
+              AnnouncementReadiness.failed,
+              await _clips.describeUnavailable() ??
+                  'This announcement could not be made on this machine.',
+            );
     } on Object {
+      _status[entry.itemId] = const AnnouncementStatus(
+        AnnouncementReadiness.failed,
+        'This announcement could not be made on this machine.',
+      );
       // Nothing waits on a warm. A clip that cannot be rendered or read is
       // answered again at the transition, where the decision to go without it
       // is made — an unhandled error here would take the app down for a file
@@ -276,6 +348,10 @@ abstract class ClipFactory {
   /// Reads an existing file's duration back.
   Future<AnnouncementClip?> probe(String path,
       {required String text, String? hash});
+
+  /// Why this machine cannot speak, phrased so the operator can fix it, or
+  /// null when nothing is missing and the failure was something else.
+  Future<String?> describeUnavailable() async => null;
 }
 
 /// The production [ClipFactory]: native TTS to a file, duration read back off
@@ -377,6 +453,9 @@ class PlatformClipFactory implements ClipFactory {
       text: text,
     );
   }
+
+  @override
+  Future<String?> describeUnavailable() => _voice.describeMissing();
 
   Future<void> _configureTts() async {
     await _tts.setSpeechRate(settings.rate);

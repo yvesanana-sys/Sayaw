@@ -117,8 +117,10 @@ void main() {
 
     // The sentence, not a label: a merge has no voice by definition, and
     // "nothing will be said" must not read as a tag that failed.
-    final rendered =
-        tester.widget<RichText>(find.byType(RichText).last).text.toPlainText();
+    final rendered = tester
+        .widget<RichText>(find.byKey(AnnouncerStrip.sentenceKey))
+        .text
+        .toPlainText();
     expect(rendered, contains('runs on into'));
     expect(rendered, contains('still the same dance'));
     expect(container.read(playbackProvider).announcement, isNull);

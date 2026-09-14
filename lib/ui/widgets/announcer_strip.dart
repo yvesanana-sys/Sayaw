@@ -24,6 +24,9 @@ import '../theme/sayaw_theme.dart';
 class AnnouncerStrip extends ConsumerWidget {
   const AnnouncerStrip({super.key});
 
+  /// Finds the sentence itself, past the label above it and the cause below.
+  static const sentenceKey = Key('announcer-sentence');
+
   /// Tall enough for two lines of the sentence at a readable size, and the
   /// same whether or not there is anything to say.
   ///
@@ -49,34 +52,62 @@ class AnnouncerStrip extends ConsumerWidget {
     // there is actually a voice in the transition. A blend with nothing said
     // is ordinary, not noteworthy, and must not compete with one that speaks.
     final speaks = announcement != null;
+    // Red takes the same box at the same height, so a failure never moves what
+    // is under a reaching hand — it only changes what that box says.
+    final trouble = sentence.isTrouble;
 
     return Semantics(
       container: true,
-      label: 'What happens next. ${sentence.text}',
+      label: 'What happens next. ${sentence.text}'
+          '${sentence.cause == null ? '' : ' ${sentence.cause}'}',
       child: ExcludeSemantics(
         child: Container(
           height: heightFor(breakpoint),
           width: double.infinity,
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
           decoration: BoxDecoration(
-            color: speaks
-                ? SayawColors.tertiary.withValues(alpha: 0.10)
-                : SayawColors.surfaceContainer,
+            color: trouble
+                ? SayawColors.error.withValues(alpha: 0.12)
+                : speaks
+                    ? SayawColors.tertiary.withValues(alpha: 0.10)
+                    : SayawColors.surfaceContainer,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: speaks
-                  ? SayawColors.tertiary.withValues(alpha: 0.55)
-                  : SayawColors.outlineVariant,
-              width: speaks ? 2 : 1,
+              color: trouble
+                  ? SayawColors.error
+                  : speaks
+                      ? SayawColors.tertiary.withValues(alpha: 0.55)
+                      : SayawColors.outlineVariant,
+              width: speaks || trouble ? 2 : 1,
             ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              _Label(speaks: speaks, isRecording: announcement?.isRecording),
+              _Label(
+                speaks: speaks,
+                trouble: trouble,
+                isRecording: announcement?.isRecording,
+              ),
               const SizedBox(height: 6),
               Expanded(child: _Sentence(sentence, compact: compact)),
+              // The fixable thing, under the sentence that reports it. A
+              // failure that says only "no voice" sends the operator looking;
+              // this says where to look.
+              if (sentence.cause case final cause?)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    cause,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: SayawColors.onSurfaceVariant,
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -86,15 +117,23 @@ class AnnouncerStrip extends ConsumerWidget {
 }
 
 class _Label extends StatelessWidget {
-  const _Label({required this.speaks, required this.isRecording});
+  const _Label({
+    required this.speaks,
+    required this.trouble,
+    required this.isRecording,
+  });
 
   final bool speaks;
+  final bool trouble;
   final bool? isRecording;
 
   @override
   Widget build(BuildContext context) {
-    final colour =
-        speaks ? SayawColors.tertiary : SayawColors.onSurfaceVariant;
+    final colour = trouble
+        ? SayawColors.error
+        : speaks
+            ? SayawColors.tertiary
+            : SayawColors.onSurfaceVariant;
 
     return Row(
       children: [
@@ -102,17 +141,19 @@ class _Label extends StatelessWidget {
         // voice — the same distinction the soundboard bar draws, and worth
         // knowing at a glance because only one of them is in their voice.
         Icon(
-          !speaks
-              ? Icons.campaign_outlined
-              : isRecording == true
-                  ? Icons.campaign
-                  : Icons.record_voice_over,
+          trouble
+              ? Icons.warning_amber_rounded
+              : !speaks
+                  ? Icons.campaign_outlined
+                  : isRecording == true
+                      ? Icons.campaign
+                      : Icons.record_voice_over,
           size: 16,
           color: colour,
         ),
         const SizedBox(width: 8),
         Text(
-          'WHAT HAPPENS NEXT',
+          trouble ? 'WHAT HAPPENS NEXT — NEEDS YOU' : 'WHAT HAPPENS NEXT',
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w800,
@@ -138,6 +179,7 @@ class _Sentence extends StatelessWidget {
     return Align(
       alignment: Alignment.centerLeft,
       child: RichText(
+        key: AnnouncerStrip.sentenceKey,
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
         text: TextSpan(
@@ -165,5 +207,6 @@ class _Sentence extends StatelessWidget {
         SentenceTone.dance => SayawColors.secondary,
         // The same amber as every other voice affordance.
         SentenceTone.voice => SayawColors.tertiary,
+        SentenceTone.trouble => SayawColors.error,
       };
 }
